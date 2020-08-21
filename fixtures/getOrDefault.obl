@@ -1,7 +1,6 @@
 
-getOrDefault with name, default:
-
+getOrSubstitute with name, substitute:
 	if exists of self with name:
 		returns get of self with name
-
-	returns default
+	or else:
+		returns substitute
