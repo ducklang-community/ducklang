@@ -1,0 +1,7 @@
+
+getOrDefault with name, default:
+
+	if exists of self with name:
+		returns get of self with name
+
+	returns default

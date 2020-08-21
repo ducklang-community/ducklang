@@ -1,0 +1,21 @@
+
+using type, errors, logger, harness, blaster, turbo, offset
+
+engageBoosters with thrust, angle otherwise 0.0, color otherwise 'green':
+	variable = { stage: 0 }
+
+	checksResult = precheck blaster with angle, thrust
+	variable.stage += 1
+
+	ableToTurbo = sufficient turbo with { angle, thrust, size: usage of self } otherwise false
+
+	if not ableToTurbo:
+		variable.stage += 1
+		returns 'abort'
+
+	variable.cache = map [1, 2, 3] with mapper: (function of x: returns x * x)
+
+	for x in iterator of turbo:
+		variable.stage += 1
+
+	returns boost blaster with stage.: variable, thrust, angle, offset, color
