@@ -1,25 +1,23 @@
 
-using type, BetterDictionaries, Logger
-using Blaster, TurboConcept, RocketConcept, RocketFix
+using type, BetterDictionaries, log,
+	Blaster, TurboConcept, RocketConcept, RocketFix
 
 run:
-	logger = new Logger
-
-	extend type.dictionary with module: (use BetterDictionaries with logger)
+	extend type.dictionary with software: (use BetterDictionaries with log)
 
 	NicerRocketFix = rename RocketFix with
 		init: 'initRocketFix',
-		logging: 'logger'
+		logging: 'log'
 
 	blaster = new Blaster
 
-	turbo = new of (use TurboConcept with logger)
+	turbo = new of (use TurboConcept with log)
 
-	basicTypes = readonly of type with
+	basicTypes = readOnly of type with
 		names: ['dictionary', 'number', 'list', 'text', 'rational']
 
-	Rocket = use RocketConcept with type: basicTypes, logger
-	type.rocket = new type with modules: [Rocket, NicerRocketFix]
+	Rocket = use RocketConcept with type: basicTypes, log
+	type.rocket = new type with software: [Rocket, NicerRocketFix]
 	rocket = new of type.rocket with blaster, turbo, offset: 720
 
 	engageBoosters of rocket with angle: 93.4, thrust: 42

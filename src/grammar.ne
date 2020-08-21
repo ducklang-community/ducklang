@@ -5,36 +5,41 @@ const IndentationLexer = require('moo-indentation-lexer');
 const lexer = new IndentationLexer({
     lexer: moo.compile({
         comment: /"(?:\\["\\]|[^\n"\\])*"/,
+        string: /'(?:\\['\\]|[^\n'\\])*'/,
+        interpolation: /`(?:\\[`\\]|[^\n`\\])*`/,
+        NL: { match: /\n/, lineBreaks: true },
         _: / /,
         ____: /\t/,
-        decimalNumber: /[0-9]+\.[0-9]+/,
-        digitNumber: /0|[1-9][0-9]*/,
-        hexNumber: /0x0|0x[1-9a-f][0-9a-f]*/,
-        string: /'(?:\\['\\]|[^\n'\\])*'/,
         expandEqual: '...=',
+        plusEqual: '+=',
+        assign: '=',
         dotDefine: '.:',
         colon: ':',
         dot: '.',
         comma: ',',
-        lparen: '(',
-        rparen: ')',
-        lbrace: '{',
-        rbrace: '}',
-        lbracket: '[',
-        rbracket: ']',
-        assign: '=',
-        plusEqual: '+=',
+        leftParen: '(',
+        rightParen: ')',
+        leftBrace: '{',
+        rightBrace: '}',
+        leftBracket: '[',
+        rightBracket: ']',
+        greater: '>',
         times: '*',
+        decimalNumber: /[0-9]+\.[0-9]+/,
+        digitNumber: /0|[1-9][0-9]*/,
+        hexNumber: /0x0|0x[1-9a-f][0-9a-f]*/,
 
         name: {
             match: /\w*[a-zA-Z]\w*/,
             type: moo.keywords({
                 Using: 'using',
                 Otherwise: 'otherwise',
+                Default: 'default',
                 With: 'with',
                 Of: 'of',
                 Returns: 'returns',
                 If: 'if',
+                Or: 'or',
                 Else: 'else',
                 Repeat: 'repeat',
                 For: 'for',
@@ -42,29 +47,33 @@ const lexer = new IndentationLexer({
                 Function: 'function'
             })
         },
-
-        NL: { match: /\n/, lineBreaks: true }
     })
 });
 %}
 
 @lexer lexer
 
-main -> %NL (using:* %NL):? method:+
+main -> %NL using:? method:+
 
-using -> annotatedComment:* %Using _ name (%comma _ name):* %NL
+using -> annotatedComment:* %Using dependencies %NL
+
+# TODO: List comprehensions
 
 method -> annotatedComment:* name (%_ %With _ parametersGroup):? %colon %NL
     %INDENT
     (%NL:? ____ commentedStatement):+
     %DEDENT
 
-if -> %If %_ expression %colon %NL
+if -> %If _ expression %colon %NL
     %INDENT
     (%NL:? ____:+ commentedStatement):+
     %DEDENT
+    (%NL:? ____:+ %Or _ %Else %colon %NL
+    %INDENT
+    (%NL:? ____:+ commentedStatement):+
+    %DEDENT):?
 
-for -> %For %_ name _ %In _ expression %colon %NL
+for -> %For _ name _ %In _ expression %colon %NL
     %INDENT
     (%NL:? ____:+ commentedStatement):+
     %DEDENT
@@ -86,18 +95,31 @@ expression -> name
     | %digitNumber
     | %decimalNumber
     | %string
+    | %interpolation
     | expression _ %times _ expression
-    | %lbracket listGroup %rbracket
-    | %lbrace _ dictionaryLine _ %rbrace
+    | expression _ %greater _ expression
+    | %leftBracket %rightBracket
+    | %leftBracket listGroup %rightBracket
+    | %leftBrace %rightBrace
+    | %leftBrace _ dictionaryLine _ %rightBrace
     | tabbedDictionaryGroup
     | %Function (_ %Of _ parametersGroup):? %colon _ %Returns _ expression
+    | listComprehension
+    | ifExpression
     | methodCall
-    | %lparen expression %rparen
+    | %leftParen expression %rightParen
 
-methodCall -> name (_ %Of):? _ expression (_ %With methodArguments):? (_ %Otherwise _ expression):?
 
-methodArguments -> _ dictionaryLine (%comma %NL tabbedDictionaryGroup):?
-    | _ %lbrace _ dictionaryLine _ %rbrace
+ifExpression -> expression _ %If _ expression _ %Or _ %Else _ expression
+
+listComprehension -> %leftBracket expression _ %For _ name _ %In _ expression (_ %If _ expression):? %rightBracket
+
+
+methodCall -> name (_ %Of):? _ expression (_ %With methodArguments):? (_ %Otherwise _ %Default _ expression):?
+
+
+methodArguments -> _ dictionaryLine
+    | _ %leftBrace _ dictionaryLine _ %rightBrace
     | (_ dictionaryLine %comma):? %NL tabbedDictionaryGroup
 
 tabbedDictionaryGroup -> %INDENT
@@ -114,6 +136,21 @@ dictionaryDefinition -> dictionaryName (dictionaryAssign _:+ expression):?
 dictionaryAssign -> %colon | %dotDefine
 
 dictionaryName -> name | %string
+
+
+dependencies -> _ dependencyLine %NL
+    | (_ dependencyLine %comma):? %NL tabbedDependencyGroup
+
+tabbedDependencyGroup -> %INDENT
+    tabbedDependencyLine tabbedDependencyLineList:? %comma:? %NL
+    %DEDENT
+
+tabbedDependencyLineList -> (%comma %NL tabbedDependencyLine):+
+tabbedDependencyLine -> ____:+ dependencyLine
+
+dependencyLine -> name dependencyList:?
+dependencyList -> (%comma _:+ name):+
+
 
 parametersGroup -> parameter (%comma _ parameter):*
 parameter -> name | name _ %Otherwise _ expression

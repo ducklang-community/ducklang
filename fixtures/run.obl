@@ -1,20 +1,20 @@
 
-using module, type
+using software, type
 
-" This is the main program "
+"This is the main software"
 run:
-	BaseConcept = import module with id: 717189784315811721173404183
-	Base = use BaseConcept with type, module
+	BaseConcept = import software with id: 717189784315811721173404183
+	Base = use BaseConcept with type, software
 	...= init new Base
 
-	...= locate sources with
-		Blaster:       { user: 'terry', name: 'Blaster',       version: '2.3.0' },
-		TurboConcept:  { user: 'jill',  name: 'TurboConcept',  version: '0.1.0' },
-		RocketConcept: { user: 'alex',  name: 'RocketConcept', version: '1.0.2' },
-		RocketFix:     { user: 'rick',  name: 'RocketFix',     version: '0.0.2' },
-		Program:       { user: 'clive', name: 'Program',       version: '4.0.0' },
+	...= import software with
+		Blaster:       { author: 'terry', version: '2.3.0' },
+		TurboConcept:  { author: 'jill',  version: '0.1.0' },
+		RocketConcept: { author: 'alex',  version: '1.0.2' },
+		RocketFix:     { author: 'rick',  version: '0.0.2' },
+		Program:       { author: 'clive', version: '4.0.0' },
 
-	program = new Program with type, logger,
+	program = new Program with type, BetterDictionaries, log,
 		Blaster, TurboConcept, RocketConcept, RocketFix
 
 	run program
