@@ -1,0 +1,20 @@
+
+using module, type
+
+" This is the main program "
+run:
+	BaseConcept = import module with id: 717189784315811721173404183
+	Base = use BaseConcept with type, module
+	...= init new Base
+
+	...= locate sources with
+		Blaster:       { user: 'terry', name: 'Blaster',       version: '2.3.0' },
+		TurboConcept:  { user: 'jill',  name: 'TurboConcept',  version: '0.1.0' },
+		RocketConcept: { user: 'alex',  name: 'RocketConcept', version: '1.0.2' },
+		RocketFix:     { user: 'rick',  name: 'RocketFix',     version: '0.0.2' },
+		Program:       { user: 'clive', name: 'Program',       version: '4.0.0' },
+
+	program = new Program with type, logger,
+		Blaster, TurboConcept, RocketConcept, RocketFix
+
+	run program
