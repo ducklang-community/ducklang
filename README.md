@@ -2,7 +2,7 @@
 
 *No PhD required!*
 
-## 🦆 About
+## About
 
 Ducklang is a duck-typed programming language with an emphasis on readability of the language.
 
@@ -24,7 +24,7 @@ Ducklang is a duck-typed programming language with an emphasis on readability of
 
 Please see the [fixtures](fixtures/) directory for example code
 
-## ▶️ Usage
+## Usage
 
 ### Install
 ```shell script
@@ -39,7 +39,7 @@ yarn build && yarn parse <fixtures/program.dg
 yarn build && yarn parse <fixtures/rocket.dg
 ```
 
-## 🗺️ Roadmap
+## Roadmap
 
 * Clean up the Nearley output using functions
 * Build a representation of the program from the parse tree
