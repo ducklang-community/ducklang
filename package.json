@@ -1,8 +1,9 @@
 {
-  "name": "oblong",
+  "name": "ducklang",
   "version": "0.1.0",
   "main": "src/index.js",
-  "repository": "github:aliclark/oblong",
+  "homepage": "https://ducklang.community",
+  "repository": "github:aliclark/ducklang",
   "author": "Ali Clark",
   "license": "MIT",
   "scripts": {
