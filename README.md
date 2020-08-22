@@ -1,6 +1,6 @@
 # 🐥 Ducklang
 
-*"No PhD required!"*
+*No PhD required!*
 
 ## Install
 ```shell script
