@@ -6,7 +6,7 @@
 
 Ducklang is a duck-typed programming language with an emphasis on readability of the language.
 
-### Principles
+### 🦆 Principles
 
 * **Duck typing**: Testing over typing - a good type system can get complex, while a good integration suite can give peace of mind
 * **Encapsulation**: The language is completely object oriented, with all state held in objects
@@ -19,16 +19,16 @@ Ducklang is a duck-typed programming language with an emphasis on readability of
 * **Extensibility**: most operators expand into method calls, so you aren't tied by what comes shipped with the language
 * **Separation of Concerns**: all code is stand-alone and can be "mixed-in" with existing types, allowing for smaller modules which do one thing and do it well
 
-### Examples
+### 📄 Examples
 
 Please see code examples in the [fixtures](fixtures/) directory
 
-## Install
+## ⬇️ Install
 ```shell script
 yarn
 ```
 
-## Run
+## ▶️ Run
 ```shell script
 yarn build && yarn parse <fixtures/getOrDefault.dg
 yarn build && yarn parse <fixtures/run.dg
@@ -36,7 +36,7 @@ yarn build && yarn parse <fixtures/program.dg
 yarn build && yarn parse <fixtures/rocket.dg
 ```
 
-## Discuss
+## 👋 Chat
 
 * [Slack](https://join.slack.com/t/ducklang/shared_invite/zt-gt4ne6er-zASbb3R5p68g2jddKyqFOw)
 * [Matrix](https://matrix.to/#/%23Ducklang%3Amatrix.org)
