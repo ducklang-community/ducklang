@@ -7,8 +7,8 @@
   "author": "Ali Clark",
   "license": "MIT",
   "scripts": {
-    "build": "yarn run nearleyc src/grammar.ne -o src/grammar.js",
-    "start": "node src/index.js"
+    "build": "mkdir -p dist && yarn run nearleyc src/grammar.ne -o dist/grammar.js",
+    "parse": "nearley-test dist/grammar.js"
   },
   "dependencies": {
     "moo": "^0.5.1",
