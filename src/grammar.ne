@@ -51,28 +51,26 @@ const lexer = new IndentationLexer({
 
 @lexer lexer
 
+lineList[DEFINITION] -> (%comma %NL $DEFINITION):+
+spaceSeparated[SEGMENT] -> _ $SEGMENT | %NL %INDENT ____:+ $SEGMENT %NL %DEDENT
+
 main -> %NL using:? method:+
 
 using -> annotatedComment:* %Using dependencies %NL
 
-# TODO: List comprehensions
-
 method -> annotatedComment:* name (%_ %With _ parametersGroup):? %colon %NL
-    %INDENT
-    (%NL:? ____ commentedStatement):+
-    %DEDENT
+	indentedCommentedStatements
 
 if -> %If _ expression %colon %NL
-    %INDENT
-    (%NL:? ____:+ commentedStatement):+
-    %DEDENT
+		indentedCommentedStatements
     (%NL:? ____:+ %Otherwise %colon %NL
-    %INDENT
-    (%NL:? ____:+ commentedStatement):+
-    %DEDENT):?
+		indentedCommentedStatements):?
 
 for -> %For _ name _ %In _ expression %colon %NL
-    %INDENT
+	indentedCommentedStatements
+
+
+indentedCommentedStatements -> %INDENT
     (%NL:? ____:+ commentedStatement):+
     %DEDENT
 
@@ -88,6 +86,7 @@ statement -> methodCall %NL
     | %name (%dot %name):? _ %plusEqual _ expression %NL
     | %expandEqual _ expression %NL
     | %Returns _ expression %NL
+
 
 expression -> name
     | expression %dot name
@@ -111,10 +110,10 @@ expression -> name
 
 ifExpression -> expression _ %If _ expression _ %Otherwise _ expression
 
-listComprehension -> %leftBracket expression _ %For _ name _ %In _ expression (_ %If _ expression):? %rightBracket
+listComprehension -> %leftBracket expression (_ %For _ name _ %In _ expression):+ (_ %If _ expression):? %rightBracket
 
 
-methodCall -> name (_ %Of):? _ expression (_ %With methodArguments):? (_ %Otherwise _ %Default _ expression):?
+methodCall -> name (_ %Of):? _ expression (_ %With methodArguments):? (spaceSeparated[%Otherwise _ %Default _ expression]):?
 
 
 methodArguments -> _ dictionaryLine
@@ -125,7 +124,7 @@ tabbedDictionaryGroup -> %INDENT
     tabbedDictionaryLine tabbedDictionaryLineList:? %comma:? %NL
     %DEDENT
 
-tabbedDictionaryLineList -> (%comma %NL tabbedDictionaryLine):+
+tabbedDictionaryLineList -> lineList[tabbedDictionaryLine]
 tabbedDictionaryLine -> ____:+ dictionaryLine
 
 dictionaryLine -> dictionaryDefinition dictionaryList:?
@@ -144,11 +143,11 @@ tabbedDependencyGroup -> %INDENT
     tabbedDependencyLine tabbedDependencyLineList:? %comma:? %NL
     %DEDENT
 
-tabbedDependencyLineList -> (%comma %NL tabbedDependencyLine):+
+tabbedDependencyLineList -> lineList[tabbedDependencyLine]
 tabbedDependencyLine -> ____:+ dependencyLine
 
 dependencyLine -> name dependencyList:?
-dependencyList -> (%comma _:+ name):+
+dependencyList -> (%comma _ name):+
 
 
 parametersGroup -> parameter (%comma _ parameter):*
