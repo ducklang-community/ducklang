@@ -1,9 +1,9 @@
 
-using categories, log, BetterLookupsConcept,
+using categories, log, BetterLookupConcept,
 	Blaster, TurboConcept, RocketConcept, RocketFix
 
 run:
-	extend categories.lookup with software: (use BetterLookupsConcept with log)
+	extend categories.lookup with software: (use BetterLookupConcept with log)
 
 	NicerRocketFix = rename RocketFix with
 		init: 'initRocketFix'
