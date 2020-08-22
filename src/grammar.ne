@@ -80,7 +80,8 @@ for -> %For _ name _ %In _ expression %colon %NL
 
 commentedStatement -> annotatedComment:* statement
 
-annotatedComment -> name:? %comment %NL
+annotatedComment -> annotation _ %comment %NL
+annotation -> "note" | "idea" | "todo"
 
 statement -> methodCall %NL
     | if
