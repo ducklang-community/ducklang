@@ -32,7 +32,6 @@ const lexer = new IndentationLexer({
         name: {
             match: /\w*[a-zA-Z]\w*/,
             type: moo.keywords({
-                Using: 'using',
                 Otherwise: 'otherwise',
                 Default: 'default',
                 With: 'with',
@@ -54,9 +53,9 @@ const lexer = new IndentationLexer({
 lineList[DEFINITION] -> (%comma %NL $DEFINITION):+
 spaceSeparated[SEGMENT] -> _ $SEGMENT | %NL %INDENT ____:+ $SEGMENT %NL %DEDENT
 
-main -> %NL using:? method:+
+main -> %NL use:? method:+
 
-using -> annotatedComment:* %Using dependencies %NL
+use -> annotatedComment:* "use" dependencies %NL
 
 method -> annotatedComment:* name (%_ %With _ parametersGroup):? %colon %NL
 	indentedCommentedStatements
