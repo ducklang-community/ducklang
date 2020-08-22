@@ -8,9 +8,10 @@ engageBoosters with thrust, angle otherwise 0.0, color otherwise 'green':
 	checksResult = preCheck blaster with angle, thrust
 	variable.stage += 1
 
-	info log with message: `Pre-checks complete! ...(checksResult)`
+	info log with message: `Pre-checks complete! {checksResult}`
 
-	ableToTurbo = isSufficient turbo with { angle, thrust, size: usage of self } otherwise default no
+	ableToTurbo = isSufficient turbo with { angle, thrust, size: usage of self }
+		otherwise default no
 
 	if not ableToTurbo:
 		variable.stage += 2

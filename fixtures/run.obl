@@ -14,7 +14,7 @@ run:
 		RocketFix:     { author: 'rick',  version: '0.0.2' },
 		Program:       { author: 'clive', version: '4.0.0' },
 
-	program = new Program with categories, BetterDictionaries, log,
+	program = new Program with categories, log, BetterLookupsConcept,
 		Blaster, TurboConcept, RocketConcept, RocketFix
 
 	run program

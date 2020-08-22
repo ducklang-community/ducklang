@@ -1,20 +1,19 @@
 
-using categories, BetterDictionaries, log,
+using categories, log, BetterLookupsConcept,
 	Blaster, TurboConcept, RocketConcept, RocketFix
 
 run:
-	extend categories.dictionary with software: (use BetterDictionaries with log)
+	extend categories.lookup with software: (use BetterLookupsConcept with log)
 
 	NicerRocketFix = rename RocketFix with
-		init: 'initRocketFix',
-		logging: 'log'
+		init: 'initRocketFix'
 
 	blaster = new Blaster
 
 	turbo = new of (use TurboConcept with log)
 
 	basicCategories = readOnly of categories with
-		names: ['dictionary', 'number', 'list', 'text', 'rational']
+		names: ['lookup', 'number', 'list', 'text', 'rational']
 
 	Rocket = use RocketConcept with categories: basicCategories, log
 	categories.rocket = new of categories with software: [Rocket, NicerRocketFix]
