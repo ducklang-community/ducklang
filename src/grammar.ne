@@ -39,8 +39,6 @@ const lexer = new IndentationLexer({
                 Of: 'of',
                 Returns: 'returns',
                 If: 'if',
-                Or: 'or',
-                Else: 'else',
                 Repeat: 'repeat',
                 For: 'for',
                 In: 'in',
@@ -68,7 +66,7 @@ if -> %If _ expression %colon %NL
     %INDENT
     (%NL:? ____:+ commentedStatement):+
     %DEDENT
-    (%NL:? ____:+ %Or _ %Else %colon %NL
+    (%NL:? ____:+ %Otherwise %colon %NL
     %INDENT
     (%NL:? ____:+ commentedStatement):+
     %DEDENT):?
@@ -111,7 +109,7 @@ expression -> name
     | %leftParen expression %rightParen
 
 
-ifExpression -> expression _ %If _ expression _ %Or _ %Else _ expression
+ifExpression -> expression _ %If _ expression _ %Otherwise _ expression
 
 listComprehension -> %leftBracket expression _ %For _ name _ %In _ expression (_ %If _ expression):? %rightBracket
 

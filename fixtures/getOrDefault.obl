@@ -2,5 +2,5 @@
 getOrSubstitute with name, substitute:
 	if exists of self with name:
 		returns get of self with name
-	or else:
+	otherwise:
 		returns substitute
