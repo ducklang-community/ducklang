@@ -22,7 +22,7 @@ engageBoosters with thrust, angle otherwise 0.0, color otherwise 'green':
 	variable.cache = map [1, 2, 3] with mapping: (function of x: returns x * x)
 	variable.cache = [x * x for x in [1, 2, 3] if x > 1]
 
-	status = 'green light' if ableToTurbo or else 'red light'
+	status = 'green light' if ableToTurbo otherwise 'red light'
 
 	for x in iterator of turbo:
 		variable.stage += 1
