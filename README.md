@@ -1,5 +1,3 @@
-# oblong
-## (Mallard?)
+# 🐥 Ducklang
 
-> No PhD needed
-
+*"No PhD required!"*
