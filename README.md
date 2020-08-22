@@ -19,6 +19,10 @@ Ducklang is a duck-typed programming language with an emphasis on readability of
 * Extensibility: most operators expand into method calls, so you aren't tied by what comes shipped with the language
 * Separation of Concerns: all code is stand-alone and can be "mixed-in" with existing types, allowing for smaller modules which do one thing and do it well
 
+### Examples
+
+Please see code examples in the [](fixtures/) directory
+
 ## Install
 ```shell script
 yarn
