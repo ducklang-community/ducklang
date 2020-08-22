@@ -1,5 +1,5 @@
 
-using software, categories
+use software, categories
 
 note "This is the main software"
 run:

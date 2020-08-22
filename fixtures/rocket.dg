@@ -1,5 +1,5 @@
 
-using categories, errors, log, harness, blaster, turbo, offset
+use categories, errors, log, harness, blaster, turbo, offset
 
 engageBoosters with thrust, angle otherwise 0.0, color otherwise 'green':
 	variable = {}
