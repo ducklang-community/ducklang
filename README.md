@@ -18,6 +18,7 @@ Ducklang is a duck-typed programming language with an emphasis on readability of
 * **Named arguments**: methods calls pass arguments by name, for readability and ease of code evolution
 * **Extensibility**: most operators expand into method calls, so you aren't tied by what comes shipped with the language
 * **Separation of Concerns**: all code is stand-alone and can be "mixed-in" with existing types, allowing for smaller modules which do one thing and do it well
+* **Uniform**: emphasis on the object oriented paradigm, and uniform whitespace make "other people's code" nicer to see!
 
 ### Code examples
 
@@ -43,7 +44,7 @@ yarn build && yarn parse <fixtures/rocket.dg
 * Clean up the Nearley output using functions
 * Build a representation of the program from the parse tree
 
-## 👋 Chat
+## 👋 Say hi
 
 * [Slack](https://join.slack.com/t/ducklang/shared_invite/zt-gt4ne6er-zASbb3R5p68g2jddKyqFOw)
 * [Matrix](https://matrix.to/#/%23ducklang%3Amatrix.org)
