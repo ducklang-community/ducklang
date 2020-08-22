@@ -1,9 +1,9 @@
 
-using type, BetterDictionaries, log,
+using categories, BetterDictionaries, log,
 	Blaster, TurboConcept, RocketConcept, RocketFix
 
 run:
-	extend type.dictionary with software: (use BetterDictionaries with log)
+	extend categories.dictionary with software: (use BetterDictionaries with log)
 
 	NicerRocketFix = rename RocketFix with
 		init: 'initRocketFix',
@@ -13,11 +13,11 @@ run:
 
 	turbo = new of (use TurboConcept with log)
 
-	basicTypes = readOnly of type with
+	basicCategories = readOnly of categories with
 		names: ['dictionary', 'number', 'list', 'text', 'rational']
 
-	Rocket = use RocketConcept with type: basicTypes, log
-	type.rocket = new type with software: [Rocket, NicerRocketFix]
-	rocket = new of type.rocket with blaster, turbo, offset: 720
+	Rocket = use RocketConcept with categories: basicCategories, log
+	categories.rocket = new of categories with software: [Rocket, NicerRocketFix]
+	rocket = new of categories.rocket with blaster, turbo, offset: 720
 
 	engageBoosters of rocket with angle: 93.4, thrust: 42

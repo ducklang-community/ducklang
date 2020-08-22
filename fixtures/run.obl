@@ -1,10 +1,10 @@
 
-using software, type
+using software, categories
 
 "This is the main software"
 run:
 	BaseConcept = import software with id: 717189784315811721173404183
-	Base = use BaseConcept with type, software
+	Base = use BaseConcept with software, categories
 	...= init new Base
 
 	...= import software with
@@ -14,7 +14,7 @@ run:
 		RocketFix:     { author: 'rick',  version: '0.0.2' },
 		Program:       { author: 'clive', version: '4.0.0' },
 
-	program = new Program with type, BetterDictionaries, log,
+	program = new Program with categories, BetterDictionaries, log,
 		Blaster, TurboConcept, RocketConcept, RocketFix
 
 	run program
