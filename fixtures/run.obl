@@ -1,7 +1,7 @@
 
 using software, categories
 
-"This is the main software"
+note "This is the main software"
 run:
 	BaseConcept = import software with id: 717189784315811721173404183
 	Base = use BaseConcept with software, categories
