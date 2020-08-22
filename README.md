@@ -35,3 +35,8 @@ yarn build && yarn parse <fixtures/run.dg
 yarn build && yarn parse <fixtures/program.dg
 yarn build && yarn parse <fixtures/rocket.dg
 ```
+
+## Discuss
+
+* [Slack](https://join.slack.com/t/ducklang/shared_invite/zt-gt4ne6er-zASbb3R5p68g2jddKyqFOw)
+* [Matrix](https://matrix.to/#/%23Ducklang%3Amatrix.org)
