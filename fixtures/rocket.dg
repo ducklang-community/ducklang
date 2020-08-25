@@ -1,30 +1,53 @@
 
-use categories, errors, log, harness, blaster, turbo, offset
+use category,
+    errors,
+    log,
+    harness,
+    blaster,
+    turbo,
+    offset
 
-engageBoosters with thrust, angle otherwise 0.0, color otherwise 'green':
-	variable = {}
-	variable.stage = 0
+
+engageBoosters of self with thrust,
+                            angle  otherwise 0.0,
+                            color  otherwise 'green':
 
 	checksResult = preCheck blaster with angle, thrust
-	variable.stage += 1
 
-	info log with message: `Pre-checks complete! {checksResult}`
+	info log with message: 'Hi {name}! Your favourite drink is {drink}.'
 
-	ableToTurbo = isSufficient turbo with { angle, thrust, size: usage of self }
-		otherwise default no
+	turboState = state of turbo with { angle, thrust,
+	                                   size: usage of self } otherwise default 'poor'
 
-	if not ableToTurbo:
-		variable.stage += 2
-		returns 'abort'
+	when turboState
+		is 'good':
+			info log with message: 'Turbo is go!'
+			result launchBoosters of self with angle, thrust, turboState
 
-	z = getOrSubstitute variable with name: 'stage', substitute: 9
+		is 'okay':
+			warning log with message: 'Turbo is iffy :/'
+			result launchBoosters of self with angle, thrust, turboState
 
-	variable.cache = map [1, 2, 3] with mapping: (function of x: returns x * x)
-	variable.cache = [x * x for x in [1, 2, 3] if x > 1]
+		otherwise:
+			result 'stopped'
 
-	status = 'green light' if ableToTurbo otherwise 'red light'
 
-	for x in iterator of turbo:
-		variable.stage += 1
+launchBoosters of self with thrust,
+                            angle      otherwise 0.0,
+                            turboState otherwise 'unknown':
 
-	returns boost blaster with stage.: variable, thrust, angle, offset, color
+	variable = new of category.data
+	variable.stage = 0
+
+	squaring = function of x: result x * x
+	numbers = [1, 2, 3]
+
+	variable.cache = resultFromEach of numbers with square
+
+	for every x in turbo,
+		variable.stage =+ 1
+		engage turbo with thruster: x
+
+	result boost blaster with { stage:. variable, thrust,
+	                            angle, offset, color } otherwise default 'done'
+

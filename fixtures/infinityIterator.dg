@@ -1,0 +1,9 @@
+
+use state
+
+
+next of self:
+	count = state.counter otherwise default 0
+	state.counter = count + 1
+	result count
+

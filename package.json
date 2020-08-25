@@ -8,11 +8,12 @@
   "license": "MIT",
   "scripts": {
     "build": "mkdir -p dist && yarn run nearleyc src/grammar.ne -o dist/grammar.js",
-    "parse": "nearley-test dist/grammar.js"
+    "parse": "nearley-test dist/grammar.js",
+    "parse-fixtures": "yarn build && for file in fixtures/*; do yarn parse <$file; echo; echo $file parsed; echo; echo; sleep 2; done"
   },
   "dependencies": {
     "moo": "^0.5.1",
-    "moo-indentation-lexer": "^3.3.1",
+    "moo-indentation-lexer": "^4.0.0",
     "nearley": "^2.19.5"
   }
 }

@@ -19,6 +19,7 @@ Ducklang is a duck-typed programming language with an emphasis on readability of
 * **Extensibility**: most operators expand into method calls, so you aren't tied by what comes shipped with the language
 * **Separation of Concerns**: all code is stand-alone and can be "mixed-in" with existing types, allowing for smaller modules which do one thing and do it well
 * **Uniformity**: emphasis on the object oriented paradigm, and uniform whitespace make "other people's code" nicer to see!
+* **Error propagation**: Errors are held in Result objects like Rust, however the behaviour is inverted - every error is returned immediately to the caller unless the `?=` operator is used
 
 ### Code examples
 
@@ -33,10 +34,13 @@ yarn
 
 ### Run
 ```shell script
-yarn build && yarn parse <fixtures/getOrSubstitute.dg
-yarn build && yarn parse <fixtures/run.dg
-yarn build && yarn parse <fixtures/program.dg
+yarn build && yarn parse <fixtures/infinityIterator.dg
+yarn build && yarn parse <fixtures/infinity.dg
+yarn build && yarn parse <fixtures/mapping.dg
+yarn build && yarn parse <fixtures/numberRanges.dg
 yarn build && yarn parse <fixtures/rocket.dg
+yarn build && yarn parse <fixtures/program.dg
+yarn build && yarn parse <fixtures/run.dg
 ```
 
 ## Roadmap
