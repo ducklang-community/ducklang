@@ -4,15 +4,24 @@ const IndentationLexer = require('moo-indentation-lexer');
 
 const lexer = new IndentationLexer({
     lexer: moo.compile({
-
-        literal: /"(?:\\["\\]|[^\n"\\])*"/,
+        literal: /`(?:\\[`\\]|[^\n`\\])*`/,
         text: /'(?:\\['\\]|[^\n'\\])*'/,
 
         decimalNumber: /-?[0-9]+\.[0-9]+/,
         digitNumber: /0|-?[1-9][0-9]*/,
         hexNumber: /0x0|0x[1-9a-f][0-9a-f]*/,
 
-		name: /[a-zA-Z]+[a-zA-Z0-9]*/,
+		name: {
+			match: /[a-zA-Z]+[a-zA-Z0-9]*/,
+			type: moo.keywords({
+				when: 'when',
+				For: 'for',
+				result: 'result',
+				collect: 'collect',
+				of: 'of',
+				With: 'with',
+			})
+		},
 
         newline: { match: /\n/, lineBreaks: true },
         _: ' ',
@@ -31,7 +40,7 @@ const lexer = new IndentationLexer({
         updateMinus: '=-',
         set: '=',
 
-		expand: '...'
+		expand: '...',
         locatorDefine: ':.',
         define: ':',
         locator: '.',
@@ -45,10 +54,10 @@ const lexer = new IndentationLexer({
 });
 %}
 
+# TODO: Make comments not be ambiguous with a method call on a literal.
+
 @lexer lexer
 
-@builtin "number.ne"
-@builtin "string.ne"
 @builtin "postprocessors.ne"
 
 does[operator] -> $operator _ expression newline
@@ -61,68 +70,65 @@ standalone[definition] -> newline:?
 	____:+ $definition
 
 indented[definition] -> newline indent $definition dedent
-blockOf[$definition] -> indented[standalone[$definition]]
+blockOf[definition]  -> indented[standalone[$definition]:+]
 
-list[definition]    -> delimited[$definition, ("," _)]
 items[definition]   -> delimited[$definition, ("," _:+)]
-listing[definition] -> delimited[$definition, ("," newline)]
+listing[definition] -> delimited[$definition, ("," newline)] ",":?
 
-flowing[definition] ->
-	  list[$definition]
-	| items[$definition] ("," newline _:+ items[$definition]):+
+flowing[definition] -> items[$definition] ("," newline
+	____:* _:+ items[$definition]):*
 
-listed[adjusted, definition] -> listing[
+listed[adjusted, definition] -> listing[(
 		($adjusted comment):*
-		$adjusted $definition
-	]
+		 $adjusted $definition
+	)]
 
-elongated[adjusted, definition] -> $definition (","
+elongated[adjusted, definition] -> $definition ("," newline
 		listed[$adjusted, $definition]
 	):?
 
 listingBlock[definition] ->
-	indented[
-		listed[____, $definition] newline
-	]
+	indented[(
+		listed[____:+, $definition] newline
+	)]
 
 
 main ->
 	newline
 	use:?
 	method:+
-	newline
 
 use ->
 	commented
 	"use" _
-	elongated[(_ _ _ _), name]
+	elongated[(_ _ _ _), name] newline
+	newline
 
 method ->
 	newline
 	commented
-	name (_ "of"):? _ name (_ "with" _
+	name (_ of):? _ name (_ with _
 	elongated[(_ _ _ _ _ _ _ _ _:+), parameter]):? ":"
 		blockOf[statement]
 	newline
 
-
-for -> "for" _ "every" _ name _ "in" _ expression ","
+for -> for _ "every" _ name _ "in" _ expression ","
 	blockOf[statement]
 
-when -> "when" _ expression
-	indented[
-		(standalone["is" _ expression ":" (_:+ statement
-			| blockOf[statement])]):+
+when -> when _ expression
+	indented[(
+		(standalone[("is" _ expression ":" (_:+ statement
+			| blockOf[statement]))]):+
 
-    	(standalone["otherwise" ":" (_:+ statement
-			| blockOf[statement])]):?
-	]
+    	(standalone[("otherwise" ":" (_:+ statement
+			| blockOf[statement]))]):?
+	)]
 
 
 statement ->
 	  "stop" newline
 	| "skip" newline
-    | assignmentOf[("function" _ "of" _ flowing[parameter] ":" _ "result" _ expression)]
+    | assignmentOf[("function" _ of _ flowing[parameter] ":" _ result _ expression)]
 	| assignmentOf[("[" flowing[expression] "]")]
 	| assignmentOf[("{" _ flowing[dataDefinition] _ "}")]
 	| assignmentOf[listBlock]
@@ -132,9 +138,9 @@ statement ->
     | assignment["=/"]
     | assignment["=+"]
     | assignment["=-"]
-    | does["collect"]
-    | does["result"]
-	| methodExecution
+    | does[collect]
+    | does[result]
+	| methodExecution newline
     | when
     | for
 
@@ -148,37 +154,41 @@ expression ->
     | methodExecution
 
 methodExecution ->
-	  name (_ "of"):? _ expression
-	| name (_ "of"):? _ expression _ "otherwise" _ "default" _ expression
-	| name (_ "of"):? _ expression _ "with" _ flowing[dataDefinition]
-	| name (_ "of"):? _ expression _ "with" _ "{" _ flowing[dataDefinition] _ "}" (_ "otherwise" _ "default" _ expression):?
-	| name (_ "of"):? _ expression _ "with"
+	  name (_ of):? _ expression
+	| name (_ of):? _ expression _ "otherwise" _ "default" _ expression
+	| name (_ of):? _ expression _ with _ flowing[dataDefinition]
+	| name (_ of):? _ expression _ with _ "{" _ flowing[dataDefinition] _ "}" (_ "otherwise" _ "default" _ expression):?
+	| name (_ of):? _ expression _ with
 		listingBlock[dataDefinition]
-	| name (_ "of"):? _ expression _ "with" _ enclosedDataBlock
-		(newline "otherwise" _ "default" _ expression):?
+	| name (_ of):? _ expression _ with _ enclosedDataBlock
+		(newline ____:+ "otherwise" _ "default" _ expression):?
 
 
 listBlock ->  "["
 		listingBlock[flowing[expression]]
-	"]"
+	____:+ "]"
 
 
 dataBlock -> listingBlock[dataDefinition] | enclosedDataBlock
 
 enclosedDataBlock ->  "{"
 		listingBlock[dataDefinition]
-	"}"
+	____:+ "}"
 
 
 dataDefinition ->
 	  simple ((":" | ":.") _:+ expression):?
-	| "..." "{" flowing[simple] "}" ":" _ expression
+	| simple ":" _:+ "[" flowing[expression] "]"
+	| simple ":" _:+ "{" _ flowing[dataDefinition] _ "}"
+	| "..." "{" _ flowing[simple] _ "}" ":" _ expression
 
-parameter -> name (_:+ "otherwise" _ expression):?
+parameter ->
+	  name (_:+ "otherwise" _ expression):?
+	| "..." name
 
 
 commented -> comment:*
-comment -> annotation _ literal newline
+comment -> annotation literal newline
 annotation -> "note" | "idea" | "todo"
 
 
@@ -191,9 +201,16 @@ simple ->
 	| literal
 	| text
 
-literal -> dqstring
-text -> sqstring
-decimalNumber -> decimal
+when -> %when
+for -> %For
+result -> %result
+collect -> %collect
+of -> %of
+with -> %With
+
+literal -> %literal
+text -> %text
+decimalNumber -> %decimalNumber
 digitNumber -> %digitNumber
 
 newline -> %newline

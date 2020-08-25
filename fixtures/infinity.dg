@@ -1,0 +1,10 @@
+
+use category,
+    infinityIteratorConcept
+
+
+iterator of self:
+	state = new of category.data
+	InfinityIterator = use infinityIteratorConcept with state
+	result new InfinityIterator
+
