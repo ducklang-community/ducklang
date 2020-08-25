@@ -4,156 +4,201 @@ const IndentationLexer = require('moo-indentation-lexer');
 
 const lexer = new IndentationLexer({
     lexer: moo.compile({
-        comment: /"(?:\\["\\]|[^\n"\\])*"/,
-        string: /'(?:\\['\\]|[^\n'\\])*'/,
-        interpolation: /`(?:\\[`\\]|[^\n`\\])*`/,
-        NL: { match: /\n/, lineBreaks: true },
-        _: / /,
-        ____: /\t/,
-        expandEqual: '...=',
-        plusEqual: '+=',
-        assign: '=',
-        dotDefine: '.:',
-        colon: ':',
-        dot: '.',
-        comma: ',',
+
+        literal: /"(?:\\["\\]|[^\n"\\])*"/,
+        text: /'(?:\\['\\]|[^\n'\\])*'/,
+
+        decimalNumber: /-?[0-9]+\.[0-9]+/,
+        digitNumber: /0|-?[1-9][0-9]*/,
+        hexNumber: /0x0|0x[1-9a-f][0-9a-f]*/,
+
+		name: /[a-zA-Z]+[a-zA-Z0-9]*/,
+
+        newline: { match: /\n/, lineBreaks: true },
+        _: ' ',
+        ____: '\t',
+
         leftParen: '(',
         rightParen: ')',
         leftBrace: '{',
         rightBrace: '}',
         leftBracket: '[',
         rightBracket: ']',
-        greater: '>',
-        times: '*',
-        decimalNumber: /[0-9]+\.[0-9]+/,
-        digitNumber: /0|[1-9][0-9]*/,
-        hexNumber: /0x0|0x[1-9a-f][0-9a-f]*/,
 
-        name: {
-            match: /\w*[a-zA-Z]\w*/,
-            type: moo.keywords({
-                Otherwise: 'otherwise',
-                Default: 'default',
-                With: 'with',
-                Of: 'of',
-                Returns: 'returns',
-                If: 'if',
-                Repeat: 'repeat',
-                For: 'for',
-                In: 'in',
-                Function: 'function'
-            })
-        },
+        updateTimes: '=*',
+        updateDividedBy: '=/',
+        updatePlus: '=+',
+        updateMinus: '=-',
+        set: '=',
+
+		expand: '...'
+        locatorDefine: ':.',
+        define: ':',
+        locator: '.',
+        separator: ',',
+
+        times: '*',
+        dividedBy: '/',
+        plus: '+',
+        minus: '-',
     })
 });
 %}
 
 @lexer lexer
 
-lineList[DEFINITION] -> (%comma %NL $DEFINITION):+
-spaceSeparated[SEGMENT] -> _ $SEGMENT | %NL %INDENT ____:+ $SEGMENT %NL %DEDENT
+@builtin "number.ne"
+@builtin "string.ne"
+@builtin "postprocessors.ne"
 
-main -> %NL use:? method:+
+does[operator] -> $operator _ expression newline
+assignmentWith[operator, expression] -> location _ $operator _ $expression newline
+assignmentOf[expression] -> assignmentWith["=",       $expression]
+assignment[operator]     -> assignmentWith[$operator, expression]
 
-use -> annotatedComment:* "use" dependencies %NL
+standalone[definition] -> newline:?
+	(____:+ comment):*
+	____:+ $definition
 
-method -> annotatedComment:* name (%_ %With _ parametersGroup):? %colon %NL
-	indentedCommentedStatements
+indented[definition] -> newline indent $definition dedent
+blockOf[$definition] -> indented[standalone[$definition]]
 
-if -> %If _ expression %colon %NL
-		indentedCommentedStatements
-    (%NL:? ____:+ %Otherwise %colon %NL
-		indentedCommentedStatements):?
+list[definition]    -> delimited[$definition, ("," _)]
+items[definition]   -> delimited[$definition, ("," _:+)]
+listing[definition] -> delimited[$definition, ("," newline)]
 
-for -> %For _ name _ %In _ expression %colon %NL
-	indentedCommentedStatements
+flowing[definition] ->
+	  list[$definition]
+	| items[$definition] ("," newline _:+ items[$definition]):+
+
+listed[adjusted, definition] -> listing[
+		($adjusted comment):*
+		$adjusted $definition
+	]
+
+elongated[adjusted, definition] -> $definition (","
+		listed[$adjusted, $definition]
+	):?
+
+listingBlock[definition] ->
+	indented[
+		listed[____, $definition] newline
+	]
 
 
-indentedCommentedStatements -> %INDENT
-    (%NL:? ____:+ commentedStatement):+
-    %DEDENT
+main ->
+	newline
+	use:?
+	method:+
+	newline
 
-commentedStatement -> annotatedComment:* statement
+use ->
+	commented
+	"use" _
+	elongated[(_ _ _ _), name]
 
-annotatedComment -> annotation _ %comment %NL
+method ->
+	newline
+	commented
+	name (_ "of"):? _ name (_ "with" _
+	elongated[(_ _ _ _ _ _ _ _ _:+), parameter]):? ":"
+		blockOf[statement]
+	newline
+
+
+for -> "for" _ "every" _ name _ "in" _ expression ","
+	blockOf[statement]
+
+when -> "when" _ expression
+	indented[
+		(standalone["is" _ expression ":" (_:+ statement
+			| blockOf[statement])]):+
+
+    	(standalone["otherwise" ":" (_:+ statement
+			| blockOf[statement])]):?
+	]
+
+
+statement ->
+	  "stop" newline
+	| "skip" newline
+    | assignmentOf[("function" _ "of" _ flowing[parameter] ":" _ "result" _ expression)]
+	| assignmentOf[("[" flowing[expression] "]")]
+	| assignmentOf[("{" _ flowing[dataDefinition] _ "}")]
+	| assignmentOf[listBlock]
+	| assignmentOf[dataBlock]
+    | assignment["="]
+    | assignment["=*"]
+    | assignment["=/"]
+    | assignment["=+"]
+    | assignment["=-"]
+    | does["collect"]
+    | does["result"]
+	| methodExecution
+    | when
+    | for
+
+expression ->
+	  location (_ "otherwise" _ "default" _ expression):?
+    | simple
+    | expression _ "+" _ expression
+    | expression _ "-" _ expression
+    | expression _ "*" _ expression
+    | expression _ "/" _ expression
+    | methodExecution
+
+methodExecution ->
+	  name (_ "of"):? _ expression
+	| name (_ "of"):? _ expression _ "otherwise" _ "default" _ expression
+	| name (_ "of"):? _ expression _ "with" _ flowing[dataDefinition]
+	| name (_ "of"):? _ expression _ "with" _ "{" _ flowing[dataDefinition] _ "}" (_ "otherwise" _ "default" _ expression):?
+	| name (_ "of"):? _ expression _ "with"
+		listingBlock[dataDefinition]
+	| name (_ "of"):? _ expression _ "with" _ enclosedDataBlock
+		(newline "otherwise" _ "default" _ expression):?
+
+
+listBlock ->  "["
+		listingBlock[flowing[expression]]
+	"]"
+
+
+dataBlock -> listingBlock[dataDefinition] | enclosedDataBlock
+
+enclosedDataBlock ->  "{"
+		listingBlock[dataDefinition]
+	"}"
+
+
+dataDefinition ->
+	  simple ((":" | ":.") _:+ expression):?
+	| "..." "{" flowing[simple] "}" ":" _ expression
+
+parameter -> name (_:+ "otherwise" _ expression):?
+
+
+commented -> comment:*
+comment -> annotation _ literal newline
 annotation -> "note" | "idea" | "todo"
 
-statement -> methodCall %NL
-    | if
-    | for
-    | %name (%dot %name):? _ %assign _ expression %NL
-    | %name (%dot %name):? _ %plusEqual _ expression %NL
-    | %expandEqual _ expression %NL
-    | %Returns _ expression %NL
 
+location -> name ("." simple):?
 
-expression -> name
-    | expression %dot name
-    | %digitNumber
-    | %decimalNumber
-    | %string
-    | %interpolation
-    | expression _ %times _ expression
-    | expression _ %greater _ expression
-    | %leftBracket %rightBracket
-    | %leftBracket listGroup %rightBracket
-    | %leftBrace %rightBrace
-    | %leftBrace _ dictionaryLine _ %rightBrace
-    | tabbedDictionaryGroup
-    | %Function (_ %Of _ parametersGroup):? %colon _ %Returns _ expression
-    | listComprehension
-    | ifExpression
-    | methodCall
-    | %leftParen expression %rightParen
+simple ->
+	  name
+	| digitNumber
+	| decimalNumber
+	| literal
+	| text
 
+literal -> dqstring
+text -> sqstring
+decimalNumber -> decimal
+digitNumber -> %digitNumber
 
-ifExpression -> expression _ %If _ expression _ %Otherwise _ expression
-
-listComprehension -> %leftBracket expression (_ %For _ name _ %In _ expression):+ (_ %If _ expression):? %rightBracket
-
-
-methodCall -> name (_ %Of):? _ expression (_ %With methodArguments):? (spaceSeparated[%Otherwise _ %Default _ expression]):?
-
-
-methodArguments -> _ dictionaryLine
-    | _ %leftBrace _ dictionaryLine _ %rightBrace
-    | (_ dictionaryLine %comma):? %NL tabbedDictionaryGroup
-
-tabbedDictionaryGroup -> %INDENT
-    tabbedDictionaryLine tabbedDictionaryLineList:? %comma:? %NL
-    %DEDENT
-
-tabbedDictionaryLineList -> lineList[tabbedDictionaryLine]
-tabbedDictionaryLine -> ____:+ dictionaryLine
-
-dictionaryLine -> dictionaryDefinition dictionaryList:?
-dictionaryList -> (%comma _:+ dictionaryDefinition):+
-
-dictionaryDefinition -> dictionaryName (dictionaryAssign _:+ expression):?
-dictionaryAssign -> %colon | %dotDefine
-
-dictionaryName -> name | %string
-
-
-dependencies -> _ dependencyLine %NL
-    | (_ dependencyLine %comma):? %NL tabbedDependencyGroup
-
-tabbedDependencyGroup -> %INDENT
-    tabbedDependencyLine tabbedDependencyLineList:? %comma:? %NL
-    %DEDENT
-
-tabbedDependencyLineList -> lineList[tabbedDependencyLine]
-tabbedDependencyLine -> ____:+ dependencyLine
-
-dependencyLine -> name dependencyList:?
-dependencyList -> (%comma _ name):+
-
-
-parametersGroup -> parameter (%comma _ parameter):*
-parameter -> name | name _ %Otherwise _ expression
-
-listGroup -> expression (%comma _ expression):*
-
+newline -> %newline
+indent -> %indent
+dedent -> %dedent
 name -> %name
 _ -> %_
 ____ -> %____
