@@ -1,6 +1,0 @@
-
-getOrSubstitute with name, substitute:
-	if exists of self with name:
-		returns get of self with name
-	otherwise:
-		returns substitute
