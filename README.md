@@ -8,18 +8,18 @@ Ducklang is a duck-typed programming language with an emphasis on readability of
 
 ### Principles
 
-* **Duck typing**: Testing over typing - a good type system can get complex, while a good integration suite can give peace of mind
-* **Encapsulation**: The language is completely object oriented, with all state held in objects
+* **Duck typing**: Testing over typing - a good type system can get complex while a good integration suite can give peace of mind
+* **Encapsulation**: The language is completely object oriented with all state held in objects
 * **Composition**: (over inheritance) - the quick wins of inheritance can lead to code structures that are hard to refactor
-* **Inversion of control**: Dependencies inject into modules, not the other way round
-* **Readability**: (over concision) - the code we tend to be most proud of is code that can be read almost like prose
-* **Promises**: Asynchronicity using promises and processes like JavaScript, however the `async`/`await` behaviour is inverted - everything is `await`'ed unless the `background` keyword is used
-* **Smart tabs**: Indentation-aware syntax like Python - tabs for indentation, and spaces for alignment
-* **Named arguments**: methods calls pass arguments by name, for readability and ease of code evolution
-* **Extensibility**: most operators expand into method calls, so you aren't tied by what comes shipped with the language
+* **Inversion of control**: Dependencies inject into modules not the other way round for better modularity
+* **Readability**: (over concision) - the code which we're most proud about tends to be code which reads like prose
+* **Promises**: Asynchronicity using promises and processes like JavaScript, but the `async`/`await` behaviour is inverted - everything is `await`'ed unless the `background` keyword is used
+* **Smart tabs**: Indentation-aware syntax like Python - tabs for indentation and spaces for alignment
+* **Named arguments**: methods calls pass arguments by name for readability and ease of code evolution
+* **Extensibility**: most operators expand into method calls so you aren't tied by what comes shipped with the language
 * **Separation of Concerns**: all code is stand-alone and can be "mixed-in" with existing types, allowing for smaller modules which do one thing and do it well
-* **Uniformity**: emphasis on the object oriented paradigm, and uniform whitespace make "other people's code" nicer to see!
-* **Error propagation**: Errors are held in Result objects like Rust, however the behaviour is inverted - every error is returned immediately to the caller unless the `?=` operator is used
+* **Uniformity**: emphasis on the object oriented paradigm and uniform whitespace makes the community's code much less irregular
+* **Error propagation**: Errors are signalled using Result objects as in Rust, but the behaviour is inverted - every error is returned immediately to the caller unless the `?=` operator is used
 
 ### Code examples
 
