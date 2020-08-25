@@ -34,13 +34,7 @@ yarn
 
 ### Run
 ```shell script
-yarn build && yarn parse <fixtures/infinityIterator.dg
-yarn build && yarn parse <fixtures/infinity.dg
-yarn build && yarn parse <fixtures/mapping.dg
-yarn build && yarn parse <fixtures/numberRanges.dg
-yarn build && yarn parse <fixtures/rocket.dg
-yarn build && yarn parse <fixtures/program.dg
-yarn build && yarn parse <fixtures/run.dg
+yarn parse-fixtures
 ```
 
 ## Roadmap
