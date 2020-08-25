@@ -14,12 +14,11 @@ const lexer = new IndentationLexer({
 		name: {
 			match: /[a-zA-Z]+[a-zA-Z0-9]*/,
 			type: moo.keywords({
-				when: 'when',
-				For: 'for',
 				result: 'result',
 				collect: 'collect',
 				of: 'of',
 				With: 'with',
+				otherwise: 'otherwise',
 			})
 		},
 
@@ -100,7 +99,7 @@ main ->
 
 use ->
 	commented
-	"use" _
+	use _
 	elongated[(_ _ _ _), name] newline
 	newline
 
@@ -112,23 +111,23 @@ method ->
 		blockOf[statement]
 	newline
 
-for -> for _ "every" _ name _ "in" _ expression ","
+for -> for _ every _ name _ in _ expression ","
 	blockOf[statement]
 
 when -> when _ expression
 	indented[(
-		(standalone[("is" _ expression ":" (_:+ statement
+		(standalone[(is _ expression ":" (_:+ statement
 			| blockOf[statement]))]):+
 
-    	(standalone[("otherwise" ":" (_:+ statement
+    	(standalone[(otherwise ":" (_:+ statement
 			| blockOf[statement]))]):?
 	)]
 
 
 statement ->
-	  "stop" newline
-	| "skip" newline
-    | assignmentOf[("function" _ of _ flowing[parameter] ":" _ result _ expression)]
+	  stop newline
+	| skip newline
+    | assignmentOf[(function _ of _ flowing[parameter] ":" _ result _ expression)]
 	| assignmentOf[("[" flowing[expression] "]")]
 	| assignmentOf[("{" _ flowing[dataDefinition] _ "}")]
 	| assignmentOf[listBlock]
@@ -145,7 +144,7 @@ statement ->
     | for
 
 expression ->
-	  location (_ "otherwise" _ "default" _ expression):?
+	  location (_ otherwise _ default _ expression):?
     | simple
     | expression _ "+" _ expression
     | expression _ "-" _ expression
@@ -155,13 +154,13 @@ expression ->
 
 methodExecution ->
 	  name (_ of):? _ expression
-	| name (_ of):? _ expression _ "otherwise" _ "default" _ expression
+	| name (_ of):? _ expression _ otherwise _ default _ expression
 	| name (_ of):? _ expression _ with _ flowing[dataDefinition]
-	| name (_ of):? _ expression _ with _ "{" _ flowing[dataDefinition] _ "}" (_ "otherwise" _ "default" _ expression):?
+	| name (_ of):? _ expression _ with _ "{" _ flowing[dataDefinition] _ "}" (_ otherwise _ default _ expression):?
 	| name (_ of):? _ expression _ with
 		listingBlock[dataDefinition]
 	| name (_ of):? _ expression _ with _ enclosedDataBlock
-		(newline ____:+ "otherwise" _ "default" _ expression):?
+		(newline ____:+ otherwise _ default _ expression):?
 
 
 listBlock ->  "["
@@ -183,13 +182,13 @@ dataDefinition ->
 	| "..." "{" _ flowing[simple] _ "}" ":" _ expression
 
 parameter ->
-	  name (_:+ "otherwise" _ expression):?
+	  name (_:+ otherwise _ expression):?
 	| "..." name
 
 
 commented -> comment:*
 comment -> annotation literal newline
-annotation -> "note" | "idea" | "todo"
+annotation -> note | idea | todo
 
 
 location -> name ("." simple):?
@@ -201,12 +200,26 @@ simple ->
 	| literal
 	| text
 
-when -> %when
-for -> %For
+# I've tried to use as few keywords as possible, while still getting a consistent parse
+note -> "note"
+idea -> "idea"
+todo -> "todo"
+use -> "use"
+when -> "when"
+is -> "is"
+for -> "for"
+every -> "every"
+in -> "in"
+skip -> "skip"
+stop -> "stop"
 result -> %result
 collect -> %collect
 of -> %of
 with -> %With
+otherwise -> %otherwise
+default -> "default"
+default -> "default"
+function -> "function"
 
 literal -> %literal
 text -> %text
