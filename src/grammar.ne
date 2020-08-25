@@ -51,6 +51,9 @@ const lexer = new IndentationLexer({
         minus: '-',
     })
 });
+
+bin = () => null
+second = ([, b]) => b
 %}
 
 # TODO: Make comments not be ambiguous with a method call on a literal.
@@ -99,7 +102,7 @@ main ->
 
 use ->
 	commented
-	use _
+	Use _
 	elongated[(_ _ _ _), name] newline
 	newline
 
@@ -111,55 +114,50 @@ method ->
 		blockOf[statement]
 	newline
 
-for -> for _ every _ name _ in _ expression ","
+for -> For _ every _ name _ in _ expression ","
 	blockOf[statement]
 
-when -> when _ expression
+when -> When _ expression
 	indented[(
-		(standalone[(is _ expression ":" (_:+ statement
-			| blockOf[statement]))]):+
+		(standalone[(is _ expression ":" (_:+ statement	{% id %}
+			| blockOf[statement] {% id %}))]):+
 
-    	(standalone[(otherwise ":" (_:+ statement
-			| blockOf[statement]))]):?
+    	(standalone[(otherwise ":" (_:+ statement	{% id %}
+			| blockOf[statement] {% id %}))]):?
 	)]
 
 
 statement ->
-	  stop newline
-	| skip newline
-    | assignmentOf[(function _ of _ flowing[parameter] ":" _ result _ expression)]
-	| assignmentOf[("[" flowing[expression] "]")]
-	| assignmentOf[("{" _ flowing[dataDefinition] _ "}")]
-	| assignmentOf[listBlock]
-	| assignmentOf[dataBlock]
-    | assignment["="]
-    | assignment["=*"]
-    | assignment["=/"]
-    | assignment["=+"]
-    | assignment["=-"]
-    | does[collect]
-    | does[result]
-	| methodExecution newline
-    | when
-    | for
+	  stop newline	{% id %}
+	| skip newline	{% id %}
+    | assignmentOf[(function _ of _ flowing[parameter] ":" _ result _ expression)]	{% id %}
+	| assignmentOf[("[" flowing[expression] "]")]			{% id %}
+	| assignmentOf[("{" _ flowing[dataDefinition] _ "}")]	{% id %}
+	| assignmentOf[listBlock]	{% id %}
+	| assignmentOf[dataBlock]	{% id %}
+    | assignment["="]	{% id %}
+    | assignment["=*"]	{% id %}
+    | assignment["=/"]	{% id %}
+    | assignment["=+"]	{% id %}
+    | assignment["=-"]	{% id %}
+    | does[collect]	{% id %}
+    | does[result]	{% id %}
+	| methodExecution newline	{% id %}
+    | when	{% id %}
+    | for	{% id %}
 
 expression ->
-	  location (_ otherwise _ default _ expression):?
-    | simple
-    | expression _ "+" _ expression
-    | expression _ "-" _ expression
-    | expression _ "*" _ expression
-    | expression _ "/" _ expression
-    | methodExecution
+      locator	{% id %}
+    | location (_ otherwise _ default _ expression):?
+    | expression _ ("+" | "-" | "*" | "/") _ expression
+    | methodExecution	{% id %}
 
 methodExecution ->
-	  name (_ of):? _ expression
-	| name (_ of):? _ expression _ otherwise _ default _ expression
-	| name (_ of):? _ expression _ with _ flowing[dataDefinition]
+	  name (_ of):? _ expression (_ otherwise _ default _ expression):?
+	| name (_ of):? _ expression _ with (_ flowing[dataDefinition] {% second %} | listingBlock[dataDefinition] {% id %})
 	| name (_ of):? _ expression _ with _ "{" _ flowing[dataDefinition] _ "}" (_ otherwise _ default _ expression):?
-	| name (_ of):? _ expression _ with
-		listingBlock[dataDefinition]
-	| name (_ of):? _ expression _ with _ enclosedDataBlock
+	| name (_ of):? _ expression _ with _
+		enclosedDataBlock
 		(newline ____:+ otherwise _ default _ expression):?
 
 
@@ -168,7 +166,9 @@ listBlock ->  "["
 	____:+ "]"
 
 
-dataBlock -> listingBlock[dataDefinition] | enclosedDataBlock
+dataBlock ->
+	  listingBlock[dataDefinition]	{% id %}
+	| enclosedDataBlock				{% id %}
 
 enclosedDataBlock ->  "{"
 		listingBlock[dataDefinition]
@@ -176,59 +176,60 @@ enclosedDataBlock ->  "{"
 
 
 dataDefinition ->
-	  simple ((":" | ":.") _:+ expression):?
-	| simple ":" _:+ "[" flowing[expression] "]"
-	| simple ":" _:+ "{" _ flowing[dataDefinition] _ "}"
-	| "..." "{" _ flowing[simple] _ "}" ":" _ expression
+	  locator ((":" {% id %} | ":." {% id %}) _:+ expression):?
+	| locator ":" _:+ ("[" flowing[expression] "]" | "{" _ flowing[dataDefinition] _ "}")
+	| "..." "{" _ flowing[locator] _ "}" ":" _ expression
 
 parameter ->
 	  name (_:+ otherwise _ expression):?
-	| "..." name
+	| "..." name {% second %}
 
 
 commented -> comment:*
 comment -> annotation literal newline
-annotation -> note | idea | todo
+annotation ->
+	  note	{% id %}
+	| idea	{% id %}
+	| todo	{% id %}
 
 
-location -> name ("." simple):?
+location -> name ("." locator):?
 
-simple ->
-	  name
-	| digitNumber
-	| decimalNumber
-	| literal
-	| text
+locator ->
+	  name			{% id %}
+	| digitNumber	{% id %}
+	| decimalNumber	{% id %}
+	| literal		{% id %}
+	| text			{% id %}
 
 # I've tried to use as few keywords as possible, while still getting a consistent parse
-note -> "note"
-idea -> "idea"
-todo -> "todo"
-use -> "use"
-when -> "when"
-is -> "is"
-for -> "for"
-every -> "every"
-in -> "in"
-skip -> "skip"
-stop -> "stop"
-result -> %result
-collect -> %collect
-of -> %of
-with -> %With
-otherwise -> %otherwise
-default -> "default"
-default -> "default"
-function -> "function"
+note -> "note"		{% id %}
+idea -> "idea"		{% id %}
+todo -> "todo"		{% id %}
+Use -> "use"		{% bin %}
+When -> "when"		{% bin %}
+is -> "is"			{% bin %}
+For -> "for"		{% bin %}
+every -> "every"	{% bin %}
+in -> "in"			{% bin %}
+skip -> "skip"		{% bin %}
+stop -> "stop"		{% bin %}
+result -> %result	{% bin %}
+collect -> %collect	{% bin %}
+of -> %of			{% bin %}
+with -> %With		{% bin %}
+otherwise -> %otherwise	{% bin %}
+default -> "default"	{% bin %}
+function -> "function"	{% bin %}
 
-literal -> %literal
-text -> %text
-decimalNumber -> %decimalNumber
-digitNumber -> %digitNumber
+literal -> %literal				{% id %}
+text -> %text					{% id %}
+decimalNumber -> %decimalNumber	{% id %}
+digitNumber -> %digitNumber		{% id %}
+name -> %name					{% id %}
 
-newline -> %newline
-indent -> %indent
-dedent -> %dedent
-name -> %name
-_ -> %_
-____ -> %____
+newline -> %newline	{% bin %}
+indent -> %indent	{% bin %}
+dedent -> %dedent	{% bin %}
+_ -> %_				{% bin %}
+____ -> %____		{% bin %}
