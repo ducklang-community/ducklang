@@ -5,7 +5,7 @@ use category,
     harness,
     blaster,
     turbo,
-    offset
+    float offset
 
 
 engageBoosters of self with thrust,
@@ -32,6 +32,10 @@ engageBoosters of self with thrust,
 			result 'stopped'
 
 
+square of x:
+	result x * x
+
+
 launchBoosters of self with thrust,
                             angle      otherwise 0.0,
                             turboState otherwise 'unknown':
@@ -39,9 +43,12 @@ launchBoosters of self with thrust,
 	variable = new of category.data
 	variable.stage = 0
 
-	squaring = function of x: result x * x
 	numbers = [1, 2, 3]
 
+	variable.cache = resultFromEach of numbers with square
+
+	note:`This hypothetically adds square method temporarily on each number then invokes it.
+	      It possibly reduces the need for functions by a lot, or even entirely.`
 	variable.cache = resultFromEach of numbers with square
 
 	for every x in turbo,

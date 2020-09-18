@@ -1,7 +1,0 @@
-
-
-resultFromEach of self with ...parameters:
-	mapping = next of parameters
-	for every x in self,
-		collect resultFrom mapping with x
-

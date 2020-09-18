@@ -1,0 +1,138 @@
+
+
+
+::2020-09::Number::
+
+
+
+square of self:
+	result self * self
+
+
+
+::2020-09::Function::
+
+
+
+selfsame of self:
+	result self
+
+
+
+::2020-09::Iterable::
+
+
+
+resultFromEach of self with ...parameters -> mapping:
+	iterator = iterator of self
+	result resultFromEach of iterator with mapping
+
+
+
+::2020-09::Iterate::
+
+
+
+resultFromEach of self with ...parameters -> mapping:
+	for each x in self,
+		collect resultFrom (mapping in x)
+
+
+
+::2020-09::Numbers::
+
+
+
+use infinity
+
+
+numbersGreaterThan self:
+	for each number in infinity,
+		collect self + 1 + number
+
+
+numbersLessThan self:
+	for each number in infinity, with extent: self,
+		when compare self with number
+			is 'greater': collect number
+
+
+countingFrom self:
+	for each number in numbersGreaterThan self,
+		collect number - 1
+
+
+countingTo self:
+	for each number in numbersLessThan self,
+		collect number + 1
+
+
+evenNumbersLessThan self:
+	for each number in numbersLessThan self, with extent: roundingUp (self / 2),
+		when remainder of number with divisor: 2
+			is 0: collect number
+
+
+oddNumbersLessThan self:
+	todo: refactor with evenNumbersLessThan to not repeat the logic
+	for each number in numbersLessThan self, with extent: roundingDown (self / 2),
+		when remainder of number with divisor: 2
+			is 1: collect number
+
+
+
+::2020-09::Rocket::
+
+
+
+use category,
+    errors,
+    log,
+    harness,
+    blaster,
+    turbo,
+    offset
+
+
+engageBoosters of self with thrust,
+                            angle  otherwise 0.0,
+                            color  otherwise 'green':
+
+	checksResult = preCheck blaster with angle, thrust
+
+	add log with info: 'Hi {name}! Your favourite drink is {drink}.'
+
+	turboState = state of turbo with { angle, thrust,
+	                                   size: usage of self } otherwise default 'poor'
+
+	when turboState
+		is 'good':
+			add log with info: 'Turbo is go!'
+			result launchBoosters of self with angle, thrust, turboState
+
+		is 'okay':
+			add log with warning: 'Turbo is iffy :/'
+			result launchBoosters of self with angle, thrust, turboState
+
+		otherwise:
+			result 'stopped'
+
+
+launchBoosters of self with thrust,
+                            angle      otherwise 0.0,
+                            turboState otherwise 'unknown':
+
+	variable = new of category.data
+	variable.stage = 0
+
+	numbers = [1, 2, 3]
+	variable.cache = resultFromEach of numbers with square
+
+	for each x in turbo, do:
+		variable.stage =+ 1
+		engage turbo with thruster: x
+
+	result boost blaster with { stage:. variable, thrust,
+	                            angle, offset, color } otherwise default 'done'
+
+

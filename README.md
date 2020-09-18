@@ -23,7 +23,7 @@ Ducklang is a duck-typed programming language with an emphasis on readability of
 
 ### Code examples
 
-Please see the [fixtures](fixtures/) directory for example code
+Please see the [fixtures/definitions.dg](fixtures/definitions.dg) for example code
 
 ## Usage
 
@@ -39,8 +39,9 @@ yarn parse-fixtures
 
 ## Roadmap
 
-* Clean up the Nearley output using functions
+* ~~Clean up the Nearley output using functions~~
 * Build a representation of the program from the parse tree
+* Compile the program representation into JavaScript
 
 ## 👋 Say hi
 

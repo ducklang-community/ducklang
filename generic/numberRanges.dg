@@ -1,0 +1,39 @@
+
+use infinity
+
+
+numbersGreaterThan self:
+	for each number in infinity,
+		collect self + 1 + number
+
+
+numbersLessThan self:
+	for each number in infinity, result having size: self
+		when compare self with number
+			is 'greater': collect number
+
+
+version: 0.1.0
+countingFrom self:
+	for each number in numbersGreaterThan self,
+		collect number - 1
+
+
+version: 3.0.0
+countingTo self:
+	for each number in numbersLessThan self,
+		collect number + 1
+
+
+evenNumbersLessThan self:
+	for each number in all numbersLessThan self, result having size: roundingUp (self / 2)
+		when remainder of number with divisor: 2
+			is 0: collect number
+
+
+oddNumbersLessThan self:
+	todo: refactor with evenNumbersLessThan to not repeat the logic
+	for each number in all numbersLessThan self, result having size: roundingDown (self / 2)
+		when remainder of number with divisor: 2
+			is 1: collect number
+
