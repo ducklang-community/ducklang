@@ -12,10 +12,10 @@ discontinuous-range@1.0.0:
   resolved "https://registry.yarnpkg.com/discontinuous-range/-/discontinuous-range-1.0.0.tgz#e38331f0844bba49b9a9cb71c771585aab1bc65a"
   integrity sha1-44Mx8IRLukm5qctxx3FYWqsbxlo=
 
-moo-indentation-lexer@^4.0.0:
-  version "4.0.0"
-  resolved "https://registry.yarnpkg.com/moo-indentation-lexer/-/moo-indentation-lexer-4.0.0.tgz#fa8a99f63c4c20dbf053ce7016d33adb0b4c4f39"
-  integrity sha512-9vcoVIyUCYOV+7jhyaaaBDZjTdkkzxBskSMCAJXcbQfnbp7osG1Y17HHPltdG1NGuPoBTPsYiyJRv043hdgbQQ==
+moo-indentation-lexer@^5.0.0:
+  version "5.0.0"
+  resolved "https://registry.yarnpkg.com/moo-indentation-lexer/-/moo-indentation-lexer-5.0.0.tgz#5bef59bb1c2f86862e5aa8e88d49f3b398964cff"
+  integrity sha512-ebC9A4mC/4yVzqtdCtLoG6vFp6y8vbFddOS6ZgC1hm/wC4lhYoj5kmP41o5h1sF0KR8LOAyuEeaI6khY8UqNew==
   dependencies:
     moo-peekable-lexer "^1.1.2"
 

@@ -1,0 +1,10 @@
+
+use infinityIterator
+
+
+provides iterator
+
+
+iterator of self:
+	result infinityIterator
+

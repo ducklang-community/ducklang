@@ -3,6 +3,9 @@ use software,
     category
 
 
+provides entry-point
+
+
 note`This is the main software`
 run self:
 
