@@ -138,8 +138,8 @@ statement ->
     | when										{% take %}
     | for										{% take %}
 
-# TODO: require complex division and subtraction be grouped with parentheses
-# Require that non-same operation be grouped with parentheses except a + b + c and a * b * c
+# TODO: Require all binary operations be grouped with parentheses except additions and multiplications
+# eg. (a / b) / c , (a - b) - c, a + b + c , a * b * c
 
 expression ->
 	  expression _ "-" _ expressionWithoutAddition {% ([a, , , , b]) => ({ type: 'subtraction', a, b }) %}
