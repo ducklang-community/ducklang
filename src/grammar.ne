@@ -1,7 +1,4 @@
 
-# TODO: alternative syntax for requires and provides in code.
-#       The problem is that different modules will want to implement this same method.
-
 @lexer lexer
 
 @builtin "postprocessors.ne"
