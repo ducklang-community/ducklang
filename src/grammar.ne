@@ -223,7 +223,6 @@ value ->
 	| text			{% take %}
 
 
-# I've tried to use as few keywords as possible, while still getting a consistent parse
 Use			-> "use"		{% ignore %}
 When		-> "when"		{% ignore %}
 is			-> "is"			{% ignore %}
@@ -233,13 +232,14 @@ in			-> "in"			{% ignore %}
 skip		-> "skip"		{% ignore %}
 stop		-> "stop"		{% ignore %}
 extent		-> "extent"		{% ignore %}
-with		-> %With		{% ignore %}
-otherwise	-> %otherwise	{% ignore %}
 default		-> "default"	{% ignore %}
 
-of			-> %of			{% take %}
+# I've tried to use as few reserved keywords as possible, while still getting a consistent parse
 result		-> %result		{% take %}
 collect		-> %collect		{% take %}
+of			-> %of			{% take %}
+with		-> %With		{% ignore %}
+otherwise	-> %otherwise	{% ignore %}
 
 todo		-> %todo		{% take %}
 idea		-> %idea		{% take %}
