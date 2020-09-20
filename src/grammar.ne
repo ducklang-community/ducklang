@@ -262,9 +262,9 @@ methodExecution ->
 	| identifier (_ of {% takeSecond %} ):? _ expression _ with _
 		enclosedDataBlock
 		(newline ____:+ otherwise _ default _ expression {% takeSeventh %} ):?
-	{% ([identifier, of, , receiver, , , , arguments, otherwise]) => ({
+	{% ([method, of, , receiver, , , , arguments, otherwise]) => ({
 	  	type: 'methodExecution',
-	  	identifier,
+	  	method,
 	  	...(of && { of }),
 	  	receiver,
 	  	arguments,
