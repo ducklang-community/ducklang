@@ -24,7 +24,7 @@ const lexer = new IndentationLexer({
         digitNumber: /0|-?[1-9][0-9]*/,
         hexNumber: /0x0|0x[1-9a-f][0-9a-f]*/,
 
-		name: {
+		identifier: {
 			match: /[a-zA-Z]+[a-zA-Z0-9]*/,
 			type: moo.keywords({
 				result: 'result',
@@ -143,7 +143,6 @@ main ->
 		method:+
 
 		{% ([namespaceDeclaration, using, methods]) => ({
-			type: 'namespace',
 			namespaceDeclaration,
 			...(using && { using }),
 			methods
@@ -159,15 +158,15 @@ namespaceDeclaration ->
 	newline
 	namespaceIdentifier newline
 	newline
-	{%	([, , , namespaceIdentifier]) => ({ type: 'namespaceDeclaration', namespaceIdentifier })	%}
+	{%	takeFourth	%}
 
 using ->
 	newline
 	newline
 	standalone[(
 			Use _
-			elongated[(_ _ _ _) {% ignore %} , name {% take %} ] newline
-			{%	([, , parameters]) => ({ type: 'use', parameters })	%}
+			elongated[(_ _ _ _) {% ignore %} , identifier {% take %} ] newline
+			{%	takeThird	%}
 		) {% take %} ,
 		null {% ignore %} ]
 	{%	takeThird	%}
@@ -177,11 +176,10 @@ method ->
 	newline
 	newline
 	standalone[(
-			name (_ of {% takeSecond %} ):? _ ("self" | "{" _ "self":? ("," _ "this"):? ("," _ "inner"):? _ "}") (_ with _
+			identifier (_ of {% takeSecond %} ):? _ ("self" | "{" _ "self":? ("," _ "this"):? ("," _ "inner"):? _ "}") (_ with _
 			elongated[(_ _ _ _ _ _ _ _ _:+) {% ignore %} , parameter {% take %} ] {% takeFourth %} ):? ":"
 				blockOf[statement {% take %} ]
 			{%	([name, of, , receiver, parameters, , statements]) => ({
-				type: 'method',
 				name,
 				...(of && { of }),
 				receiver,
@@ -192,7 +190,7 @@ method ->
 		null {% ignore %} ]
 	{%	takeThird	%}
 
-for -> For _ each _ name _ in _ expression (("," _ with _ extent ":" _ expression {% ([, , , , , , , extent]) => ({ extent }) %} ):? "," {% take %} | "," _ "do" ":" {% ([, , Do]) => ({ do: Do }) %} )
+for -> For _ each _ identifier _ in _ expression (("," _ with _ extent ":" _ expression {% ([, , , , , , , extent]) => ({ extent }) %} ):? "," {% take %} | "," _ "do" ":" {% ([, , Do]) => ({ do: Do }) %} )
 	blockOf[statement {% take %} ]
 	{% ([, , , , name, , , , expression, extent, statements]) => ({ type: 'for', name, expression, ...(extent && { ...extent }), statements }) %}
 
@@ -258,15 +256,15 @@ expressionWithoutExponentiation ->
     | "(" expression ")" {% takeSecond %}
 
 methodExecution ->
-	  name (_ of {% takeSecond %} ):? _ expression (_ otherwise _ default _ expression {% takeSixth %} ):? {% ([name, of, , receiver, otherwise]) => ({ type: 'methodExecution', name, ...(of && { of }), receiver, ...(otherwise && { otherwise }) }) %}
-	| name (_ of {% takeSecond %} ):? _ expression _ with (_ flowing[dataDefinition {% take %} ] {% takeSecond %} | listingBlock[dataDefinition {% take %} ] {% take %} ) {% ([name, of, , receiver, , , arguments]) => ({ type: 'methodExecution', name, ...(of && { of }), receiver, arguments }) %}
-	| name (_ of {% takeSecond %} ):? _ expression _ with _ "{" _ flowing[dataDefinition {% take %} ] _ "}" (_ otherwise _ default _ expression {% takeSixth %} ):? {% ([name, of, , receiver, , , , , , arguments, , , otherwise]) => ({ type: 'methodExecution', name, ...(of && { of }), receiver, arguments, ...(otherwise && { otherwise }) }) %}
-	| name (_ of {% takeSecond %} ):? _ expression _ with _
+	  identifier (_ of {% takeSecond %} ):? _ expression (_ otherwise _ default _ expression {% takeSixth %} ):? {% ([identifier, of, , receiver, otherwise]) => ({ type: 'methodExecution', identifier, ...(of && { of }), receiver, ...(otherwise && { otherwise }) }) %}
+	| identifier (_ of {% takeSecond %} ):? _ expression _ with (_ flowing[dataDefinition {% take %} ] {% takeSecond %} | listingBlock[dataDefinition {% take %} ] {% take %} ) {% ([identifier, of, , receiver, , , arguments]) => ({ type: 'methodExecution', identifier, ...(of && { of }), receiver, arguments }) %}
+	| identifier (_ of {% takeSecond %} ):? _ expression _ with _ "{" _ flowing[dataDefinition {% take %} ] _ "}" (_ otherwise _ default _ expression {% takeSixth %} ):? {% ([identifier, of, , receiver, , , , , , arguments, , , otherwise]) => ({ type: 'methodExecution', identifier, ...(of && { of }), receiver, arguments, ...(otherwise && { otherwise }) }) %}
+	| identifier (_ of {% takeSecond %} ):? _ expression _ with _
 		enclosedDataBlock
 		(newline ____:+ otherwise _ default _ expression {% takeSeventh %} ):?
-	{% ([name, of, , receiver, , , , arguments, otherwise]) => ({
+	{% ([identifier, of, , receiver, , , , arguments, otherwise]) => ({
 	  	type: 'methodExecution',
-	  	name,
+	  	identifier,
 	  	...(of && { of }),
 	  	receiver,
 	  	arguments,
@@ -295,9 +293,9 @@ dataDefinition ->
 	| "..." "{" _ flowing[locator {% take %} ] _ "}" ":" _ expression {% ([, , , locators, , , , , expression]) => { type: 'expandDefinition', locators, expression } %}
 
 parameter ->
-	  name (_:+ otherwise _ expression {% takeFourth %} ):? {% ([name, otherwise]) => ({ type: 'parameter', name, ...(otherwise && { otherwise }) }) %}
-	| "..." name {% ([, name]) => ({ type: 'parameterGroup', name }) %}
-	| "..." name _ point _ name {% ([, parameters, , , , name]) => ({ type: 'parameterSingleton', parameters, name }) %}
+	  identifier (_:+ otherwise _ expression {% takeFourth %} ):? {% ([name, otherwise]) => ({ type: 'parameter', name, ...(otherwise && { otherwise }) }) %}
+	| "..." identifier {% ([, name]) => ({ type: 'parameterGroup', name }) %}
+	| "..." identifier _ point _ identifier {% ([, parameters, , , , name]) => ({ type: 'parameterSingleton', parameters, name }) %}
 
 
 comment -> (todo {% take %} | idea {% take %} | note {% take %} | annotation ":" literal  {% ([annotation, , literal]) => ({ type: 'comment', annotation, literal }) %} ) newline {% take %}
@@ -307,11 +305,11 @@ annotation ->
 	| "todo"	{% take %}
 
 
-location -> name ("." locator {% takeSecond %} ):? {% ([name, locator]) => ({ type: 'location', name, ...(locator && { locator }) }) %}
+location -> identifier ("." locator {% takeSecond %} ):? {% ([name, locator]) => ({ type: 'location', name, ...(locator && { locator }) }) %}
 
 locator ->
-	  name	{% take %}
-	| value	{% take %}
+	  identifier	{% take %}
+	| value			{% take %}
 
 value ->
 	  digitNumber	{% take %}
@@ -346,7 +344,7 @@ literal			-> %literal			{% take %}
 text			-> %text			{% take %}
 decimalNumber	-> %decimalNumber	{% take %}
 digitNumber		-> %digitNumber		{% take %}
-name			-> %name			{% take %}
+identifier		-> %identifier		{% take %}
 
 namespaceIdentifier -> %namespaceIdentifier	{% take %}
 
