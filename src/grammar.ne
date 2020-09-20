@@ -93,13 +93,13 @@ assignmentWith[operator, expression] -> location _ $operator _ $expression newli
 assignmentOf[expression] -> assignmentWith["=" {% take %}, $expression {% take %}	] {% take %}
 assignment[operator] -> assignmentWith[$operator {% take %}, expression {% take %}	] {% take %}
 
-standalone[definition] -> newline:?
-	(____:+ comment		{% takeSecond %} ):*
-	____:+ $definition
+standalone[definition, adjusted] -> newline:?
+	($adjusted comment		{% takeSecond %} ):*
+	 $adjusted $definition
 	{%	([, comments, , definition]) => ({ type: 'standalone', ...(comments.length && { comments }), definition })	%}
 
 indented[definition] -> newline indent $definition dedent	{% takeThird %}
-blockOf[definition]  -> indented[standalone[$definition		{% take %} ]:+		{% take %}	]	{% take %}
+blockOf[definition]  -> indented[standalone[$definition		{% take %} , ____:+ {% ignore %} ]:+		{% take %}	]	{% take %}
 
 items[definition]   -> delimited[$definition	{% take %} , ("," _:+)		{% ignore %} ]			{% take %}
 listing[definition] -> delimited[$definition	{% take %} , ("," newline)	{% ignore %} ] ",":?	{% take %}
@@ -107,7 +107,7 @@ listing[definition] -> delimited[$definition	{% take %} , ("," newline)	{% ignor
 flowing[definition] -> items[$definition	{% take %} ] ("," newline
 	____:* _:+ items[$definition	{% take %} ]
 	{% takeFifth %}	):*
-	{%	([first, rest]) => ({ type: 'flowing', items: [...first, ...rest.flat()] })	%}
+	{%	([first, rest]) => [...first, ...rest.flat()]	%}
 
 listed[adjusted, definition] -> listing[(
 		($adjusted comment		{% takeSecond %} ):*
@@ -116,11 +116,17 @@ listed[adjusted, definition] -> listing[(
 	{% take %} ]
 	{% take %}
 
-elongated[adjusted, definition] -> $definition ("," newline
+elongated[adjusted, definition] ->
+	(
+		  $definition {% ([definition]) => ({ type: 'listed', definition }) %}
+		| ( delimited[comment {% take %}, $adjusted {% ignore %} ] {% take %} ):+ $adjusted $definition
+			{%	([comments, , definition]) => ({ type: 'listed', ...(comments.length && { comments }), definition })	%}
+	)
+	("," newline
 		listed[$adjusted	{% take %} , $definition	{% take %} ]
 		{% takeThird %}
 	):?
-	{%	([definition, items]) => ({ type: 'elongated', definition, ...(items && { items }) })	%}
+	{%	([first, rest]) => [first, ...(rest || [])]	%}
 
 listingBlock[definition] ->
 	indented[(
@@ -133,13 +139,13 @@ listingBlock[definition] ->
 main ->
 	(
 		namespaceDeclaration
-		use:?
+		using:?
 		method:+
 
-		{% ([namespaceDeclaration, use, methods]) => ({
+		{% ([namespaceDeclaration, using, methods]) => ({
 			type: 'namespace',
 			namespaceDeclaration,
-			...(use && { use }),
+			...(using && { using }),
 			methods
 		}) %}
 	):+
@@ -155,47 +161,58 @@ namespaceDeclaration ->
 	newline
 	{%	([, , , namespaceIdentifier]) => ({ type: 'namespaceDeclaration', namespaceIdentifier })	%}
 
-use ->
+using ->
 	newline
 	newline
-	commented
-	Use _
-	elongated[(_ _ _ _) {% ignore %} , name {% take %} ] newline
-	{%	([, , comments, , , elongated]) => ({ type: 'use', ...(comments && { comments }), elongated })	%}
+	standalone[(
+			Use _
+			elongated[(_ _ _ _) {% ignore %} , name {% take %} ] newline
+			{%	([, , parameters]) => ({ type: 'use', parameters })	%}
+		) {% take %} ,
+		null {% ignore %} ]
+	{%	takeThird	%}
 
 # TODO: improve the { self, this, inner } to make any part optional
 method ->
 	newline
 	newline
-	commented
-	name (_ of {% takeSecond %} ):? _ ("self" | "{" _ "self":? ("," _ "this"):? ("," _ "inner"):? _ "}") (_ with _
-	elongated[(_ _ _ _ _ _ _ _ _:+) {% ignore %} , parameter {% take %} ] {% takeFourth %} ):? ":"
-		blockOf[statement {% take %} ]
-	{%	([, , comments, name, of, , receiver, parameters, , block]) => ({
-		type: 'method',
-		...(comments && { comments }),
-		name,
-		...(of && { of }),
-		receiver,
-		...(parameters && { parameters }),
-		block
-	}) %}
+	standalone[(
+			name (_ of {% takeSecond %} ):? _ ("self" | "{" _ "self":? ("," _ "this"):? ("," _ "inner"):? _ "}") (_ with _
+			elongated[(_ _ _ _ _ _ _ _ _:+) {% ignore %} , parameter {% take %} ] {% takeFourth %} ):? ":"
+				blockOf[statement {% take %} ]
+			{%	([name, of, , receiver, parameters, , statements]) => ({
+				type: 'method',
+				name,
+				...(of && { of }),
+				receiver,
+				...(parameters && { parameters }),
+				statements
+			}) %}
+		) {% take %} ,
+		null {% ignore %} ]
+	{%	takeThird	%}
 
-for -> For _ each _ name _ in _ expression (("," _ with _ extent ":" _ expression {% ([, , , , , , , expression]) => ({ type: 'extent', expression }) %} ):? "," {% take %} | "," _ "do" ":" {% () => ({ type: 'do' }) %} )
+for -> For _ each _ name _ in _ expression (("," _ with _ extent ":" _ expression {% ([, , , , , , , extent]) => ({ extent }) %} ):? "," {% take %} | "," _ "do" ":" {% ([, , Do]) => ({ do: Do }) %} )
 	blockOf[statement {% take %} ]
-	{% ([, , , , name, , , , expression, extent, block]) => ({ type: 'for', name, expression, ...(extent && { extent }), block }) %}
+	{% ([, , , , name, , , , expression, extent, statements]) => ({ type: 'for', name, expression, ...(extent && { ...extent }), statements }) %}
 
 when -> When _ expression
 	indented[(
-		standalone[(is _ expression ":" (_:+ statement	{% ([, statement]) => [statement] %}
-			| blockOf[statement {% take %} ] {% take %} ) {% ([, , expression, , statements]) => ({ type: 'case', expression, statements }) %} ) {% take %} ]:+
+		standalone[
+			(is _ expression ":" (_:+ statement	{% ([, statement]) => [statement] %}
+				| blockOf[statement {% take %} ] {% take %} )
+			{% ([, , expression, , statements]) => ({ type: 'case', expression, statements }) %} ) {% take %} ,
+			____:+ {% ignore %}	]:+
 
-    	standalone[(otherwise ":" (_:+ statement	{% ([, statement]) => [statement] %}
-			| blockOf[statement {% take %} ] {% take %} ) {% ([, , statements]) => statements %} ) {% take %} ]:?
+    	standalone[
+    		(otherwise ":" (_:+ statement	{% ([, statement]) => [statement] %}
+				| blockOf[statement {% take %} ] {% take %} )
+			{% ([, , statements]) => statements %} ) {% take %} ,
+			____:+ {% ignore %}	]:?
 
-		{% ([cases, otherwise]) => ({ type: 'cases', cases, ...(otherwise && { otherwise }) }) %}
+		{% ([cases, otherwise]) => ({ cases, ...(otherwise && { otherwise }) }) %}
 	) {% take %} ]
-	{% ([, , expression, branches]) => ({ type: 'when', expression, branches }) %}
+	{% ([, , expression, branches]) => ({ type: 'when', expression, ...branches }) %}
 
 
 statement ->
@@ -273,9 +290,9 @@ enclosedDataBlock ->  "{"
 
 
 dataDefinition ->
-	  locator ((":" {% take %} | ":." {% take %} ) _:+ expression {% ([definer, , expression]) => ({ type: 'definer', definer, expression }) %} ):?	{% ([locator, definition]) => ({ type: 'dataDefinition', locator, ...(definition && { definition }) }) %}
-	| locator ":" _:+ ("[" flowing[expression {% take %} ] "]" {% ([, flowing]) => { type: 'listing', flowing } %} | "{" _ flowing[dataDefinition {% take %} ] _ "}" {% ([, flowing]) => { type: 'definition', flowing } %} )	{% ([locator, , , definition]) => ({ type: 'dataDefinition', locator, definition }) %}
-	| "..." "{" _ flowing[locator {% take %} ] _ "}" ":" _ expression {% ([, , , flowing, , , , , expression]) => { type: 'expandDefinition', flowing, expression } %}
+	  locator ((":" {% take %} | ":." {% take %} ) _:+ expression {% ([operator, , expression]) => ({ operator, expression }) %} ):?	{% ([locator, definition]) => ({ type: 'dataDefinition', locator, ...(definition && { ...definition }) }) %}
+	| locator ":" _:+ ("[" flowing[expression {% take %} ] "]" {% ([, list]) => { list } %} | "{" _ flowing[dataDefinition {% take %} ] _ "}" {% ([, data]) => { data } %} )	{% ([locator, , , definition]) => ({ type: 'dataDefinition', locator, ...definition }) %}
+	| "..." "{" _ flowing[locator {% take %} ] _ "}" ":" _ expression {% ([, , , locators, , , , , expression]) => { type: 'expandDefinition', locators, expression } %}
 
 parameter ->
 	  name (_:+ otherwise _ expression {% takeFourth %} ):? {% ([name, otherwise]) => ({ type: 'parameter', name, ...(otherwise && { otherwise }) }) %}
@@ -283,7 +300,6 @@ parameter ->
 	| "..." name _ point _ name {% ([, parameters, , , , name]) => ({ type: 'parameterSingleton', parameters, name }) %}
 
 
-commented -> comment:* {% ([comments]) => comments.length ? comments : null %}
 comment -> (todo {% take %} | idea {% take %} | note {% take %} | annotation ":" literal  {% ([annotation, , literal]) => ({ type: 'comment', annotation, literal }) %} ) newline {% take %}
 annotation ->
 	  "note"	{% take %}
