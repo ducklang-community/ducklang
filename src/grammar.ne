@@ -1,3 +1,76 @@
+@{%
+const moo = require('moo');
+const IndentationLexer = require('moo-indentation-lexer');
+
+const lexer = new IndentationLexer({
+    lexer: moo.compile({
+    	todo: /todo: .*$/,
+    	idea: /idea: .*$/,
+    	note: /note: .*$/,
+        literal: /`(?:\\[`\\]|[^\n`\\])*`/,
+        text: /'(?:\\['\\]|[^\n'\\])*'/,
+
+		namespaceIdentifier: /^::.*::$/,
+
+        decimalNumber: /-?[0-9]+\.[0-9]+/,
+        digitNumber: /0|-?[1-9][0-9]*/,
+        hexNumber: /0x0|0x[1-9a-f][0-9a-f]*/,
+
+		name: {
+			match: /[a-zA-Z]+[a-zA-Z0-9]*/,
+			type: moo.keywords({
+				result: 'result',
+				collect: 'collect',
+				of: 'of',
+				With: 'with',
+				otherwise: 'otherwise',
+			})
+		},
+
+        newline: { match: /\n/, lineBreaks: true },
+        _: ' ',
+        ____: '\t',
+
+		point: '->',
+
+        leftParen: '(',
+        rightParen: ')',
+        leftBrace: '{',
+        rightBrace: '}',
+        leftBracket: '[',
+        rightBracket: ']',
+
+        updateTimes: '=*',
+        updateDividedBy: '=/',
+        updatePlus: '=+',
+        updateMinus: '=-',
+        set: '=',
+
+		expand: '...',
+		namespaceSeparator: '::',
+        locatorDefine: ':.',
+        define: ':',
+        locator: '.',
+        separator: ',',
+
+        exponential: '**',
+        times: '*',
+        dividedBy: '/',
+        plus: '+',
+        minus: '-',
+    })
+});
+
+const ignore		= ()		=> null
+const takeFirst		= ([a])		=> a
+const takeSecond	= ([, b])	=> b
+const takeThird		= ([, , c])	=> c
+const takeFourth	= ([, , , d])		=> d
+const takeFifth		= ([, , , , e])		=> e
+const takeSixth		= ([, , , , , f])	=> f
+const takeSeventh	= ([, , , , , , g])	=> g
+const take			= takeFirst
+%}
 
 @lexer lexer
 
@@ -259,78 +332,3 @@ indent	-> %indent	{% ignore %}
 dedent	-> %dedent	{% ignore %}
 _		-> %_		{% ignore %}
 ____	-> %____	{% ignore %}
-
-
-@{%
-const moo = require('moo');
-const IndentationLexer = require('moo-indentation-lexer');
-
-const lexer = new IndentationLexer({
-    lexer: moo.compile({
-    	todo: /todo: .*$/,
-    	idea: /idea: .*$/,
-    	note: /note: .*$/,
-        literal: /`(?:\\[`\\]|[^\n`\\])*`/,
-        text: /'(?:\\['\\]|[^\n'\\])*'/,
-
-		namespaceIdentifier: /^::.*::$/,
-
-        decimalNumber: /-?[0-9]+\.[0-9]+/,
-        digitNumber: /0|-?[1-9][0-9]*/,
-        hexNumber: /0x0|0x[1-9a-f][0-9a-f]*/,
-
-		name: {
-			match: /[a-zA-Z]+[a-zA-Z0-9]*/,
-			type: moo.keywords({
-				result: 'result',
-				collect: 'collect',
-				of: 'of',
-				With: 'with',
-				otherwise: 'otherwise',
-			})
-		},
-
-        newline: { match: /\n/, lineBreaks: true },
-        _: ' ',
-        ____: '\t',
-
-		point: '->',
-
-        leftParen: '(',
-        rightParen: ')',
-        leftBrace: '{',
-        rightBrace: '}',
-        leftBracket: '[',
-        rightBracket: ']',
-
-        updateTimes: '=*',
-        updateDividedBy: '=/',
-        updatePlus: '=+',
-        updateMinus: '=-',
-        set: '=',
-
-		expand: '...',
-		namespaceSeparator: '::',
-        locatorDefine: ':.',
-        define: ':',
-        locator: '.',
-        separator: ',',
-
-        exponential: '**',
-        times: '*',
-        dividedBy: '/',
-        plus: '+',
-        minus: '-',
-    })
-});
-
-const ignore		= ()		=> null
-const takeFirst		= ([a])		=> a
-const takeSecond	= ([, b])	=> b
-const takeThird		= ([, , c])	=> c
-const takeFourth	= ([, , , d])		=> d
-const takeFifth		= ([, , , , e])		=> e
-const takeSixth		= ([, , , , , f])	=> f
-const takeSeventh	= ([, , , , , , g])	=> g
-const take			= takeFirst
-%}
