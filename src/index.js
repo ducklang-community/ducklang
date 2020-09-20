@@ -11,8 +11,16 @@ if (parser.results.length === 0) {
     console.error('Expected more input')
 }
 else if (parser.results.length === 1) {
-    console.log(JSON.stringify(parser.results[0], null, 2))
+    const results = parser.results[0]
+    console.log(JSON.stringify(results, null, 2))
     console.log('Good parse');
+
+    // TODO: loop over the cleaned parse tree and build a representation of the output program.
+    results.forEach(({ namespaceDeclaration, using, methods }) => {
+        methods.forEach(({ comments, definition: { name, of, receiver, statements } }) => {
+
+        })
+    })
 }
 else {
     console.log(JSON.stringify(parser.results, null, 2))
