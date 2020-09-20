@@ -1,26 +1,73 @@
 const fs = require('fs')
 const nearley = require("nearley")
+const { SourceNode } = require("source-map")
 const grammar = require("../dist/grammar.js")
 
 const parser = new nearley.Parser(nearley.Grammar.fromCompiled(grammar))
 
+const fileName = null;
 const data = fs.readFileSync(0, 'utf-8')
 parser.feed(data)
+
+const jsComment = ({ value }) => value.includes('\n') ? `/*\n${value}\n*/\n` : `// ${value}\n`
+
+const jsComments = (comments) => comments ? comments.map(comment => jsComment(comment)) : []
+
+const jsParameters = (items) =>
+    items && items.map(({ definition: { name: { line, col, value } } }) => [', ', new SourceNode(
+        line, col - 1, fileName, value
+    )]).flat().slice(1) || []
 
 if (parser.results.length === 0) {
     console.error('Expected more input')
 }
 else if (parser.results.length === 1) {
+
     const results = parser.results[0]
+
     console.log(JSON.stringify(results, null, 2))
     console.log('Good parse');
 
-    // TODO: loop over the cleaned parse tree and build a representation of the output program.
+    // TODO: validate the input for any rules that are not easy to put into grammar,
+    // For example that the parameter names of a method are unique.
     results.forEach(({ namespaceDeclaration, using, methods }) => {
-        methods.forEach(({ comments, definition: { name, of, receiver, statements } }) => {
+
+        methods.map(({ comments, definition: { name, of, receiver, parameters, statements } }) => {
 
         })
+
     })
+
+    results.forEach(({ namespaceDeclaration, using, methods }) => {
+
+        const dependencies = using && jsParameters(using.definition) || []
+
+        methods.map(({ comments, definition: { name, of, receiver, parameters, statements } }) => {
+
+            // TODO: check all parameters, dependencies and assignment statements to prevent name clash
+
+            const names = jsParameters(parameters.filter(({ definition: { type } }) => type === 'parameter'))
+            const singleton = jsParameters(parameters.filter(({ definition: { type } }) => type === 'parameterSingleton'))
+
+            return new SourceNode(name.line, name.col - 1, fileName, [
+                jsComments(comments),
+                '($parameters) => {\n',
+                    // For any parameters which weren't supplied we can automatically fill in defaults here.
+                    'const { ', names,  ' } = $parameters\n',
+                '}\n'
+            ])
+        })
+
+        const namespace = new SourceNode(namespaceDeclaration.line, namespaceDeclaration.col - 1, fileName, [
+            '{\n',
+                // methods go here, each enclosed by the namespace's parameters
+            '}\n'
+        ])
+    })
+
+    // TODO: make the output as pretty as possible (prettier doesn't do source mapping)
+
+    // TODO: set the line,col of closing tags to be something at the end of the source
 }
 else {
     console.log(JSON.stringify(parser.results, null, 2))

@@ -15,6 +15,7 @@
   "dependencies": {
     "moo": "^0.5.1",
     "moo-indentation-lexer": "^5.0.0",
-    "nearley": "^2.19.5"
+    "nearley": "^2.19.5",
+    "source-map": "^0.7.3"
   }
 }

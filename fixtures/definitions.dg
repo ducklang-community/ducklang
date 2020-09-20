@@ -46,20 +46,19 @@ resultFromEach of self with ...parameters -> mapping:
 use infinity
 
 
-numbersGreaterThan self:
+countingFrom self:
 	for each number in infinity,
-		collect self + 1 + number
+		collect self + number
 
 
 numbersLessThan self:
-	for each number in infinity, with extent: self,
-		when compare self with number
-			is 'greater': collect number
+	for each number in extent of self,
+		collect number
 
 
-countingFrom self:
-	for each number in numbersGreaterThan self,
-		collect number - 1
+numbersGreaterThan self:
+	for each number in countingFrom self,
+		collect number + 1
 
 
 countingTo self:
@@ -68,16 +67,13 @@ countingTo self:
 
 
 evenNumbersLessThan self:
-	for each number in numbersLessThan self, with extent: roundingUp (self / 2),
-		when remainder of number with divisor: 2
-			is 0: collect number
+	for each number in extent of roundingUp (self / 2),
+		collect number * 2
 
 
 oddNumbersLessThan self:
-	todo: refactor with evenNumbersLessThan to not repeat the logic
-	for each number in numbersLessThan self, with extent: roundingDown (self / 2),
-		when remainder of number with divisor: 2
-			is 1: collect number
+	for each number in extent of roundingDown (self / 2),
+		collect (number * 2) + 1
 
 
 

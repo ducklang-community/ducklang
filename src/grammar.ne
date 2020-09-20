@@ -28,6 +28,7 @@ const lexer = new IndentationLexer({
 			match: /[a-zA-Z]+[a-zA-Z0-9]*/,
 			type: moo.keywords({
 				result: 'result',
+				extent: 'extent',
 				collect: 'collect',
 				of: 'of',
 				With: 'with',
@@ -80,6 +81,10 @@ const takeSeventh	= ([, , , , , , g])	=> g
 const take			= takeFirst
 %}
 
+
+# todo: Do we want `in` to work like currying/partial application?
+
+
 @lexer lexer
 
 @builtin "postprocessors.ne"
@@ -108,6 +113,8 @@ flowing[definition] -> items[$definition	{% take %} ] ("," newline
 	____:* _:+ items[$definition	{% take %} ]
 	{% takeFifth %}	):*
 	{%	([first, rest]) => [...first, ...rest.flat()]	%}
+
+# TODO: there is some duplication between listed/elongated which would be nice to extract and simplify
 
 listed[adjusted, definition] -> listing[(
 		($adjusted comment		{% takeSecond %} ):*
@@ -165,7 +172,7 @@ using ->
 	newline
 	standalone[(
 			Use _
-			elongated[(_ _ _ _) {% ignore %} , identifier {% take %} ] newline
+			elongated[(_ _ _ _) {% ignore %} , identifier {% ([name]) => ({ type: 'parameter', name }) %} ] newline
 			{%	takeThird	%}
 		) {% take %} ,
 		null {% ignore %} ]
@@ -190,9 +197,12 @@ method ->
 		null {% ignore %} ]
 	{%	takeThird	%}
 
-for -> For _ each _ identifier _ in _ expression (("," _ with _ extent ":" _ expression {% ([, , , , , , , extent]) => ({ extent }) %} ):? "," {% take %} | "," _ "do" ":" {% ([, , Do]) => ({ do: Do }) %} )
+for -> For _ each _ identifier _ in _ (
+			  expression "," (_ "do" ":" {% takeSecond %} ):? {% ([expression, , Do]) => ({ expression, ...(Do && { do: Do }) }) %}
+			| extent _ of _ expression "," {% ([, , , , extent]) => ({ extent }) %}
+		)
 	blockOf[statement {% take %} ]
-	{% ([, , , , name, , , , expression, extent, statements]) => ({ type: 'for', name, expression, ...(extent && { ...extent }), statements }) %}
+	{% ([, , , , name, , , , extent, statements]) => ({ type: 'for', name, ...(extent && { ...extent }), statements }) %}
 
 when -> When _ expression
 	indented[(
@@ -256,9 +266,9 @@ expressionWithoutExponentiation ->
     | "(" expression ")" {% takeSecond %}
 
 methodExecution ->
-	  identifier (_ of {% takeSecond %} ):? _ expression (_ otherwise _ default _ expression {% takeSixth %} ):? {% ([identifier, of, , receiver, otherwise]) => ({ type: 'methodExecution', identifier, ...(of && { of }), receiver, ...(otherwise && { otherwise }) }) %}
-	| identifier (_ of {% takeSecond %} ):? _ expression _ with (_ flowing[dataDefinition {% take %} ] {% takeSecond %} | listingBlock[dataDefinition {% take %} ] {% take %} ) {% ([identifier, of, , receiver, , , arguments]) => ({ type: 'methodExecution', identifier, ...(of && { of }), receiver, arguments }) %}
-	| identifier (_ of {% takeSecond %} ):? _ expression _ with _ "{" _ flowing[dataDefinition {% take %} ] _ "}" (_ otherwise _ default _ expression {% takeSixth %} ):? {% ([identifier, of, , receiver, , , , , , arguments, , , otherwise]) => ({ type: 'methodExecution', identifier, ...(of && { of }), receiver, arguments, ...(otherwise && { otherwise }) }) %}
+	  identifier (_ of {% takeSecond %} ):? _ expression (_ otherwise _ default _ expression {% takeSixth %} ):? {% ([method, of, , receiver, otherwise]) => ({ type: 'methodExecution', method, ...(of && { of }), receiver, ...(otherwise && { otherwise }) }) %}
+	| identifier (_ of {% takeSecond %} ):? _ expression _ with (_ flowing[dataDefinition {% take %} ] {% takeSecond %} | listingBlock[dataDefinition {% take %} ] {% take %} ) {% ([method, of, , receiver, , , arguments]) => ({ type: 'methodExecution', method, ...(of && { of }), receiver, arguments }) %}
+	| identifier (_ of {% takeSecond %} ):? _ expression _ with _ "{" _ flowing[dataDefinition {% take %} ] _ "}" (_ otherwise _ default _ expression {% takeSixth %} ):? {% ([method, of, , receiver, , , , , , arguments, , , otherwise]) => ({ type: 'methodExecution', method, ...(of && { of }), receiver, arguments, ...(otherwise && { otherwise }) }) %}
 	| identifier (_ of {% takeSecond %} ):? _ expression _ with _
 		enclosedDataBlock
 		(newline ____:+ otherwise _ default _ expression {% takeSeventh %} ):?
@@ -326,11 +336,11 @@ each		-> "each"		{% ignore %}
 in			-> "in"			{% ignore %}
 skip		-> "skip"		{% ignore %}
 stop		-> "stop"		{% ignore %}
-extent		-> "extent"		{% ignore %}
 default		-> "default"	{% ignore %}
 
 # I've tried to use as few reserved keywords as possible, while still getting a consistent parse
 result		-> %result		{% take %}
+extent		-> %extent		{% take %}
 collect		-> %collect		{% take %}
 of			-> %of			{% take %}
 with		-> %With		{% ignore %}
