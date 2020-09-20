@@ -4,11 +4,19 @@ const IndentationLexer = require('moo-indentation-lexer');
 
 const lexer = new IndentationLexer({
     lexer: moo.compile({
+
+        literal: {
+        	match: /`(?:\\[`\\]|[^\n`\\])*`/,
+        	lineBreaks: true,
+        },
+        text: {
+        	match: /'(?:\\['\\]|[^\n'\\])*'/,
+        	lineBreaks: true,
+        },
+
     	todo: /todo: .*$/,
     	idea: /idea: .*$/,
     	note: /note: .*$/,
-        literal: /`(?:\\[`\\]|[^\n`\\])*`/,
-        text: /'(?:\\['\\]|[^\n'\\])*'/,
 
 		namespaceIdentifier: /^::.*::$/,
 
