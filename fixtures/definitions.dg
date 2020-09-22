@@ -6,7 +6,11 @@
 
 
 square of self:
-	result self * self
+	result self ** 2
+
+
+cube of self:
+	result self ** 3
 
 
 
@@ -19,7 +23,7 @@ selfsame of self:
 
 
 
-::2020-09::Iterable::
+::2020-09::Iterator::
 
 
 
@@ -29,30 +33,80 @@ resultFromEach of self with ...parameters -> mapping:
 
 
 
-::2020-09::Iterate::
+::2020-09::Iteration::
 
 
 
 resultFromEach of self with ...parameters -> mapping:
 	for each x in self,
-		collect resultFrom (mapping in x)
+		collect resultOf (mapping in x)
 
 
 
-::2020-09::Numbers::
+::2020-09::Sequences::
 
 
 
 use infinity
 
 
-countingFrom self:
+evenNumbers:
 	for each number in infinity,
+		collect number * 2
+
+
+oddNumbers:
+	for each number in evenNumbers,
+		collect number + 1
+
+
+power of self:
+	for each number in infinity,
+		collect self ** number
+
+
+factorial:
+	for each n through infinity,
+		when n
+			is 0:      collect 1
+			otherwise: collect n * (factorial (n - 1))
+
+
+note:`The benefit using a 'through' sequence than a plain function is language-provided memoization.
+      A nice property here is that recursion is allowed but only in the very narrow sense of f(N).
+      Because 'through' works from 0->infinity, it does not actually recurse deeply, as f(n-1) is already memoized.`
+fibonacci:
+	for each n through infinity,
+		when n
+			is 0: collect 0
+			is 1: collect 1
+			otherwise: collect (fibonacci (n - 1)) + (fibonacci (n - 2))
+
+
+lucas:
+	for each n through infinity,
+		when n
+			is 0: collect 2
+			is 1: collect 1
+			otherwise: collect (lucas (n - 1)) + (lucas (n - 2))
+
+
+
+::2020-09::Ranges::
+
+
+
+use infinity
+
+
+countingFrom self with numbersLessThan (otherwise default infinity):
+	length = numbersLessThan - self
+	for each number in infinity, to extent of length,
 		collect self + number
 
 
 numbersLessThan self:
-	for each number in extent of self,
+	for each number in infinity, to extent of self,
 		collect number
 
 
@@ -66,14 +120,64 @@ countingTo self:
 		collect number + 1
 
 
+
+::2020-09::Numbers::
+
+
+
+use evenNumbers,
+    oddNumbers
+
+
 evenNumbersLessThan self:
-	for each number in extent of roundingUp (self / 2),
-		collect number * 2
+	for each number in evenNumbers, to extent of roundedUp (self / 2),
+		collect number
 
 
 oddNumbersLessThan self:
-	for each number in extent of roundingDown (self / 2),
-		collect (number * 2) + 1
+	for each number in oddNumbers, to extent of roundedDown (self / 2),
+		collect number
+
+
+
+::2020-09::Aliquot::
+
+
+
+use category,
+    error
+
+
+aliquotSum of self:
+	when self
+		is 1: result 0
+
+		otherwise:
+			variable:sum = 1
+
+			...{ squareRoot of self }
+
+			for each number in countingFrom 2 with numbersLessThan: squareRoot, do:
+				when remainder of self with divisor: number
+					is 0:
+						variable:sum =+ number + (self / number)
+
+			when square of roundedDown squareRoot
+				is self:
+					variable:sum =+ squareRoot
+
+			result variable:sum
+
+
+aliquotClassification of self:
+	when compare self with number: 1
+		is 'less':
+			result error 'Input must be a positive integer'
+		otherwise:
+			when compare (aliquotSum of self) with self
+				is 'less':    result 'deficient'
+				is 'greater': result 'abundant'
+				otherwise:    result 'perfect'
 
 
 
@@ -90,45 +194,45 @@ use category,
     offset
 
 
+launchBoosters of self with thrust,
+                            angle      (otherwise default 0.0),
+                            turboState (otherwise default 'unknown'):
+	numbers = [1, 2, 3]
+
+	variable:stage = 0
+	variable:cache = resultFromEach of numbers with square
+
+	variable:...{ resultFromEach of numbers with square }
+
+	for each x in turbo, do:
+		variable:stage =+ 1
+		engage turbo with thruster: x
+
+	result boost blaster with { ...{ stage }: variable,
+	                            thrust, angle, offset, color } otherwise default 'done'
+
+
 engageBoosters of self with thrust,
-                            angle  otherwise 0.0,
-                            color  otherwise 'green':
+                            angle (otherwise default 0.0),
+                            color (otherwise default 'green'):
 
 	checksResult = preCheck blaster with angle, thrust
 
 	add log with info: 'Hi {name}! Your favourite drink is {drink}.'
 
-	turboState = state of turbo with { angle, thrust,
-	                                   size: usage of self } otherwise default 'poor'
+	...{ state of turbo with { angle, thrust,
+	                           size: usage of self } otherwise default 'poor' }
 
-	when turboState
+	when state
 		is 'good':
 			add log with info: 'Turbo is go!'
-			result launchBoosters of self with angle, thrust, turboState
+			result launchBoosters of self with angle, thrust, state
 
 		is 'okay':
 			add log with warning: 'Turbo is iffy :/'
-			result launchBoosters of self with angle, thrust, turboState
+			result launchBoosters of self with angle, thrust, state
 
 		otherwise:
 			result 'stopped'
-
-
-launchBoosters of self with thrust,
-                            angle      otherwise 0.0,
-                            turboState otherwise 'unknown':
-
-	variable = new of category.data
-	variable.stage = 0
-
-	numbers = [1, 2, 3]
-	variable.cache = resultFromEach of numbers with square
-
-	for each x in turbo, do:
-		variable.stage =+ 1
-		engage turbo with thruster: x
-
-	result boost blaster with { stage:. variable, thrust,
-	                            angle, offset, color } otherwise default 'done'
 
 
