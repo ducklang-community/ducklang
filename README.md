@@ -45,5 +45,4 @@ yarn parse-fixtures
 
 ## 👋 Say hi
 
-* [Slack](https://join.slack.com/t/ducklang/shared_invite/zt-gt4ne6er-zASbb3R5p68g2jddKyqFOw)
-* [Matrix](https://matrix.to/#/%23ducklang%3Amatrix.org)
+* [Gitter](https://gitter.im/ducklang-community/community)
