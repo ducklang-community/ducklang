@@ -6,11 +6,11 @@ const lexer = new IndentationLexer({
     lexer: moo.compile({
 
         literal: {
-        	match: /`(?:\\[`\\]|[^\n`\\])*`/,
+        	match: /`(?:\\[`\\]|[^`\\])*`/,
         	lineBreaks: true,
         },
         text: {
-        	match: /'(?:\\['\\]|[^\n'\\])*'/,
+        	match: /'(?:\\['\\]|[^'\\])*'/,
         	lineBreaks: true,
         },
 
@@ -56,10 +56,8 @@ const lexer = new IndentationLexer({
         set: '=',
 
 		expand: '...',
-		namespaceSeparator: '::',
-        locatorDefine: ':.',
+		namespaceSpecifier: '::',
         define: ':',
-        locator: '.',
         separator: ',',
 
         exponential: '**',
@@ -70,14 +68,15 @@ const lexer = new IndentationLexer({
     })
 });
 
-const ignore		= ()		=> null
-const takeFirst		= ([a])		=> a
-const takeSecond	= ([, b])	=> b
+const ignore		= ()	=> null
+const takeFirst		= ([a]) => a
+const takeSecond	= ([, b]) => b
 const takeThird		= ([, , c])	=> c
-const takeFourth	= ([, , , d])		=> d
-const takeFifth		= ([, , , , e])		=> e
-const takeSixth		= ([, , , , , f])	=> f
-const takeSeventh	= ([, , , , , , g])	=> g
+const takeFourth	= ([, , , d]) => d
+const takeFifth		= ([, , , , e]) => e
+const takeSixth		= ([, , , , , f]) => f
+const takeSeventh	= ([, , , , , , g]) => g
+const takeEighth	= ([, , , , , , , h]) => h
 const take			= takeFirst
 %}
 
@@ -103,8 +102,9 @@ standalone[definition, adjusted] -> newline:?
 	 $adjusted $definition
 	{%	([, comments, , definition]) => ({ type: 'standalone', ...(comments.length && { comments }), definition })	%}
 
-indented[definition] -> newline indent $definition dedent	{% takeThird %}
-blockOf[definition]  -> indented[standalone[$definition		{% take %} , ____:+ {% ignore %} ]:+		{% take %}	]	{% take %}
+indented[definition]	-> newline indent $definition dedent	{% takeThird %}
+block[definition]		-> indented[standalone[$definition		{% take %} , ____:+ {% ignore %} ]		{% take %}	]	{% take %}
+blockOf[definition]		-> indented[standalone[$definition		{% take %} , ____:+ {% ignore %} ]:+	{% take %}	]	{% take %}
 
 items[definition]   -> delimited[$definition	{% take %} , ("," _:+)		{% ignore %} ]			{% take %}
 listing[definition] -> delimited[$definition	{% take %} , ("," newline)	{% ignore %} ] ",":?	{% take %}
@@ -147,7 +147,7 @@ main ->
 	(
 		namespaceDeclaration
 		using:?
-		method:+
+		(method {% take %} | sequence {% take %} ):+
 
 		{% ([namespaceDeclaration, using, methods]) => ({
 			namespaceDeclaration,
@@ -183,8 +183,8 @@ method ->
 	newline
 	newline
 	standalone[(
-			identifier (_ of {% takeSecond %} ):? _ ("self" | "{" _ "self":? ("," _ "this"):? ("," _ "inner"):? _ "}") (_ with _
-			elongated[(_ _ _ _ _ _ _ _ _:+) {% ignore %} , parameter {% take %} ] {% takeFourth %} ):? ":"
+			identifier (_ of {% takeSecond %} ):? _ ("self" | "{" _ "self":? ("," _ "this"):? ("," _ "inner"):? _ "}")
+					methodParameters ":"
 				blockOf[statement {% take %} ]
 			{%	([name, of, , receiver, parameters, , statements]) => ({
 				name,
@@ -197,12 +197,28 @@ method ->
 		null {% ignore %} ]
 	{%	takeThird	%}
 
-for -> For _ each _ identifier _ in _ (
-			  expression "," (_ "do" ":" {% takeSecond %} ):? {% ([expression, , Do]) => ({ expression, ...(Do && { do: Do }) }) %}
-			| extent _ of _ expression "," {% ([, , , , extent]) => ({ extent }) %}
-		)
+sequence ->
+	newline
+	newline
+	standalone[(
+			identifier methodParameters ":"
+				block[for {% take %} ]
+			{%	([name, parameters, , sequence]) => ({
+				name,
+				...(parameters && { parameters }),
+				sequence
+			}) %}
+		) {% take %} ,
+		null {% ignore %} ]
+	{%	takeThird	%}
+
+methodParameters -> (_ with _ elongated[(_ _ _ _ _ _ _ _ _:+) {% ignore %} , parameter {% take %} ] {% takeFourth %} ):?
+
+for -> For _ each _ identifier _ (in {% take %} | through {% take %} ) _ expression ","
+		(_ to _ extent _ of _ expression "," {% takeEighth %} ):?
+		(_ do ":" {% takeSecond %} ):?
 	blockOf[statement {% take %} ]
-	{% ([, , , , name, , , , extent, statements]) => ({ type: 'for', name, ...(extent && { ...extent }), statements }) %}
+	{% ([, , , , name, , iteration, , expression, , , extent, Do, statements]) => ({ type: 'for', name, expression, ...(extent && { extent }), ...(Do && { do: Do }), statements }) %}
 
 when -> When _ expression
 	indented[(
@@ -235,11 +251,24 @@ statement ->
     | assignment["=-"			{% take %} ]	{% take %}
     | does[collect				{% take %} ]	{% take %}
     | does[result				{% take %} ]	{% take %}
+	| (location ":" {% take %}):? "..." "{" _ flowing[locator {% take %} ] _ "}" _ "=" _ expression newline
+		{% ([location, , , locators, , , , , , expression]) => ({ type: 'expandAssign', ...(location && { location }), locators, expression }) %}
+    | (location ":" {% take %}):? "..." "{" _ methodExecution _ "}" newline
+    	{% ([location, expand, , , methodExecution]) => ({ type: 'assignMethodResult', ...(location && { location }), methodExecution }) %}
 	| methodExecution newline					{% take %}
 	| stop newline								{% take %}
 	| skip newline								{% take %}
     | when										{% take %}
     | for										{% take %}
+
+# TODO: support (method in X) - partially applies parameter X
+# TODO: support (method from Z) - binds a method with receiver Z
+#	In order to support this, 'of' should be completely optional and just for readability
+#	(method of from Z) is not pretty...)
+# How about:
+#   (method-of from Z) - where m-of is allowed?
+#
+# Intuitively I think 'in' should bind receiver and 'from' the parameters?
 
 # TODO: Require all binary operations be grouped with parentheses except additions and multiplications
 # eg. (a / b) / c , (a - b) - c, a + b + c , a * b * c
@@ -298,14 +327,15 @@ enclosedDataBlock ->  "{"
 
 
 dataDefinition ->
-	  locator ((":" {% take %} | ":." {% take %} ) _:+ expression {% ([operator, , expression]) => ({ operator, expression }) %} ):?	{% ([locator, definition]) => ({ type: 'dataDefinition', locator, ...(definition && { ...definition }) }) %}
-	| locator ":" _:+ ("[" flowing[expression {% take %} ] "]" {% ([, list]) => { list } %} | "{" _ flowing[dataDefinition {% take %} ] _ "}" {% ([, data]) => { data } %} )	{% ([locator, , , definition]) => ({ type: 'dataDefinition', locator, ...definition }) %}
-	| "..." "{" _ flowing[locator {% take %} ] _ "}" ":" _ expression {% ([, , , locators, , , , , expression]) => { type: 'expandDefinition', locators, expression } %}
+	  locator (":" _:+ expression {% takeThird %} ):?	{% ([locator, expression]) => ({ type: 'dataDefinition', locator, ...(expression && { expression }) }) %}
+	| locator ":" _:+ ("[" flowing[expression {% take %} ] "]" {% ([, list]) => ({ list }) %} | "{" _ flowing[dataDefinition {% take %} ] _ "}" {% ([, data]) => ({ data }) %} )	{% ([locator, , , definition]) => ({ type: 'dataDefinition', locator, ...definition }) %}
+	| "..." "{" _ flowing[locator {% take %} ] _ "}" ":" _ expression {% ([, , , locators, , , , , expression]) => ({ type: 'expandDefinition', locators, expression }) %}
+	| "..." "{" _ methodExecution _ "}" {% ([, , , methodExecution]) => ({ type: 'expandDefinition', methodExecution }) %}
 
 parameter ->
-	  identifier (_:+ otherwise _ expression {% takeFourth %} ):? {% ([name, otherwise]) => ({ type: 'parameter', name, ...(otherwise && { otherwise }) }) %}
-	| "..." identifier {% ([, name]) => ({ type: 'parameterGroup', name }) %}
-	| "..." identifier _ point _ identifier {% ([, parameters, , , , name]) => ({ type: 'parameterSingleton', parameters, name }) %}
+	  identifier (_:+ "(" otherwise _ default _ expression ")" {% takeSeventh %} ):? {% ([name, otherwise]) => ({ type: 'parameter', name, ...(otherwise && { otherwise }) }) %}
+	| "..." identifier {% ([, group]) => ({ type: 'parameterGroup', group }) %}
+	| "..." identifier _ point _ identifier (_:+ otherwise _ expression {% takeFourth %} ):? {% ([, group, , , , singleton, otherwise]) => ({ type: 'parameterSingleton', group, singleton, otherwise }) %}
 
 
 comment -> (todo {% take %} | idea {% take %} | note {% take %} | annotation ":" literal  {% ([annotation, , literal]) => ({ type: 'comment', annotation, literal }) %} ) newline {% take %}
@@ -315,7 +345,7 @@ annotation ->
 	| "todo"	{% take %}
 
 
-location -> identifier ("." locator {% takeSecond %} ):? {% ([name, locator]) => ({ type: 'location', name, ...(locator && { locator }) }) %}
+location -> identifier (":" locator {% takeSecond %} ):* {% ([name, locators]) => ({ type: 'location', name, ...(locators.length && { locators }) }) %}
 
 locator ->
 	  identifier	{% take %}
@@ -334,6 +364,9 @@ is			-> "is"			{% ignore %}
 For			-> "for"		{% ignore %}
 each		-> "each"		{% ignore %}
 in			-> "in"			{% ignore %}
+to			-> "to"			{% ignore %}
+do			-> "do"			{% ignore %}
+through		-> "through"	{% ignore %}
 skip		-> "skip"		{% ignore %}
 stop		-> "stop"		{% ignore %}
 default		-> "default"	{% ignore %}
