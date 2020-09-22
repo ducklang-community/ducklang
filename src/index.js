@@ -3,20 +3,26 @@ const nearley = require("nearley")
 const { SourceNode } = require("source-map")
 const grammar = require("../dist/grammar.js")
 
-const parser = new nearley.Parser(nearley.Grammar.fromCompiled(grammar))
-
-const fileName = null;
-const data = fs.readFileSync(0, 'utf-8')
-parser.feed(data)
 
 const jsComment = ({ value }) => value.includes('\n') ? `/*\n${value}\n*/\n` : `// ${value}\n`
 
 const jsComments = (comments) => comments ? comments.map(comment => jsComment(comment)) : []
 
 const jsParameters = (items) =>
-    items && items.map(({ definition: { name: { line, col, value } } }) => [', ', new SourceNode(
-        line, col - 1, fileName, value
-    )]).flat().slice(1) || []
+    items.map(({ definition: { name: { line, col, value } } }) =>
+        [', ', new SourceNode(line, col - 1, fileName, value)]).flat()
+
+const jsParametersGroup = (item) =>
+    item.map(({ definition: { group: { line, col, value } } }) =>
+        [', ', '...', new SourceNode(line, col - 1, fileName, value)]).flat()
+
+const parser = new nearley.Parser(nearley.Grammar.fromCompiled(grammar))
+
+
+const fileName = null;
+const data = fs.readFileSync(0, 'utf-8')
+parser.feed(data)
+
 
 if (parser.results.length === 0) {
     console.error('Expected more input')
@@ -28,37 +34,53 @@ else if (parser.results.length === 1) {
     console.log(JSON.stringify(results, null, 2))
     console.log('Good parse');
 
-    // TODO: validate the input for any rules that are not easy to put into grammar,
-    // For example that the parameter names of a method are unique.
     results.forEach(({ namespaceDeclaration, using, methods }) => {
 
-        methods.map(({ comments, definition: { name, of, receiver, parameters, statements } }) => {
+        methods.forEach(({ comments, definition: { name, of, receiver, parameters, statements } }) => {
+
+            parameters = parameters || []
+
+            const names = parameters.filter(({ definition: { type } }) => type === 'parameter')
+            const group = parameters.filter(({ definition: { type } }) =>
+                ['parameterSingleton', 'parameterGroup'].includes(type))
+
+            if (group.length > 1) {
+                throw new Error('Cannot have more than one parameter group per method')
+            }
+
+            // TODO: check all parameters, dependencies and assignment statements to prevent name clash
 
         })
 
     })
 
-    results.forEach(({ namespaceDeclaration, using, methods }) => {
+    results.map(({ namespaceDeclaration, using, methods }) => {
 
         const dependencies = using && jsParameters(using.definition) || []
 
         methods.map(({ comments, definition: { name, of, receiver, parameters, statements } }) => {
 
-            // TODO: check all parameters, dependencies and assignment statements to prevent name clash
+            parameters = parameters || []
 
-            const names = jsParameters(parameters.filter(({ definition: { type } }) => type === 'parameter'))
-            const singleton = jsParameters(parameters.filter(({ definition: { type } }) => type === 'parameterSingleton'))
+            const names     = jsParameters(     parameters.filter(({ definition: { type } }) => type === 'parameter'))
+            const group     = jsParametersGroup(parameters.filter(({ definition: { type } }) => type === 'parameterGroup'))
+            const singleton = jsParametersGroup(parameters.filter(({ definition: { type } }) => type === 'parameterSingleton'))
 
             return new SourceNode(name.line, name.col - 1, fileName, [
                 jsComments(comments),
                 '($parameters) => {\n',
-                    // For any parameters which weren't supplied we can automatically fill in defaults here.
-                    'const { ', names,  ' } = $parameters\n',
+                    'const { ', ...[...names, ...group, ...singleton].slice(1), ' } = $parameters\n',
+
+                    // TODO: get the singleton out, if relevant and group has length 1
+
+                    // TODO: check and fill in the defaults for missing params (will need to move those into a 'let')
+                    //  Remember singleton can also have otherwise
+
                 '}\n'
             ])
         })
 
-        const namespace = new SourceNode(namespaceDeclaration.line, namespaceDeclaration.col - 1, fileName, [
+        return new SourceNode(namespaceDeclaration.line, namespaceDeclaration.col - 1, fileName, [
             '{\n',
                 // methods go here, each enclosed by the namespace's parameters
             '}\n'
