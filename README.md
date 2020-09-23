@@ -6,6 +6,26 @@
 
 Ducklang is a duck-typed programming language with an emphasis on readability of the language.
 
+### Code examples
+
+Please see the [fixtures/definitions.dg](fixtures/definitions.dg) for example code
+
+## 👋 Say hi
+
+* [Gitter](https://gitter.im/ducklang-community/community)
+
+## Usage
+
+### Install
+```shell script
+yarn
+```
+
+### Run
+```shell script
+yarn parse-fixtures
+```
+
 ### Principles
 
 * **Duck typing**: Testing over typing - a good type system can get complex while a good integration suite can give peace of mind
@@ -21,28 +41,8 @@ Ducklang is a duck-typed programming language with an emphasis on readability of
 * **Uniformity**: emphasis on the object oriented paradigm and uniform whitespace makes the community's code much less irregular
 * **Error propagation**: Errors are signalled using Result objects as in Rust, but the behaviour is inverted - every error is returned immediately to the caller unless the `?=` operator is used
 
-### Code examples
-
-Please see the [fixtures/definitions.dg](fixtures/definitions.dg) for example code
-
-## Usage
-
-### Install
-```shell script
-yarn
-```
-
-### Run
-```shell script
-yarn parse-fixtures
-```
-
 ## Roadmap
 
 * ~~Clean up the Nearley output using functions~~
 * Build a representation of the program from the parse tree
 * Compile the program representation into JavaScript
-
-## 👋 Say hi
-
-* [Gitter](https://gitter.im/ducklang-community/community)
