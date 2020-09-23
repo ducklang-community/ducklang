@@ -28,7 +28,7 @@ selfsame of self:
 
 
 resultFromEach of self with ...parameters -> mapping:
-	iterator = iterator of self
+	iterator... of self
 	result resultFromEach of iterator with mapping
 
 
@@ -155,7 +155,7 @@ aliquotSum of self:
 		otherwise:
 			variable:sum = 1
 
-			...{ squareRoot of self }
+			squareRoot... of self
 
 			for each number in countingFrom 2 with numbersLessThan: squareRoot, do:
 				when remainder of self with divisor: number
@@ -174,7 +174,8 @@ aliquotClassification of self:
 		is 'less':
 			result error 'Input must be a positive integer'
 		otherwise:
-			when compare (aliquotSum of self) with self
+			aliquotSum... of self
+			when compare aliquotSum with self
 				is 'less':    result 'deficient'
 				is 'greater': result 'abundant'
 				otherwise:    result 'perfect'
@@ -202,7 +203,9 @@ launchBoosters of self with thrust,
 	variable:stage = 0
 	variable:cache = resultFromEach of numbers with square
 
-	variable:...{ resultFromEach of numbers with square }
+	variable:resultFromEach... of numbers with square
+
+	variable:...{ foo, bar } = variable:cache
 
 	for each x in turbo, do:
 		variable:stage =+ 1
@@ -220,8 +223,8 @@ engageBoosters of self with thrust,
 
 	add log with info: 'Hi {name}! Your favourite drink is {drink}.'
 
-	...{ state of turbo with { angle, thrust,
-	                           size: usage of self } otherwise default 'poor' }
+	state... of turbo with { angle, thrust,
+	                         size: usage of self } otherwise default 'poor'
 
 	when state
 		is 'good':
