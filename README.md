@@ -1,18 +1,10 @@
 # 🐥 Ducklang
 
-*No PhD required!*
-
-## About
-
 Ducklang is a duck-typed programming language with an emphasis on readability of the language.
 
-### Code examples
+Look at [fixtures/definitions.dg](fixtures/definitions.dg) for code examples.
 
-Please see the [fixtures/definitions.dg](fixtures/definitions.dg) for example code
-
-## 👋 Say hi
-
-* [Gitter](https://gitter.im/ducklang-community/community)
+[Join us and chat on Gitter](https://gitter.im/ducklang-community/community)
 
 ## Usage
 
