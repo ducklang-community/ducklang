@@ -100,29 +100,6 @@ else {
 
 
 
-resultFromEach of self with options: { name, color, speed },
-                            [mapping]: ...parameters:
-
-	todo: Should be strict or not?
-	note:`With dictionary args we are not strict, because that allows the API to grow cleanly,
-	      which is the desired behaviour by default.
-
-	      I'm not sure that we want lists to be able to have unexpected ending by default,
-	      so best to require an explicit ... or ...variable at the end`
-
-	note: fine, as long as there are 1+ parameters
-	[first, ...rest] = parameters
-
-	note: errors
-	[a,b] = 1,2,3
-
-	[a,b] = 1,2
-
-
-	for each x in self,
-		collect resultOf (mapping in x)
-
-
 
 use software,
     category

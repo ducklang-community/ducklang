@@ -93,15 +93,18 @@ does[operator] -> $operator _ expression newline
 	{%	([operator, , expression]) => ({ type: 'does', operator, expression })	 %}
 
 
-assignmentWith[operator, expression] -> location $operator $expression newline
+assignmentWith[operator, expression] -> location $operator $expression
 	{%	([location, operator, expression]) => ({ type: 'assignmentWith', location, operator, expression })	%}
 
 assignmentOf[operator, expression	] -> assignmentWith[$operator							{% take %} , $expression {% take %}	] {% take %}
 assignment[  operator				] -> assignmentWith[(_ $operator _ {% takeSecond %} )	{% take %} , expression  {% take %}	] {% take %}
 
-assignExpand[operator] -> (location ":" {% take %} ):? "..." "{" _ flowing[locator {% take %} ] _ "}" $operator _ expression
-		{% ([location, , , , locators, , , operator, , expression]) =>
+# TODO: this should be the same as parameter definition, eg. can use otherwise default, and inner structures.
+# De-duplicate with statement / data definition / parameters
+assignExpand[operator] -> (location ":" {% take %} ):? "..." "{" _ flowing[locator {% take %} ] _ "}" $operator expression
+		{% ([location, , , , locators, , , operator, expression]) =>
 			({ type: 'expandAssign', ...(location && { location }), locators, operator, expression }) %}
+
 
 standalone[definition, adjusted] -> newline:?
 	($adjusted comment		{% takeSecond %} ):*
@@ -147,6 +150,7 @@ listingBlock[definition] ->
 		{% take %}
 	) {% take %} ]
 	{% take %}
+
 
 allowOtherwise[adjustment] -> ( $adjustment otherwise _ default _ expression {% takeSixth %} ):?	{% take %}
 
@@ -224,7 +228,23 @@ sequence ->
 		null {% ignore %} ]
 	{%	takeThird	%}
 
+
 methodParameters -> (_ with _ elongated[(_ _ _ _ _ _ _ _ _:+) {% ignore %} , parameter {% take %} ] {% takeFourth %} ):?
+
+parameter ->
+	"...":? identifier
+		(":" _:+ "["		flowing[parameter {% take %} ]	"]" {% takeFourth %}	):?
+		(":" _:+ "{" _	flowing[parameter {% take %} ] _	"}" {% takeFifth %}		):?
+		(_:+ "(" otherwise _ default _ expression ")" {% takeSeventh %} ):?
+	{% ([grouping, name, listed, locators, otherwise]) => ({
+		type: 'parameter',
+		...(grouping && { grouping }),
+		name,
+		...(listed && { listed }),
+		...(locators && { locators }),
+		...(otherwise && { otherwise })
+	}) %}
+
 
 for -> For _ each _ identifier _ (in {% take %} | through {% take %} ) _ expression ","
 		(_ to _ extent _ of _ expression "," {% takeEighth %} ):?
@@ -252,22 +272,22 @@ when -> When _ expression
 
 
 statement ->
-      for										{% take %}
-    | when										{% take %}
-	| assignmentOf[(_ "="       _ {% takeSecond %} ), listLiteral	{% take %} ]	{% take %}
-	| assignmentOf[(_ "="       _ {% takeSecond %} ), dataLiteral	{% take %} ]	{% take %}
-	| assignmentOf[(_ "="       _ {% takeSecond %} ), listBlock		{% take %} ]	{% take %}
-	| assignmentOf[(_ "="       _ {% takeSecond %} ), dataBlock		{% take %} ]	{% take %}
-    | assignment["="			{% take %} ]	{% take %}
-    | assignment["=**"			{% take %} ]	{% take %}
-    | assignment["=*"			{% take %} ]	{% take %}
-    | assignment["=/"			{% take %} ]	{% take %}
-    | assignment["=+"			{% take %} ]	{% take %}
-    | assignment["=-"			{% take %} ]	{% take %}
-    | does[collect				{% take %} ]	{% take %}
-    | does[result				{% take %} ]	{% take %}
-	| assignExpand[(_ "=") {% ignore %} ] newline {% take %}
-    | assignMethodResult				newline	{% take %}
+      for							{% take %}
+    | when							{% take %}
+    | does[collect	{% take %} ]	{% take %}
+    | does[result	{% take %} ]	{% take %}
+    | assignMethodResult																newline	{% take %}
+	| assignExpand[(_ "=" _ {% ignore %} )	{% ignore %} ]								newline	{% take %}
+	| assignmentOf[(_ "=" _ {% ignore %} )	{% ignore %} , listLiteral	{% take %}	]	newline	{% take %}
+	| assignmentOf[(_ "=" _ {% ignore %} )	{% ignore %} , dataLiteral	{% take %}	]	newline	{% take %}
+	| assignmentOf[(_ "=" _ {% ignore %} )	{% ignore %} , listBlock	{% take %}	]	newline	{% take %}
+	| assignmentOf[(_ "=" _ {% ignore %} )	{% ignore %} , dataBlock	{% take %}	]	newline	{% take %}
+    | assignment["="	{% take %} ]	newline	{% take %}
+    | assignment["=**"	{% take %} ]	newline	{% take %}
+    | assignment["=*"	{% take %} ]	newline	{% take %}
+    | assignment["=/"	{% take %} ]	newline	{% take %}
+    | assignment["=+"	{% take %} ]	newline	{% take %}
+    | assignment["=-"	{% take %} ]	newline	{% take %}
 	| methodExecution					newline	{% take %}
 	| stop								newline	{% take %}
 	| skip								newline	{% take %}
@@ -328,10 +348,6 @@ methodCall[nameModifier] ->
 			({ type: 'methodExecution', ...invocation, arguments, ...(otherwise && { otherwise }) }) %}
 
 
-methodExecution -> methodCall[null	{% ignore %}	]
-methodNaming    -> methodCall["..."	{% take %}		]
-
-
 listLiteral -> "["		flowing[expression		{% take %} ]	"]" {% ([, list]) => ({ list }) %}
 dataLiteral -> "{" _	flowing[dataDefinition	{% take %} ] _	"}" {% ([, data]) => ({ data }) %}
 
@@ -340,7 +356,6 @@ listBlock ->  "["
 		listingBlock[flowing[expression {% take %} ] {% take %} ]
 	____:+ "]"
 	{% ([, listingBlock]) => ({ type: 'listBlock', listingBlock }) %}
-
 
 dataBlock ->
 	  listingBlock[dataDefinition {% take %} ]	{% take %}
@@ -351,34 +366,42 @@ enclosedDataBlock ->  "{"
 	____:+ "}"
 	{% ([, listingBlock]) => ({ type: 'enclosedDataBlock', listingBlock }) %}
 
+# TODO: data blocks and list blocks?
 
 dataDefinition ->
-	  location (":" _:+ expression {% takeThird %} ):?
+	  assignMethodResult																{% take %}
+	| assignExpand[(":"	_:+ {% ignore %} ) {% ignore %} ]								{% take %}
+	| assignmentOf[(":" _:+ {% ignore %} ) {% ignore %} , listLiteral	{% take %} ]	{% take %}
+	| assignmentOf[(":" _:+ {% ignore %} ) {% ignore %} , dataLiteral	{% take %} ]	{% take %}
+	| assignmentOf[(":" _:+ {% ignore %} ) {% ignore %} , listBlock		{% take %} ]	{% take %}
+	| assignmentOf[(":" _:+ {% ignore %} ) {% ignore %} , dataBlock		{% take %} ]	{% take %}
+	| location (":" _:+ expression {% takeThird %} ):?
 	  	{% ([location, expression]) =>
 	  		({ type: 'dataDefinition', location, ...(expression && { expression }) }) %}
-	| assignmentOf[(":" _:+ {% take %} ) {% take %} , listLiteral {% take %} ]	{% take %}
-	| assignmentOf[(":" _:+ {% take %} ) {% take %} , dataLiteral {% take %} ]	{% take %}
-	| assignExpand[":"	{% ignore %} ]
-	| assignMethodResult {% take %}
+
 
 assignMethodResult -> (location ":" {% take %}):? methodNaming
 	{% ([location, methodNaming]) => ({ type: 'assignMethodResult', ...(location && { location }), methodNaming }) %}
 
-
-parameter ->
-	  identifier (_:+ "(" otherwise _ default _ expression ")" {% takeSeventh %} ):? {% ([name, otherwise]) => ({ type: 'parameter', name, ...(otherwise && { otherwise }) }) %}
-	| "..." identifier {% ([, group]) => ({ type: 'parameterGroup', group }) %}
-	| "..." identifier _ point _ identifier (_:+ otherwise _ expression {% takeFourth %} ):? {% ([, group, , , , singleton, otherwise]) => ({ type: 'parameterSingleton', group, singleton, otherwise }) %}
+methodExecution -> methodCall[null	{% ignore %}	]
+methodNaming    -> methodCall["..."	{% take %}		]
 
 
-comment -> (todo {% take %} | idea {% take %} | note {% take %} | annotation ":" literal  {% ([annotation, , literal]) => ({ type: 'comment', annotation, literal }) %} ) newline {% take %}
+comment ->
+	(todo {% take %} | idea {% take %} | note {% take %}
+		| annotation ":" literal  {% ([annotation, , literal]) => ({ type: 'comment', annotation, literal }) %} )
+	newline
+	{% take %}
+
 annotation ->
 	  "note"	{% take %}
 	| "idea"	{% take %}
 	| "todo"	{% take %}
 
 
-location -> identifier (":" locator {% takeSecond %} ):* {% ([name, locators]) => ({ type: 'location', name, ...(locators.length && { locators }) }) %}
+location -> identifier (":" locator {% takeSecond %} ):*
+	{% ([name, locators]) =>
+		({ type: 'location', name, ...(locators.length && { locators }) }) %}
 
 locator ->
 	  identifier	{% take %}

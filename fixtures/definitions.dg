@@ -27,7 +27,7 @@ selfsame of self:
 
 
 
-resultFromEach of self with ...parameters -> mapping:
+resultFromEach of self with ...parameter: [mapping]:
 	iterator... of self
 	result resultFromEach of iterator with mapping
 
@@ -37,7 +37,7 @@ resultFromEach of self with ...parameters -> mapping:
 
 
 
-resultFromEach of self with ...parameters -> mapping:
+resultFromEach of self with ...parameter: [mapping]:
 	for each x in self,
 		collect resultOf (mapping in x)
 
