@@ -18,11 +18,11 @@ use infinity
 
 
 fibonacci:
-	for each n through infinity,
-		when n
-			is 0: collect 0
-			is 1: collect 1
-			otherwise: collect (fibonacci (n - 1)) + (fibonacci (n - 2))
+    for each n through infinity,
+        when n
+            is 0: collect 0
+            is 1: collect 1
+            otherwise: collect (fibonacci (n - 1)) + (fibonacci (n - 2))
 
 
 
@@ -39,30 +39,30 @@ engageBoosters of self with thrust,
                             angle (otherwise default 0.0),
                             color (otherwise default 'green'):
 
-	checksResult = preCheck blaster with angle, thrust
+    checksResult = preCheck blaster with angle, thrust
 
-	add log with info: 'Hi {name}! Your favourite drink is {drink}.'
+    add log with info: 'Hi {name}! Your favourite drink is {drink}.'
 
-	state... of turbo with { angle, thrust,
-	                         size: usage of self } otherwise default 'poor'
+    state... of turbo with { angle, thrust,
+                             size: usage of self } otherwise default 'poor'
 
-	when state
-		is 'good':
-			add log with info: 'Turbo is go!'
-			result launchBoosters of self with angle, thrust, state
+    when state
+        is 'good':
+            add log with info: 'Turbo is go!'
+            result launchBoosters of self with angle, thrust, state
 
-		is 'okay':
-			add log with warning: 'Turbo is iffy :/'
-			result launchBoosters of self with angle, thrust, state
+        is 'okay':
+            add log with warning: 'Turbo is iffy :/'
+            result launchBoosters of self with angle, thrust, state
 
-		otherwise:
-			result 'stopped'
+        otherwise:
+            result 'stopped'
 
 
 
 ```
 
-See [fixtures/definitions.dg](fixtures/definitions.dg) for example code.
+See [fixtures/definitions.dg](fixtures/definitions.dg) for more example code.
 
 ## Usage
 
