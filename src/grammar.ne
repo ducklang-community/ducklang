@@ -28,7 +28,6 @@ const lexer = new IndentationLexer({
 			match: /[a-zA-Z]+[a-zA-Z0-9]*/,
 			type: moo.keywords({
 				result: 'result',
-				extent: 'extent',
 				collect: 'collect',
 				of: 'of',
 				With: 'with',
@@ -80,9 +79,6 @@ const takeSeventh	= ([, , , , , , g]) => g
 const takeEighth	= ([, , , , , , , h]) => h
 const take			= takeFirst
 %}
-
-
-# todo: Do we want `in` to work like currying/partial application?
 
 
 @lexer lexer
@@ -197,6 +193,15 @@ using ->
 		null {% ignore %} ]
 	{%	takeThird	%}
 
+
+# TODO: support (method in Z)		- binds a method with receiver Z
+# TODO: support (method using X)	- partially applies parameter X
+# TODO: support (method from Y)		- applies using parameters data Y
+
+# But (method of from Z) is not pretty...
+# 'of' could be completely optional and just for readability?
+# How about: (method-of from Z)
+
 # TODO: improve the { self, this, inner } to make any part optional
 method ->
 	newline
@@ -297,15 +302,6 @@ statement ->
 	| stop								newline	{% take %}
 	| skip								newline	{% take %}
 
-
-# TODO: support (method in X) - partially applies parameter X
-# TODO: support (method from Z) - binds a method with receiver Z
-#	In order to support this, 'of' should be completely optional and just for readability
-#	(method of from Z) is not pretty...)
-# How about:
-#   (method-of from Z) - where m-of is allowed?
-#
-# Intuitively I think 'in' should bind receiver and 'from' the parameters?
 
 # TODO: Require all binary operations be grouped with parentheses except additions and multiplications
 # eg. (a / b) / c , (a - b) - c, a + b + c , a * b * c
@@ -426,15 +422,15 @@ For			-> "for"		{% ignore %}
 each		-> "each"		{% ignore %}
 in			-> "in"			{% ignore %}
 to			-> "to"			{% ignore %}
+extent		-> "extent"		{% ignore %}
 do			-> "do"			{% ignore %}
 through		-> "through"	{% ignore %}
 skip		-> "skip"		{% ignore %}
 stop		-> "stop"		{% ignore %}
 default		-> "default"	{% ignore %}
 
-# I've tried to use as few reserved keywords as possible, while still getting a consistent parse
+# I've tried to use as few reserved keywords as possible, while still having an unambiguous parse
 result		-> %result		{% take %}
-extent		-> %extent		{% take %}
 collect		-> %collect		{% take %}
 of			-> %of			{% take %}
 with		-> %With		{% ignore %}
