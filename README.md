@@ -2,9 +2,9 @@
 
 Ducklang is a duck-typed programming language with an emphasis on readability of the language.
 
-Look at [fixtures/definitions.dg](fixtures/definitions.dg) for code examples.
+See [fixtures/definitions.dg](fixtures/definitions.dg) for example code.
 
-[Join us and chat on Gitter](https://gitter.im/ducklang-community/community)
+[Join and chat on Gitter](https://gitter.im/ducklang-community/community)
 
 ## Usage
 
