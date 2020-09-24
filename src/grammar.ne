@@ -90,19 +90,19 @@ does[operator] -> $operator _ expression newline
 
 
 assignmentWith[operator, expression] -> location $operator $expression
-	{%	([location, operator, expression]) => ({ type: 'assignmentWith', location, operator, expression })	%}
+	{%	([location, operator, expression]) => ({ type: 'assignmentWith', location, ...(operator && ({ operator })), expression })	%}
 
 assignmentOf[operator, expression	] -> assignmentWith[$operator							{% take %} , $expression {% take %}	] {% take %}
 assignment[  operator				] -> assignmentWith[(_ $operator _ {% takeSecond %} )	{% take %} , expression  {% take %}	] {% take %}
 
 assignExpand[operator] ->
 	  ( location ":" {% take %} ):? "..." destructuringList $operator expression
-		{% ([location, , locators, operator, expression]) =>
-			({ type: 'expandAssignList', ...(location && { location }), locators, operator, expression }) %}
+		{% ([location, , destructuring, , expression]) =>
+			({ type: 'expandAssignList', ...(location && { location }), ...destructuring, expression }) %}
 
-	| ( location ":" {% take %} ):? "..." destructuringData ( $operator expression {% ([operator, expression]) => ({ operator, expression }) %} ):?
-		{% ([location, , locators, operatorWithExpression]) =>
-			({ type: 'expandAssignData', ...(location && { location }), locators, ...(operatorWithExpression && { ...operatorWithExpression }) }) %}
+	| ( location ":" {% take %} ):? "..." destructuringData ( $operator expression {% takeSecond %} ):?
+		{% ([location, , destructuring, expression]) =>
+			({ type: 'expandAssignData', ...(location && { location }), ...destructuring, ...(expression && { expression }) }) %}
 
 
 standalone[definition, adjusted] -> newline:?
@@ -124,21 +124,21 @@ flowing[definition] -> items[$definition	{% take %} ] ("," newline
 
 # TODO: there is some duplication between listed/elongated which would be nice to extract and simplify
 
-listed[adjusted, definition] -> listing[(
+listed[adjusted, entry] -> listing[(
 		($adjusted comment		{% takeSecond %} ):*
-		 $adjusted $definition
-		{%	([comments, , definition]) => ({ type: 'listed', ...(comments.length && { comments }), definition })	%} )
+		 $adjusted $entry
+		{%	([comments, , entry]) => ({ type: 'entry', ...(comments.length && { comments }), entry })	%} )
 	{% take %} ]
 	{% take %}
 
-elongated[adjusted, definition] ->
+elongated[adjusted, entry] ->
 	(
-		  $definition {% ([definition]) => ({ type: 'listed', definition }) %}
-		| ( delimited[comment {% take %}, $adjusted {% ignore %} ] {% take %} ):+ $adjusted $definition
-			{%	([comments, , definition]) => ({ type: 'listed', ...(comments.length && { comments }), definition })	%}
+		  $entry {% ([entry]) => ({ type: 'entry', entry }) %}
+		| ( delimited[comment {% take %}, $adjusted {% ignore %} ] {% take %} ):+ $adjusted $entry
+			{%	([comments, , entry]) => ({ type: 'entry', ...(comments.length && { comments }), entry })	%}
 	)
 	("," newline
-		listed[$adjusted	{% take %} , $definition	{% take %} ]
+		listed[$adjusted	{% take %} , $entry	{% take %} ]
 		{% takeThird %}
 	):?
 	{%	([first, rest]) => [first, ...(rest || [])]	%}
@@ -237,7 +237,7 @@ sequence ->
 	{%	takeThird	%}
 
 
-methodParameters -> (_ with _ elongated[(_ _ _ _ _ _ _ _ _:+) {% ignore %} , parameter {% take %} ] {% takeFourth %} ):?
+methodParameters -> (_ with _ elongated[(_ _ _ _ _ _ _ _ _:+) {% ignore %} , parameter {% take %} ] {% takeFourth %} ):? {% take %}
 
 parameter ->
 	"...":? identifier
@@ -253,14 +253,14 @@ parameter ->
 		...(otherwise && { otherwise })
 	}) %}
 
-destructuringList -> "["   flowing[parameter {% take %} ]   "]" {% ([, listed]) => ({ listed }) %}
-destructuringData -> "{" _ flowing[parameter {% take %} ] _ "}" {% ([, , dataDefinition]) => ({ dataDefinition }) %}
+destructuringList -> "["   flowing[parameter {% take %} ]   "]" {% ([, destructuringList])   => ({ destructuringList }) %}
+destructuringData -> "{" _ flowing[parameter {% take %} ] _ "}" {% ([, , destructuringData]) => ({ destructuringData }) %}
 
 for -> For _ each _ identifier _ (in {% take %} | through {% take %} ) _ expression ","
 		(_ to _ extent _ of _ expression "," {% takeEighth %} ):?
 		(_ do ":" {% takeSecond %} ):?
 	blockOf[statement {% take %} ]
-	{% ([, , , , name, , iteration, , expression, , , extent, Do, statements]) => ({ type: 'for', name, expression, ...(extent && { extent }), ...(Do && { do: Do }), statements }) %}
+	{% ([, , , , name, , iteration, , expression, , extent, Do, statements]) => ({ type: 'for', name, iteration, expression, ...(extent && { extent }), ...(Do && { do: Do }), statements }) %}
 
 when -> When _ expression
 	indented[(
@@ -384,8 +384,8 @@ dataDefinition ->
 assignMethodResult -> (location ":" {% take %} ):? methodNaming
 	{% ([location, methodNaming]) => ({ type: 'assignMethodResult', ...(location && { location }), methodNaming }) %}
 
-methodExecution -> methodCall[null	{% ignore %}	]
-methodNaming    -> methodCall["..."	{% take %}		]
+methodExecution -> methodCall[null	{% ignore %}	] {% take %}
+methodNaming    -> methodCall["..."	{% take %}		] {% take %}
 
 
 comment ->
@@ -420,14 +420,14 @@ When		-> "when"		{% ignore %}
 is			-> "is"			{% ignore %}
 For			-> "for"		{% ignore %}
 each		-> "each"		{% ignore %}
-in			-> "in"			{% ignore %}
 to			-> "to"			{% ignore %}
 extent		-> "extent"		{% ignore %}
 do			-> "do"			{% ignore %}
-through		-> "through"	{% ignore %}
 skip		-> "skip"		{% ignore %}
 stop		-> "stop"		{% ignore %}
 default		-> "default"	{% ignore %}
+in			-> "in"			{% take %}
+through		-> "through"	{% take %}
 
 # I've tried to use as few reserved keywords as possible, while still having an unambiguous parse
 result		-> %result		{% take %}

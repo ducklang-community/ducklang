@@ -87,7 +87,8 @@ else if (parser.results.length === 1) {
         ])
     })
 
-    // TODO: make the output as pretty as possible (prettier doesn't do source mapping)
+    // TODO: make the output as pretty as possible
+    // (nb. prettier isn't viable as it doesn't do source mapping. Workarounds exist but are slow)
 
     // TODO: set the line,col of closing tags to be something at the end of the source
 }
