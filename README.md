@@ -6,7 +6,7 @@ Ducklang is a duck-typed programming language with an emphasis on readability of
 
 ## Examples
 
-```
+```ducklang
 
 
 
