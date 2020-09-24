@@ -12,10 +12,10 @@ discontinuous-range@1.0.0:
   resolved "https://registry.yarnpkg.com/discontinuous-range/-/discontinuous-range-1.0.0.tgz#e38331f0844bba49b9a9cb71c771585aab1bc65a"
   integrity sha1-44Mx8IRLukm5qctxx3FYWqsbxlo=
 
-moo-indentation-lexer@^5.0.0:
-  version "5.0.0"
-  resolved "https://registry.yarnpkg.com/moo-indentation-lexer/-/moo-indentation-lexer-5.0.0.tgz#5bef59bb1c2f86862e5aa8e88d49f3b398964cff"
-  integrity sha512-ebC9A4mC/4yVzqtdCtLoG6vFp6y8vbFddOS6ZgC1hm/wC4lhYoj5kmP41o5h1sF0KR8LOAyuEeaI6khY8UqNew==
+moo-indentation-lexer@^6.0.0:
+  version "6.0.0"
+  resolved "https://registry.yarnpkg.com/moo-indentation-lexer/-/moo-indentation-lexer-6.0.0.tgz#aba259c216109871c11dcc5c61d5cf7804188430"
+  integrity sha512-qra3nYwiOFbPCjMWvBkhHhtpILh2q46n+D8oduPR2iG/yIhKsKveKVXLhh0BGWfl21AIlqhQctEqai+6zs+DzA==
   dependencies:
     moo-peekable-lexer "^1.1.2"
 
@@ -24,15 +24,14 @@ moo-peekable-lexer@^1.1.2:
   resolved "https://registry.yarnpkg.com/moo-peekable-lexer/-/moo-peekable-lexer-1.1.2.tgz#ee4ee842c55f408da59716bd5aa9cb771a33574b"
   integrity sha512-8m53qKZqTW0RqvrxVYgfdbaH+7DMLXwLo3DRLea/6DtAcpzVZICtPboEIqcJ3dJf09JxZK9lRSGGcENgFq499Q==
 
-moo@^0.5.0, moo@^0.5.1:
+moo@^0.5.0, moo@aliclark/moo.git#graphical-errors:
   version "0.5.1"
-  resolved "https://registry.yarnpkg.com/moo/-/moo-0.5.1.tgz#7aae7f384b9b09f620b6abf6f74ebbcd1b65dbc4"
-  integrity sha512-I1mnb5xn4fO80BH9BLcF0yLypy2UKl+Cb01Fu0hJRkJjlCRtxZMWkTdAtDd5ZqCOxtCkhmRwyI57vWT+1iZ67w==
+  resolved "https://codeload.github.com/aliclark/moo/tar.gz/5c7d2192ae251a1963121f2a1fd98aac12aadebd"
 
-nearley@^2.19.5:
-  version "2.19.6"
-  resolved "https://registry.yarnpkg.com/nearley/-/nearley-2.19.6.tgz#22663fd7326eb708b4c18bfdd7e4ce204b7239b0"
-  integrity sha512-OV3Lx+o5iIGWVY38zs+7aiSnBqaHTFAOQiz83VHJje/wOOaSgzE3H0S/xfISxJhFSoPcX611OEDV9sCT8F283g==
+nearley@^2.19.7:
+  version "2.19.7"
+  resolved "https://registry.yarnpkg.com/nearley/-/nearley-2.19.7.tgz#eafbe3e2d8ccfe70adaa5c026ab1f9709c116218"
+  integrity sha512-Y+KNwhBPcSJKeyQCFjn8B/MIe+DDlhaaDgjVldhy5xtFewIbiQgcbZV8k2gCVwkI1ZsKCnjIYZbR+0Fim5QYgg==
   dependencies:
     commander "^2.19.0"
     moo "^0.5.0"

@@ -13,9 +13,9 @@
     "start": "node src/index.js"
   },
   "dependencies": {
-    "moo": "^0.5.1",
-    "moo-indentation-lexer": "^5.0.0",
-    "nearley": "^2.19.5",
+    "moo": "aliclark/moo.git#graphical-errors",
+    "moo-indentation-lexer": "^6.0.0",
+    "nearley": "^2.19.7",
     "source-map": "^0.7.3"
   }
 }
