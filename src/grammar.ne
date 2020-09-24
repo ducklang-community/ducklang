@@ -99,11 +99,14 @@ assignmentWith[operator, expression] -> location $operator $expression
 assignmentOf[operator, expression	] -> assignmentWith[$operator							{% take %} , $expression {% take %}	] {% take %}
 assignment[  operator				] -> assignmentWith[(_ $operator _ {% takeSecond %} )	{% take %} , expression  {% take %}	] {% take %}
 
-# TODO: this should be the same as parameter definition, eg. can use otherwise default, and inner structures.
-# De-duplicate with statement / data definition / parameters
-assignExpand[operator] -> (location ":" {% take %} ):? "..." "{" _ flowing[locator {% take %} ] _ "}" $operator expression
-		{% ([location, , , , locators, , , operator, expression]) =>
-			({ type: 'expandAssign', ...(location && { location }), locators, operator, expression }) %}
+assignExpand[operator] ->
+	  ( location ":" {% take %} ):? "..." destructuringList $operator expression
+		{% ([location, , locators, operator, expression]) =>
+			({ type: 'expandAssignList', ...(location && { location }), locators, operator, expression }) %}
+
+	| ( location ":" {% take %} ):? "..." destructuringData ( $operator expression {% ([operator, expression]) => ({ operator, expression }) %} ):?
+		{% ([location, , locators, operatorWithExpression]) =>
+			({ type: 'expandAssignData', ...(location && { location }), locators, ...(operatorWithExpression && { ...operatorWithExpression }) }) %}
 
 
 standalone[definition, adjusted] -> newline:?
@@ -233,18 +236,20 @@ methodParameters -> (_ with _ elongated[(_ _ _ _ _ _ _ _ _:+) {% ignore %} , par
 
 parameter ->
 	"...":? identifier
-		(":" _:+ "["		flowing[parameter {% take %} ]	"]" {% takeFourth %}	):?
-		(":" _:+ "{" _	flowing[parameter {% take %} ] _	"}" {% takeFifth %}		):?
+		(  ":" _:+ destructuringList {% takeThird %}
+		 | ":" _:+ destructuringData {% takeThird %} ):?
 		(_:+ "(" otherwise _ default _ expression ")" {% takeSeventh %} ):?
-	{% ([grouping, name, listed, locators, otherwise]) => ({
+
+	{% ([grouping, name, destructuring, otherwise]) => ({
 		type: 'parameter',
 		...(grouping && { grouping }),
 		name,
-		...(listed && { listed }),
-		...(locators && { locators }),
+		...(destructuring && { ...destructuring }),
 		...(otherwise && { otherwise })
 	}) %}
 
+destructuringList -> "["   flowing[parameter {% take %} ]   "]" {% ([, listed]) => ({ listed }) %}
+destructuringData -> "{" _ flowing[parameter {% take %} ] _ "}" {% ([, , dataDefinition]) => ({ dataDefinition }) %}
 
 for -> For _ each _ identifier _ (in {% take %} | through {% take %} ) _ expression ","
 		(_ to _ extent _ of _ expression "," {% takeEighth %} ):?
@@ -322,9 +327,11 @@ expressionWithoutMultiplication ->
 
 expressionWithoutExponentiation ->
       value	{% take %}
-    | location (_ otherwise _ default _ expression {% takeSixth %} ):? {% ([location, otherwise]) => ({ type: 'locate', location, ...(otherwise && { otherwise }) }) %}
     | methodExecution	{% take %}
     | "(" expression ")" {% takeSecond %}
+    | location (_ otherwise _ default _ expression {% takeSixth %} ):?
+    	{% ([location, otherwise]) =>
+    		({ type: 'locate', location, ...(otherwise && { otherwise }) }) %}
 
 
 methodCall[nameModifier] ->
@@ -366,8 +373,6 @@ enclosedDataBlock ->  "{"
 	____:+ "}"
 	{% ([, listingBlock]) => ({ type: 'enclosedDataBlock', listingBlock }) %}
 
-# TODO: data blocks and list blocks?
-
 dataDefinition ->
 	  assignMethodResult																{% take %}
 	| assignExpand[(":"	_:+ {% ignore %} ) {% ignore %} ]								{% take %}
@@ -380,7 +385,7 @@ dataDefinition ->
 	  		({ type: 'dataDefinition', location, ...(expression && { expression }) }) %}
 
 
-assignMethodResult -> (location ":" {% take %}):? methodNaming
+assignMethodResult -> (location ":" {% take %} ):? methodNaming
 	{% ([location, methodNaming]) => ({ type: 'assignMethodResult', ...(location && { location }), methodNaming }) %}
 
 methodExecution -> methodCall[null	{% ignore %}	]

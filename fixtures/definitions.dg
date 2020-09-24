@@ -239,3 +239,43 @@ engageBoosters of self with thrust,
 			result 'stopped'
 
 
+
+::2020-09::Ideas::
+
+
+
+testStructuring of self with options: { name, color, speed },
+                             ...parameter: [mapping]:
+
+	...[first, ...rest] = parameter
+
+	l1 = [1, 2, 3]
+	l2 = [1, 2]
+
+	l4 = [2, 3, 9]
+	l3 = [1, l4]
+
+	note: should give error at runtime
+	...[a, b] = l1
+
+	note: should be fine
+	...[a, b, ...remainder] = l1
+
+	bob:foo:...[a, innerList: [b, c, ...rest]] = l3
+
+	variable:resultFromEach... of numbers with square
+
+	variable:...{ foo, bar } = variable:cache
+
+	foo = 1
+	bar = 2
+	variable:...{ foo, bar }
+
+	for each x in turbo, do:
+		variable:stage =+ 1
+		engage turbo with thruster: x
+
+	result boost blaster with { ...{ stage }: variable,
+	                            thrust, angle, offset, color } otherwise default 'done'
+
+
