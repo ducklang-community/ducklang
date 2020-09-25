@@ -25,7 +25,7 @@ const lexer = new IndentationLexer({
         hexNumber: /0x0|0x[1-9a-f][0-9a-f]*/,
 
 		identifier: {
-			match: /[a-zA-Z]+[a-zA-Z0-9]*/,
+			match: /_|[a-zA-Z]+[a-zA-Z0-9]*/,
 			type: moo.keywords({
 				result: 'result',
 				collect: 'collect',
@@ -89,20 +89,20 @@ does[operator] -> $operator _ expression newline
 	{%	([operator, , expression]) => ({ type: 'does', operator, expression })	 %}
 
 
-assignmentWith[operator, expression] -> location $operator $expression
-	{%	([location, operator, expression]) => ({ type: 'assignmentWith', location, ...(operator && ({ operator })), expression })	%}
+assignWith[operator, expression] -> location $operator $expression
+	{%	([location, operator, expression]) => ({ type: 'assignWith', location, ...(operator && ({ operator })), expression })	%}
 
-assignmentOf[operator, expression	] -> assignmentWith[$operator							{% take %} , $expression {% take %}	] {% take %}
-assignment[  operator				] -> assignmentWith[(_ $operator _ {% takeSecond %} )	{% take %} , expression  {% take %}	] {% take %}
+assignOf[operator, expression	] -> assignWith[$operator							{% take %} , $expression {% take %}	] {% take %}
+assign[  operator				] -> assignWith[(_ $operator _ {% takeSecond %} )	{% take %} , expression  {% take %}	] {% take %}
 
 assignExpand[operator] ->
 	  ( location ":" {% take %} ):? "..." destructuringList $operator expression
 		{% ([location, , destructuring, , expression]) =>
-			({ type: 'expandAssignList', ...(location && { location }), ...destructuring, expression }) %}
+			({ type: 'assignExpandList', ...(location && { location }), ...destructuring, expression }) %}
 
 	| ( location ":" {% take %} ):? "..." destructuringData ( $operator expression {% takeSecond %} ):?
 		{% ([location, , destructuring, expression]) =>
-			({ type: 'expandAssignData', ...(location && { location }), ...destructuring, ...(expression && { expression }) }) %}
+			({ type: 'assignExpandData', ...(location && { location }), ...destructuring, ...(expression && { expression }) }) %}
 
 
 standalone[definition, adjusted] -> newline:?
@@ -288,19 +288,19 @@ statement ->
     | does[result	{% take %} ]	{% take %}
     | assignMethodResult																newline	{% take %}
 	| assignExpand[(_ "=" _ {% ignore %} )	{% ignore %} ]								newline	{% take %}
-	| assignmentOf[(_ "=" _ {% ignore %} )	{% ignore %} , listLiteral	{% take %}	]	newline	{% take %}
-	| assignmentOf[(_ "=" _ {% ignore %} )	{% ignore %} , dataLiteral	{% take %}	]	newline	{% take %}
-	| assignmentOf[(_ "=" _ {% ignore %} )	{% ignore %} , listBlock	{% take %}	]	newline	{% take %}
-	| assignmentOf[(_ "=" _ {% ignore %} )	{% ignore %} , dataBlock	{% take %}	]	newline	{% take %}
-    | assignment["="	{% take %} ]	newline	{% take %}
-    | assignment["=**"	{% take %} ]	newline	{% take %}
-    | assignment["=*"	{% take %} ]	newline	{% take %}
-    | assignment["=/"	{% take %} ]	newline	{% take %}
-    | assignment["=+"	{% take %} ]	newline	{% take %}
-    | assignment["=-"	{% take %} ]	newline	{% take %}
-	| methodExecution					newline	{% take %}
-	| stop								newline	{% take %}
-	| skip								newline	{% take %}
+	| assignOf[(_ "=" _ {% ignore %} )	{% ignore %} , listLiteral	{% take %}	]	newline	{% take %}
+	| assignOf[(_ "=" _ {% ignore %} )	{% ignore %} , dataLiteral	{% take %}	]	newline	{% take %}
+	| assignOf[(_ "=" _ {% ignore %} )	{% ignore %} , listBlock	{% take %}	]	newline	{% take %}
+	| assignOf[(_ "=" _ {% ignore %} )	{% ignore %} , dataBlock	{% take %}	]	newline	{% take %}
+    | assign["="	{% take %} ]	newline	{% take %}
+    | assign["=**"	{% take %} ]	newline	{% take %}
+    | assign["=*"	{% take %} ]	newline	{% take %}
+    | assign["=/"	{% take %} ]	newline	{% take %}
+    | assign["=+"	{% take %} ]	newline	{% take %}
+    | assign["=-"	{% take %} ]	newline	{% take %}
+	| methodExecution				newline	{% take %}
+	| stop							newline	{% take %}
+	| skip							newline	{% take %}
 
 
 # TODO: Require all binary operations be grouped with parentheses except additions and multiplications
@@ -372,10 +372,10 @@ enclosedDataBlock ->  "{"
 dataDefinition ->
 	  assignMethodResult																{% take %}
 	| assignExpand[(":"	_:+ {% ignore %} ) {% ignore %} ]								{% take %}
-	| assignmentOf[(":" _:+ {% ignore %} ) {% ignore %} , listLiteral	{% take %} ]	{% take %}
-	| assignmentOf[(":" _:+ {% ignore %} ) {% ignore %} , dataLiteral	{% take %} ]	{% take %}
-	| assignmentOf[(":" _:+ {% ignore %} ) {% ignore %} , listBlock		{% take %} ]	{% take %}
-	| assignmentOf[(":" _:+ {% ignore %} ) {% ignore %} , dataBlock		{% take %} ]	{% take %}
+	| assignOf[(":" _:+ {% ignore %} ) {% ignore %} , listLiteral	{% take %} ]	{% take %}
+	| assignOf[(":" _:+ {% ignore %} ) {% ignore %} , dataLiteral	{% take %} ]	{% take %}
+	| assignOf[(":" _:+ {% ignore %} ) {% ignore %} , listBlock		{% take %} ]	{% take %}
+	| assignOf[(":" _:+ {% ignore %} ) {% ignore %} , dataBlock		{% take %} ]	{% take %}
 	| location (":" _:+ expression {% takeThird %} ):?
 	  	{% ([location, expression]) =>
 	  		({ type: 'dataDefinition', location, ...(expression && { expression }) }) %}
