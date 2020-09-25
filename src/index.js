@@ -117,6 +117,13 @@ const jsWhen = (statement) => {
     return [
         'switch (',  jsExpression(expression), ') { ', '{\n',
         cases.map(jsCase),
+        otherwise
+            ? [
+                jsComments(otherwise.comments),
+                'default:\n',
+                otherwise.definition.map(jsStatement),
+            ]
+            : '',
         '}\n'
     ]
 }
@@ -148,9 +155,9 @@ const jsStatement = (statement) => {
         case 'does':                return jsDoes(statement)
         case 'assignWith':          return ['const ', jsLocation(statement.location), ' ', jsOperator(statement.operator), ' ', jsExpression(statement.expression), '\n']
 
-        // TODO: these ones are a little trickier. Deduplicate parameters cod
-        case 'assignExpandData':    return ['const ', symbol('assignExpandData'), ' = null\n']
-        case 'assignExpandList':    return ['const ', symbol('assignExpandList'), ' = null\n']
+        // TODO: these ones are a little trickier. Deduplicate parameters code
+        case 'assignExpandData':    return ['const ', symbol('assignExpandData'), ' = null /* todo: assignExpandData */\n']
+        case 'assignExpandList':    return ['const ', symbol('assignExpandList'), ' = null /* todo: assignExpandList */\n']
 
         case 'assignMethodResult':  return ['const ', sourceNode(statement.methodNaming.method), ' = ', jsExpression(statement.methodNaming), '\n']
         case 'methodExecution':     return [jsMethodExecution(statement), '\n']
@@ -238,7 +245,6 @@ else if (parser.results.length === 1) {
                             ).flat().slice(1),
                             type === 'list' ? ']' : ' }',
                             ' = ',
-                            // TODO: add validation that list destructuring matches the rhs shape correctly
                             type === 'list'? '(() => { const values = Object.values(' : '',
                             sourceNode(name),
                             type === 'list'? `); if (values.length < ${requiredArgs} || values.length > ${allowedArgs}) { throw new Error('Expected between ${requiredArgs} and ${allowedArgs} parameters, received ' + values.length) } else { return values })()` : ''

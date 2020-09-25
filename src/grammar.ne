@@ -424,10 +424,10 @@ For			-> "for"		{% ignore %}
 each		-> "each"		{% ignore %}
 to			-> "to"			{% ignore %}
 extent		-> "extent"		{% ignore %}
-do			-> "do"			{% ignore %}
 skip		-> "skip"		{% ignore %}
 stop		-> "stop"		{% ignore %}
 default		-> "default"	{% ignore %}
+do			-> "do"			{% take %}
 in			-> "in"			{% take %}
 through		-> "through"	{% take %}
 
