@@ -389,10 +389,12 @@ methodNaming    -> methodCall["..."	{% take %}		] {% take %}
 
 
 comment ->
-	(todo {% take %} | idea {% take %} | note {% take %}
-		| annotation ":" literal  {% ([annotation, , literal]) => ({ type: 'comment', annotation, literal }) %} )
+	(  todo {% ([line]) => ({ line }) %}
+	 | idea {% ([line]) => ({ line }) %}
+	 | note {% ([line]) => ({ line }) %}
+		| annotation ":" literal  {% ([annotation, , literal]) => ({ annotation, literal }) %} )
 	newline
-	{% take %}
+	{% ([comment]) => ({ type: 'comment', ...comment }) %}
 
 annotation ->
 	  "note"	{% take %}

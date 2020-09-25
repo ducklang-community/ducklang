@@ -4,16 +4,22 @@ const { SourceNode } = require("source-map")
 const grammar = require("../dist/grammar.js")
 
 
-const jsComment = ({ value }) => value.includes('\n') ? `/*\n${value}\n*/\n` : `// ${value}\n`
+const jsComment = ({ line, annotation, literal }) =>
+    line
+        ? new SourceNode(line.line, line.col - 1, fileName, `// ${line.value}\n`)
+        : (literal.value.includes('\n')
+            ? new SourceNode(annotation.line, annotation.col - 1, fileName, `/*\n${annotation.value}: ${literal.value}\n*/\n`)
+            : new SourceNode(annotation.line, annotation.col - 1, fileName, `// ${annotation.value}: ${literal.value}\n`))
+
 
 const jsComments = (comments) => comments ? comments.map(comment => jsComment(comment)) : []
 
 const jsParameters = (items) =>
-    items.map(({ definition: { name: { line, col, value } } }) =>
+    items.map(({ entry: { name: { line, col, value } } }) =>
         [', ', new SourceNode(line, col - 1, fileName, value)]).flat()
 
 const jsParametersGroup = (item) =>
-    item.map(({ definition: { group: { line, col, value } } }) =>
+    item.map(({ entry: { group: { line, col, value } } }) =>
         [', ', '...', new SourceNode(line, col - 1, fileName, value)]).flat()
 
 const parser = new nearley.Parser(nearley.Grammar.fromCompiled(grammar))
@@ -40,8 +46,8 @@ else if (parser.results.length === 1) {
 
             parameters = parameters || []
 
-            const names = parameters.filter(({ definition: { type } }) => type === 'parameter')
-            const group = parameters.filter(({ definition: { type } }) =>
+            const names = parameters.filter(({ entry: { type } }) => type === 'parameter')
+            const group = parameters.filter(({ entry: { type } }) =>
                 ['parameterSingleton', 'parameterGroup'].includes(type))
 
             if (group.length > 1) {
@@ -62,9 +68,9 @@ else if (parser.results.length === 1) {
 
             parameters = parameters || []
 
-            const names     = jsParameters(     parameters.filter(({ definition: { type } }) => type === 'parameter'))
-            const group     = jsParametersGroup(parameters.filter(({ definition: { type } }) => type === 'parameterGroup'))
-            const singleton = jsParametersGroup(parameters.filter(({ definition: { type } }) => type === 'parameterSingleton'))
+            const names     = jsParameters(     parameters.filter(({ entry: { type } }) => type === 'parameter'))
+            const group     = jsParametersGroup(parameters.filter(({ entry: { type } }) => type === 'parameterGroup'))
+            const singleton = jsParametersGroup(parameters.filter(({ entry: { type } }) => type === 'parameterSingleton'))
 
             return new SourceNode(name.line, name.col - 1, fileName, [
                 jsComments(comments),
