@@ -66,20 +66,12 @@ const numberOfAllowedParameters = (parameters) => {
     }
 }
 
-/*
-const requiredArgs = findLastIndexOf(parameters, ({ grouping, otherwise }) => !grouping && !otherwise) + 1
-const allowedArgs = findLastIndexOf(parameters, ({ grouping }) => grouping) !== -1
-    ? '$Infinity'
-    : Math.max(requiredArgs, findLastIndexOf(parameters, ({ otherwise }) => otherwise) + 1)
-*/
-
 const variableRename = {
     'self': 'this',
     'this': '$this'
 }
 
-// FIXME: support locators
-const jsLocation = (location) => [sourceNode(location.name, variableRename[location.name.value] || location.name.value)]
+const jsLocation = (location) => [sourceNode(location.name, variableRename[location.name.value] || location.name.value), location.locators ? ' /* todo: locators */ ' : '']
 
 const dataDefinition = (definition) => {
     console.log(JSON.stringify(definition))
@@ -96,7 +88,7 @@ const jsData = (definitions) => {
     return ['{ ', join(definitions.map(dataDefinition)), ' }']
 }
 
-const simple = (expression) => ['location'].includes(expression.type)
+const simple = (expression) => ['locate', 'digitNumber', 'decimalNumber', 'literal'].includes(expression.type)
 
 const jsMethodExecution = (expression) => {
     const { method, receiver, arguments, otherwise } = expression
@@ -104,14 +96,14 @@ const jsMethodExecution = (expression) => {
     const methodCall = ['.', sourceNode(method), '(', arguments ? jsData(arguments) : [], ')']
     return [
         otherwise
-            ? (simple(receiver)
+            ? (!simple(receiver)
                 ? [
                     '(() => { ',
                     `const ${receiverValue} = `, jsExpression(receiver), '; ',
-                    'return \'', sourceNode(method), '\' in ', receiverValue, ' ? ', receiverValue, methodCall, ' : ', jsExpression(otherwise),
+                    'return ', receiverValue, '.hasOwnProperty(\'', sourceNode(method), '\') ? ', receiverValue, methodCall, ' : ', jsExpression(otherwise),
                     ' })()'
                 ]
-                : ['\'', sourceNode(method), '\' in ', jsExpression(receiver), ' ? ', jsExpression(receiver), methodCall, ' : ', jsExpression(otherwise)]
+                : [receiverValue, '.hasOwnProperty(\'', sourceNode(method), '\') ? ', jsExpression(receiver), methodCall, ' : ', jsExpression(otherwise)]
             )
             : [jsExpression(receiver), methodCall]
     ]
@@ -123,7 +115,8 @@ const jsExpression = (expression) => {
         case 'locate':          return jsLocation(expression.location)
         case 'digitNumber':     return sourceNode(expression)
         case 'decimalNumber':   return sourceNode(expression)
-        case 'text':            return sourceNode(expression)
+        case 'text':            return [sourceNode(expression), '/* todo: formatting */']
+        case 'literal':         return sourceNode(expression)
         case 'list':            return ['[', join(expression.list.map(jsExpression)), ']']
         case 'data':            return ['{ /* todo: data */ }']
         case 'exponentiation':  return [jsExpression(expression.a), ' ** ', jsExpression(expression.b)]
@@ -153,14 +146,30 @@ const jsDoes = (statement) => {
 const jsFor = (statement) => {
     const { name, iteration, expression, statements } = statement
     // TODO: we can use iteration for 'do' case, but otherwise must build and return an iterator
+    const iterable = symbol('iterable')
+    const iterator = symbol('iterator')
+    const i = symbol('i')
+    const done = symbol('done')
     return statement.do
         ? [
-            'for (const ', sourceNode(name), ' of ', jsExpression(expression), ') {\n',
+            'const ', iterable, ' = ', jsExpression(expression), '\n',
+            'if (typeof ', iterable,' === \'function\') {\n',
+            'let ', i, ' = 0\n',
+            'while (true) {\n',
+            sourceNode(name), ' = ', iterable, '({ self: ', i, '++ })\n',
             statements.map(jsStatement),
+            '}\n',
+            '} else {\n',
+            'const ', iterator, ' = ', iterable, '[Symbol.iterator]()\n',
+            'while (true) {\n',
+            'const { value: ', sourceNode(name),', done: ', done, ' } = ', iterator, '.next()\n',
+            'if (', done, ') { break }\n',
+            statements.map(jsStatement),
+            '}\n',
             '}\n'
         ]
         : [
-            'return class { [Symbol.iterator]() { let receiver = 0; return { next(): { return { value: this.call(receiver++) } } } } }\n'
+            'return class { [Symbol.iterator]() { let receiver = 0; return { next() { return { value: this.call(receiver++) } } } } }\n'
         ]
 }
 
@@ -269,7 +278,6 @@ else if (parser.results.length === 1) {
             // TODO: check all parameters, dependencies and assignment statements to prevent name clash
 
         })
-
     })
 
     const compiled = results.map(({ namespaceDeclaration, using, methods }) => {
@@ -280,6 +288,7 @@ else if (parser.results.length === 1) {
 
             console.log()
             console.log(JSON.stringify(name))
+
             parameters = parameters || []
 
             const deconstruct = parameters.length
@@ -343,8 +352,7 @@ else if (parser.results.length === 1) {
                     'function ', sourceNode(name), '(', parameters.length ? ['$parameters', allParametersOptional(parameters.map(({ entry }) => entry)) ? ' = {}' : ''] : '', ') {\n',
                     deconstructedParameters,
                     body,
-                    '}\n',
-                    sourceNode(name), '[Symbol.iterator] = function () { let receiver = 0; return { next(): { return { value: this.call(receiver++) } } } }\n'
+                    '}\n'
                 ])
             ]
         })
