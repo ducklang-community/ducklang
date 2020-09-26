@@ -66,12 +66,7 @@ const numberOfAllowedParameters = (parameters) => {
     }
 }
 
-const variableRename = {
-    'self': 'this',
-    'this': '$this'
-}
-
-const jsLocation = (location) => [sourceNode(location.name, variableRename[location.name.value] || location.name.value), location.locators ? ' /* todo: locators */ ' : '']
+const jsLocation = (location) => [sourceNode(location.name), location.locators ? ' /* todo: locators */ ' : '']
 
 const dataDefinition = (definition) => {
     console.log(JSON.stringify(definition))
@@ -103,7 +98,7 @@ const jsMethodExecution = (expression) => {
                     'return ', receiverValue, '.hasOwnProperty(\'', sourceNode(method), '\') ? ', receiverValue, methodCall, ' : ', jsExpression(otherwise),
                     ' })()'
                 ]
-                : [receiverValue, '.hasOwnProperty(\'', sourceNode(method), '\') ? ', jsExpression(receiver), methodCall, ' : ', jsExpression(otherwise)]
+                : [jsExpression(receiver), '.hasOwnProperty(\'', sourceNode(method), '\') ? ', jsExpression(receiver), methodCall, ' : ', jsExpression(otherwise)]
             )
             : [jsExpression(receiver), methodCall]
     ]
@@ -134,7 +129,7 @@ const jsExpression = (expression) => {
 const jsDoes = (statement) => {
     const operators = {
         'result': 'return',
-        'collect': 'yield'
+        'collect': 'return'
     }
     const { operator, expression } = statement
     if (!operator.type in operators) {
@@ -146,30 +141,24 @@ const jsDoes = (statement) => {
 const jsFor = (statement) => {
     const { name, iteration, expression, statements } = statement
     // TODO: we can use iteration for 'do' case, but otherwise must build and return an iterator
-    const iterable = symbol('iterable')
     const iterator = symbol('iterator')
     const i = symbol('i')
     const done = symbol('done')
     return statement.do
         ? [
-            'const ', iterable, ' = ', jsExpression(expression), '\n',
-            'if (typeof ', iterable,' === \'function\') {\n',
-            'let ', i, ' = 0\n',
-            'while (true) {\n',
-            sourceNode(name), ' = ', iterable, '({ self: ', i, '++ })\n',
+            !simple(expression) ? ['const ', iterator, ' = ', jsExpression(expression), '\n'] : [],
+            'for (let ', i, ' = 0; ; ++', i,') {\n',
+            'const ', sourceNode(name), ' = ', !simple(expression) ? iterator : jsExpression(expression), '({ self: ', i, '++ })\n',
+            'if (', sourceNode(name), ' === undefined) { break }\n',
             statements.map(jsStatement),
             '}\n',
-            '} else {\n',
-            'const ', iterator, ' = ', iterable, '[Symbol.iterator]()\n',
-            'while (true) {\n',
-            'const { value: ', sourceNode(name),', done: ', done, ' } = ', iterator, '.next()\n',
-            'if (', done, ') { break }\n',
-            statements.map(jsStatement),
-            '}\n',
-            '}\n'
         ]
         : [
-            'return class { [Symbol.iterator]() { let receiver = 0; return { next() { return { value: this.call(receiver++) } } } } }\n'
+            !simple(expression) ? ['const ', iterator, ' = ', jsExpression(expression), '\n'] : [],
+            'return function ({ self }) {\n',
+            'const ', sourceNode(name), ' = ', !simple(expression) ? iterator : jsExpression(expression), '({ self })\n',
+            statements.map(jsStatement),
+            '}\n'
         ]
 }
 
@@ -290,6 +279,24 @@ else if (parser.results.length === 1) {
             console.log(JSON.stringify(name))
 
             parameters = parameters || []
+            receiver && receiver.reverse().forEach(name => {
+                parameters.unshift({
+                    type: 'entry',
+                    entry: {
+                        type: 'parameter',
+                            name,
+                            ...(name.value === 'self' && {
+                                otherwise: {
+                                    type: 'locate',
+                                    location: {
+                                        type: 'location',
+                                        name: {line: name.line, col: name.col, value: 'this'}
+                                    }
+                                }
+                            })
+                    }
+                })
+            })
 
             const deconstruct = parameters.length
                 ? [{
