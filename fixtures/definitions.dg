@@ -279,3 +279,11 @@ testStructuring of self with options: { name, color, speed },
 	                            thrust, angle, offset, color } otherwise default 'done'
 
 
+test1 of self with a: { b: { c: [d (otherwise default 2), e: { f (otherwise default 1) }] } }:
+	result a
+
+
+test2 of self with a: [...bob]:
+	result bob
+
+

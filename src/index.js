@@ -43,14 +43,43 @@ const jsParameters = (items) =>
     join(items.map(({ entry: { name } }) => sourceNode(name)))
 
 const allParametersOptional = (parameters) =>
-    !parameters.find(({ grouping, otherwise, destructuringList, destructuringData }) =>
-        !(grouping || otherwise)
-        || (destructuringList && !allParametersOptional(destructuringList))
-        || (destructuringData && !allParametersOptional(destructuringData)))
+    parameters.every(({ grouping, otherwise, destructuringList, destructuringData }) =>
+        grouping
+        || otherwise
+        || (destructuringList && allParametersOptional(destructuringList))
+        || (destructuringData && allParametersOptional(destructuringData)))
 
+const numberOfRequiredParameters = (parameters) =>
+    findLastIndexOf(parameters, ({ grouping, otherwise, destructuringList, destructuringData }) =>
+        !grouping
+        && !otherwise
+        && (!destructuringList || !allParametersOptional(destructuringList))
+        && (!destructuringData || !allParametersOptional(destructuringData))) + 1
+
+
+const numberOfAllowedParameters = (parameters) => {
+    if (parameters.slice(-1).find(({ grouping }) => grouping)) {
+        return Infinity
+    }
+    else {
+        return parameters.length
+    }
+}
+
+/*
+const requiredArgs = findLastIndexOf(parameters, ({ grouping, otherwise }) => !grouping && !otherwise) + 1
+const allowedArgs = findLastIndexOf(parameters, ({ grouping }) => grouping) !== -1
+    ? '$Infinity'
+    : Math.max(requiredArgs, findLastIndexOf(parameters, ({ otherwise }) => otherwise) + 1)
+*/
+
+const variableRename = {
+    'self': 'this',
+    'this': '$this'
+}
 
 // FIXME: support locators
-const jsLocation = (location) => [sourceNode(location.name)]
+const jsLocation = (location) => [sourceNode(location.name, variableRename[location.name.value] || location.name.value)]
 
 const dataDefinition = (definition) => {
     console.log(JSON.stringify(definition))
@@ -131,7 +160,7 @@ const jsFor = (statement) => {
             '}\n'
         ]
         : [
-            '/* iterator-todo */\n'
+            'return class { [Symbol.iterator]() { let receiver = 0; return { next(): { return { value: this.call(receiver++) } } } } }\n'
         ]
 }
 
@@ -236,6 +265,7 @@ else if (parser.results.length === 1) {
 
             // TODO: validate the groups can't have an otherwise or an 'as' rename
             // TODO: validate only data names may have an otherwise
+            // TODO: validate that a destructuring list or data has at least 1 thing in it
             // TODO: check all parameters, dependencies and assignment statements to prevent name clash
 
         })
@@ -248,6 +278,7 @@ else if (parser.results.length === 1) {
 
         const functions = methods.map(({ comments, definition: { name, of, receiver, parameters, statements, sequence } }) => {
 
+            console.log()
             console.log(JSON.stringify(name))
             parameters = parameters || []
 
@@ -264,10 +295,15 @@ else if (parser.results.length === 1) {
             while (deconstruct.length) {
                 const { name, parameters, type } = deconstruct.shift()
 
-                const requiredArgs = findLastIndexOf(parameters, ({ grouping, otherwise }) => !grouping && !otherwise) + 1
-                const allowedArgs = findLastIndexOf(parameters, ({ grouping }) => grouping) !== -1
-                    ? '$Infinity'
-                    : Math.max(requiredArgs, findLastIndexOf(parameters, ({ otherwise }) => otherwise) + 1)
+                console.log(JSON.stringify(parameters))
+
+                const requiredArgs = numberOfRequiredParameters(parameters)
+                const allowedArgs = numberOfAllowedParameters(parameters)
+
+                // We destructure one layer at a time so intermediate variables also get defined, eg. in
+                // var { main: { content: { title } } } = ...
+                // JavaScript will only define 'title' variable, but we also want 'main' and 'content'
+                // (using renames as needed to avoid naming collision)
 
                 deconstructedParameters.push([
                     'const ',
@@ -275,14 +311,20 @@ else if (parser.results.length === 1) {
                         ? [sourceNode(parameters[0].name), ' = ', sourceNode(name)]
                         : [
                             type === 'list' ? '[' : '{ ',
-                            parameters.map(({ grouping, name, as, otherwise }) =>
-                                [', ', grouping ? sourceNode(grouping) : '', sourceNode(name), as ? sourceNode(as, [': ', sourceNode(as)]) : '', otherwise ? sourceNode(otherwise, [' = ', jsExpression(otherwise)]) : '']
+                            parameters.map(({ grouping, name, as, otherwise, destructuringList, destructuringData }) =>
+                                [', ', grouping ? sourceNode(grouping) : '', sourceNode(name), as ? sourceNode(as, [': ', sourceNode(as)]) : '',
+                                    otherwise ? sourceNode(otherwise, [' = ', jsExpression(otherwise)])
+                                        // NB. this is a bit inefficient as it fully walks the rest of the structure for each layer
+                                        // as it goes inward
+                                        : (destructuringList && allParametersOptional(destructuringList) ? ' = []'
+                                            : (destructuringData && allParametersOptional(destructuringData) ? ' = {}' : ''))]
                             ).flat().slice(1),
                             type === 'list' ? ']' : ' }',
                             ' = ',
-                            type === 'list'? '(() => { const values = Object.values(' : '',
+                            // TODO: pick these values by iteration as needed, not by evaluating an entire iterator
+                            type === 'list' && !(requiredArgs === 0 && allowedArgs === Infinity) ? '(() => { const values = Object.values(' : '',
                             sourceNode(name),
-                            type === 'list'? [`); if (`, requiredArgs === allowedArgs ? `values.length === ${requiredArgs}` : `values.length >= ${requiredArgs} && values.length <= ${allowedArgs}`, `) { return values } else { throw new $IncorrectNumberOfParameters(${requiredArgs}, ${allowedArgs}, values.length) })()`] : ''
+                            type === 'list' && !(requiredArgs === 0 && allowedArgs === Infinity) ? [`); if (`, requiredArgs === allowedArgs ? `values.length === ${requiredArgs}` : [requiredArgs > 0 ? `values.length >= ${requiredArgs}` : '', allowedArgs < Infinity ? `values.length <= ${allowedArgs}` : ''].filter(x => x).join(' && '), `) { return values } else { throw new $IncorrectNumberOfParameters(${requiredArgs}, ${allowedArgs}, values.length) })()`] : ''
                         ],
                     '\n'
                 ])
@@ -299,10 +341,11 @@ else if (parser.results.length === 1) {
                 sourceNode(name, [
                     jsComments(comments),
                     'function ', sourceNode(name), '(', parameters.length ? ['$parameters', allParametersOptional(parameters.map(({ entry }) => entry)) ? ' = {}' : ''] : '', ') {\n',
-                    'const self = this\n',
                     deconstructedParameters,
                     body,
-                    '}\n'])
+                    '}\n',
+                    sourceNode(name), '[Symbol.iterator] = function () { let receiver = 0; return { next(): { return { value: this.call(receiver++) } } } }\n'
+                ])
             ]
         })
 
