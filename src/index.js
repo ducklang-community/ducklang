@@ -14,6 +14,9 @@ function findLastIndexOf(array, predicate) {
     return -1
 }
 
+const join = (array) => array.map(item => [', ', item]).flat().slice(1)
+
+
 const symbols = {}
 const symbol = (name) => {
     symbols[name] = name in symbols ? (symbols[name] + 1) : 0
@@ -37,24 +40,51 @@ const jsComments = (comments) =>
         : []
 
 const jsParameters = (items) =>
-    items.map(({ entry: { name } }) => [', ', sourceNode(name)] ).flat()
+    join(items.map(({ entry: { name } }) => sourceNode(name)))
+
+const allParametersOptional = (parameters) =>
+    !parameters.find(({ grouping, otherwise, destructuringList, destructuringData }) =>
+        !(grouping || otherwise)
+        || (destructuringList && !allParametersOptional(destructuringList))
+        || (destructuringData && !allParametersOptional(destructuringData)))
+
 
 // FIXME: support locators
 const jsLocation = (location) => [sourceNode(location.name)]
 
+const dataDefinition = (definition) => {
+    console.log(JSON.stringify(definition))
+    switch (definition.type) {
+        case 'dataDefinition':   return jsLocation(definition.location)
+        case 'assignExpandData': return 'null /* todo: assignExpandData */'
+        default:
+            console.error(`Unknown definition type ${definition.type}`);
+            return sourceNode(definition)
+    }
+}
+
+const jsData = (definitions) => {
+    return ['{ ', join(definitions.map(dataDefinition)), ' }']
+}
+
+const simple = (expression) => ['location'].includes(expression.type)
+
 const jsMethodExecution = (expression) => {
     const { method, receiver, arguments, otherwise } = expression
     const receiverValue = sourceNode(receiver, symbol('receiver'))
-    const methodCall = [receiverValue, '.', sourceNode(method), '(', ')']
+    const methodCall = ['.', sourceNode(method), '(', arguments ? jsData(arguments) : [], ')']
     return [
         otherwise
-            ? [
-                '(() => { ',
-                `const ${receiverValue} = `, jsExpression(receiver), '; ',
-                'return \'', sourceNode(method), '\' in ', receiverValue, ' ? ', receiverValue, '.', sourceNode(method), '(', ')', ' : ', jsExpression(otherwise),
-                ' })()'
-            ]
-            : [jsExpression(receiver), '.', sourceNode(method), '(', ')']
+            ? (simple(receiver)
+                ? [
+                    '(() => { ',
+                    `const ${receiverValue} = `, jsExpression(receiver), '; ',
+                    'return \'', sourceNode(method), '\' in ', receiverValue, ' ? ', receiverValue, methodCall, ' : ', jsExpression(otherwise),
+                    ' })()'
+                ]
+                : ['\'', sourceNode(method), '\' in ', jsExpression(receiver), ' ? ', jsExpression(receiver), methodCall, ' : ', jsExpression(otherwise)]
+            )
+            : [jsExpression(receiver), methodCall]
     ]
 }
 
@@ -65,6 +95,8 @@ const jsExpression = (expression) => {
         case 'digitNumber':     return sourceNode(expression)
         case 'decimalNumber':   return sourceNode(expression)
         case 'text':            return sourceNode(expression)
+        case 'list':            return ['[', join(expression.list.map(jsExpression)), ']']
+        case 'data':            return ['{ /* todo: data */ }']
         case 'exponentiation':  return [jsExpression(expression.a), ' ** ', jsExpression(expression.b)]
         case 'multiplication':  return [jsExpression(expression.a), ' * ',  jsExpression(expression.b)]
         case 'division':        return [jsExpression(expression.a), ' / ',  jsExpression(expression.b)]
@@ -197,10 +229,13 @@ else if (parser.results.length === 1) {
             const group = parameters.filter(({ entry: { type } }) =>
                 ['parameterSingleton', 'parameterGroup'].includes(type))
 
+            // TODO: validate there is at most one group and it's at the end
             if (group.length > 1) {
                 throw new Error('Cannot have more than one parameter group per method')
             }
 
+            // TODO: validate the groups can't have an otherwise or an 'as' rename
+            // TODO: validate only data names may have an otherwise
             // TODO: check all parameters, dependencies and assignment statements to prevent name clash
 
         })
@@ -240,14 +275,14 @@ else if (parser.results.length === 1) {
                         ? [sourceNode(parameters[0].name), ' = ', sourceNode(name)]
                         : [
                             type === 'list' ? '[' : '{ ',
-                            parameters.map(({ grouping, name, otherwise }) =>
-                                [', ', grouping ? sourceNode(grouping) : '', sourceNode(name), otherwise ? sourceNode(otherwise, [' = ', jsExpression(otherwise)]) : '']
+                            parameters.map(({ grouping, name, as, otherwise }) =>
+                                [', ', grouping ? sourceNode(grouping) : '', sourceNode(name), as ? sourceNode(as, [': ', sourceNode(as)]) : '', otherwise ? sourceNode(otherwise, [' = ', jsExpression(otherwise)]) : '']
                             ).flat().slice(1),
                             type === 'list' ? ']' : ' }',
                             ' = ',
                             type === 'list'? '(() => { const values = Object.values(' : '',
                             sourceNode(name),
-                            type === 'list'? `); if (values.length < ${requiredArgs} || values.length > ${allowedArgs}) { throw new Error('Expected between ${requiredArgs} and ${allowedArgs} parameters, received ' + values.length) } else { return values })()` : ''
+                            type === 'list'? [`); if (`, requiredArgs === allowedArgs ? `values.length === ${requiredArgs}` : `values.length >= ${requiredArgs} && values.length <= ${allowedArgs}`, `) { return values } else { throw new $IncorrectNumberOfParameters(${requiredArgs}, ${allowedArgs}, values.length) })()`] : ''
                         ],
                     '\n'
                 ])
@@ -263,7 +298,7 @@ else if (parser.results.length === 1) {
             return ['\n\n',
                 sourceNode(name, [
                     jsComments(comments),
-                    'function ', sourceNode(name), '(', parameters.length ? '$parameters = {}' : '', ') {\n',
+                    'function ', sourceNode(name), '(', parameters.length ? ['$parameters', allParametersOptional(parameters.map(({ entry }) => entry)) ? ' = {}' : ''] : '', ') {\n',
                     'const self = this\n',
                     deconstructedParameters,
                     body,
@@ -282,7 +317,9 @@ else if (parser.results.length === 1) {
     })
 
     const { code, map } = new SourceNode(0, 0, fileName, [
+        '\n\n',
         'const $Infinity = Infinity\n\n',
+        'class $IncorrectNumberOfParameters extends Error { constructor(required, allowed, actual) { super(`Expected between ${required} and ${allowed} parameters, received ${actual}`) } }\n\n',
         compiled
     ]).toStringWithSourceMap()
     console.log(code)

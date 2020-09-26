@@ -240,15 +240,16 @@ sequence ->
 methodParameters -> (_ with _ elongated[(_ _ _ _ _ _ _ _ _:+) {% ignore %} , parameter {% take %} ] {% takeFourth %} ):? {% take %}
 
 parameter ->
-	"...":? identifier
+	"...":? identifier (_ as _ identifier {% takeFourth %} ):?
 		(  ":" _:+ destructuringList {% takeThird %}
 		 | ":" _:+ destructuringData {% takeThird %} ):?
 		(_:+ "(" otherwise _ default _ expression ")" {% takeSeventh %} ):?
 
-	{% ([grouping, name, destructuring, otherwise]) => ({
+	{% ([grouping, name, as, destructuring, otherwise]) => ({
 		type: 'parameter',
 		...(grouping && { grouping }),
 		name,
+		...(as && { as }),
 		...(destructuring && { ...destructuring }),
 		...(otherwise && { otherwise })
 	}) %}
@@ -351,8 +352,8 @@ methodCall[nameModifier] ->
 			({ type: 'methodExecution', ...invocation, arguments, ...(otherwise && { otherwise }) }) %}
 
 
-listLiteral -> "["		flowing[expression		{% take %} ]	"]" {% ([, list]) => ({ list }) %}
-dataLiteral -> "{" _	flowing[dataDefinition	{% take %} ] _	"}" {% ([, data]) => ({ data }) %}
+listLiteral -> "["		flowing[expression		{% take %} ]	"]" {% ([, list]) => ({ type: 'list', list }) %}
+dataLiteral -> "{" _	flowing[dataDefinition	{% take %} ] _	"}" {% ([, data]) => ({ type: 'data', data }) %}
 
 
 listBlock ->  "["
@@ -426,6 +427,7 @@ to			-> "to"			{% ignore %}
 extent		-> "extent"		{% ignore %}
 skip		-> "skip"		{% ignore %}
 stop		-> "stop"		{% ignore %}
+as			-> "as"			{% ignore %}
 default		-> "default"	{% ignore %}
 do			-> "do"			{% take %}
 in			-> "in"			{% take %}

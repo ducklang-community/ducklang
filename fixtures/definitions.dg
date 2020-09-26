@@ -195,8 +195,8 @@ use category,
     offset
 
 
-launchBoosters of self with thrust,
-                            angle      (otherwise default 0.0),
+launchBoosters of self with thrust as level,
+                            angle as trajectory (otherwise default 0.0),
                             turboState (otherwise default 'unknown'):
 	numbers = [1, 2, 3]
 
@@ -212,7 +212,7 @@ launchBoosters of self with thrust,
 		engage turbo with thruster: x
 
 	result boost blaster with { ...{ stage }: variable,
-	                            thrust, angle, offset, color } otherwise default 'done'
+	                            level, trajectory, offset, color } otherwise default 'done'
 
 
 engageBoosters of self with thrust,
