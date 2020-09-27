@@ -73,10 +73,10 @@ const jsMethodExecution = (expression) => {
                 ? [
                     '(() => { ',
                     `const ${receiverValue} = `, jsExpression(receiver), '; ',
-                    'return ', receiverValue, '.hasOwnProperty(\'', sourceNode(method), '\') ? ', receiverValue, methodCall, ' : ', jsExpression(otherwise),
+                    'return ', receiverValue, '.', sourceNode(method), ' !== undefined ? ', receiverValue, methodCall, ' : ', jsExpression(otherwise),
                     ' })()'
                 ]
-                : [jsExpression(receiver), '.hasOwnProperty(\'', sourceNode(method), '\') ? ', jsExpression(receiver), methodCall, ' : ', jsExpression(otherwise)]
+                : [jsExpression(receiver), '.', sourceNode(method), ' !== undefined ? ', jsExpression(receiver), methodCall, ' : ', jsExpression(otherwise)]
             )
             : [jsExpression(receiver), methodCall]
     ]
