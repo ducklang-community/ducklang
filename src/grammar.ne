@@ -187,7 +187,7 @@ using ->
 	newline
 	standalone[(
 			Use _
-			elongated[(_ _ _ _) {% ignore %} , identifier {% ([name]) => ({ type: 'parameter', name }) %} ] newline
+			elongated[(_ _ _ _) {% ignore %} , identifier {% ([name]) => ({ type: 'input', name }) %} ] newline
 			{%	takeThird	%}
 		) {% take %} ,
 		null {% ignore %} ]
@@ -195,8 +195,8 @@ using ->
 
 
 # TODO: support (method in Z)		- binds a method with receiver Z
-# TODO: support (method using X)	- partially applies parameter X
-# TODO: support (method from Y)		- applies using parameters data Y
+# TODO: support (method using X)	- partially applies input X
+# TODO: support (method from Y)		- applies using inputs data Y
 
 # But (method of from Z) is not pretty...
 # 'of' could be completely optional and just for readability?
@@ -208,13 +208,13 @@ method ->
 	newline
 	standalone[(
 			identifier (_ of {% takeSecond %} ):? _ ("self" | "{" _ "self":? ("," _ "this"):? ("," _ "inner"):? _ "}")
-					methodParameters ":"
+					methodInputs ":"
 				blockOf[statement {% take %} ]
-			{%	([name, of, , receiver, parameters, , statements]) => ({
+			{%	([name, of, , receiver, inputs, , statements]) => ({
 				name,
 				...(of && { of }),
 				receiver,
-				...(parameters && { parameters }),
+				...(inputs && { inputs }),
 				statements
 			}) %}
 		) {% take %} ,
@@ -225,11 +225,11 @@ sequence ->
 	newline
 	newline
 	standalone[(
-			identifier methodParameters ":"
+			identifier methodInputs ":"
 				block[for {% take %} ]
-			{%	([name, parameters, , sequence]) => ({
+			{%	([name, inputs, , sequence]) => ({
 				name,
-				...(parameters && { parameters }),
+				...(inputs && { inputs }),
 				sequence
 			}) %}
 		) {% take %} ,
@@ -237,16 +237,16 @@ sequence ->
 	{%	takeThird	%}
 
 
-methodParameters -> (_ with _ elongated[(_ _ _ _ _ _ _ _ _:+) {% ignore %} , parameter {% take %} ] {% takeFourth %} ):? {% take %}
+methodInputs -> (_ with _ elongated[(_ _ _ _ _ _ _ _ _:+) {% ignore %} , input {% take %} ] {% takeFourth %} ):? {% take %}
 
-parameter ->
+input ->
 	"...":? identifier (_ as _ identifier {% takeFourth %} ):?
 		(  ":" _:+ destructuringList {% takeThird %}
 		 | ":" _:+ destructuringData {% takeThird %} ):?
 		(_:+ "(" otherwise _ default _ expression ")" {% takeSeventh %} ):?
 
 	{% ([grouping, name, as, destructuring, otherwise]) => ({
-		type: 'parameter',
+		type: 'input',
 		...(grouping && { grouping }),
 		name,
 		...(as && { as }),
@@ -254,8 +254,8 @@ parameter ->
 		...(otherwise && { otherwise })
 	}) %}
 
-destructuringList -> "["   flowing[parameter {% take %} ]   "]" {% ([, destructuringList])   => ({ destructuringList }) %}
-destructuringData -> "{" _ flowing[parameter {% take %} ] _ "}" {% ([, , destructuringData]) => ({ destructuringData }) %}
+destructuringList -> "["   flowing[input {% take %} ]   "]" {% ([, destructuringList])   => ({ destructuringList }) %}
+destructuringData -> "{" _ flowing[input {% take %} ] _ "}" {% ([, , destructuringData]) => ({ destructuringData }) %}
 
 for -> For _ each _ identifier _ (in {% take %} | through {% take %} ) _ expression ","
 		(_ to _ extent _ of _ expression "," {% takeEighth %} ):?

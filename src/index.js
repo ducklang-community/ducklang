@@ -29,15 +29,15 @@ const jsComments = (comments) =>
         ? comments.map(comment => jsComment(comment))
         : []
 
-const jsParameters = (items) =>
+const jsInputs = (items) =>
     join(items.map(({entry: {name}}) => sourceNode(name)))
 
-const allParametersOptional = (parameters) =>
-    parameters.every(({grouping, otherwise, destructuringList, destructuringData}) =>
+const allInputsOptional = (inputs) =>
+    inputs.every(({grouping, otherwise, destructuringList, destructuringData}) =>
         grouping
         || otherwise
-        || (destructuringList && allParametersOptional(destructuringList))
-        || (destructuringData && allParametersOptional(destructuringData)))
+        || (destructuringList && allInputsOptional(destructuringList))
+        || (destructuringData && allInputsOptional(destructuringData)))
 
 const jsLocation = (location) => [sourceNode(location.name), location.locators ? ' /* todo: locators */ ' : '']
 
@@ -128,28 +128,44 @@ const jsDoes = (statement) => {
     return [sourceNode(operator, operators[operator.type]), ' ', jsExpression(expression), '\n']
 }
 
+// TODO:
+// iterators taking their parent method name as prefix
+// extent taking their iterators name as prefix
+// fibonnaci as a (() => { })() wrapper
+// extents as functions
+
 const jsFor = (statement) => {
-    const {name, iteration, expression, statements} = statement
+    const {name, iteration, expression, extent, statements} = statement
     // TODO: we can use iteration for 'do' case, but otherwise must build and return an iterator
-    const iterator = symbol('iterator')
+    const source = symbol('source')
     const i = symbol('i')
-    const done = symbol('done')
+    const extentVariable = symbol('extent')
+    const iterator = symbol('iterator')
+    const sourceValue = !simple(expression) ? source : jsExpression(expression)
+
+    // TODO: should all iterators be wrapped in function () { } so as to return a fresh iterator each time?
+    // This would give an opportunity for length of list to be invoked and cached.
+    // Is it even that important to cache like that? Node may be able to invariant it all away.
+
     return statement.do
         ? [
-            !simple(expression) ? ['const ', iterator, ' = ', jsExpression(expression), '\n'] : [],
-            'for (let ', i, ' = 0; ; ++', i, ') {\n',
-            '   const ', sourceNode(name), ' = ', !simple(expression) ? iterator : jsExpression(expression), '({ self: ', i, ' })\n',
+            !simple(expression) ? ['const ', source, ' = ', jsExpression(expression), '\n'] : [],
+            extent ? ['const ', extentVariable, ' = ', jsExpression(extent), '\n'] : '',
+            'for (let ', i, ' = 0; ', extent ? [i, ' < ', jsExpression(extent)]: '','; ++', i, ') {\n',
+            '   const ', sourceNode(name), ' = ', sourceValue, '({ self: ', i, ' })\n',
             '   if (', sourceNode(name), ' === undefined) { break }\n',
             statements.map(jsStatement),
             '}\n',
         ]
         : [
-            !simple(expression) ? ['const ', iterator, ' = ', jsExpression(expression), '\n'] : [],
-            'return function ({ self: ', i, ' }) {\n',
-            '   const ', sourceNode(name), ' = ', !simple(expression) ? iterator : jsExpression(expression), '({ self: ', i, ' })\n',
+            !simple(expression) ? ['const ', source, ' = ', jsExpression(expression), '\n'] : [],
+            'function ', iterator, '({ self: ', i, ' }) {\n',
+            '   const ', sourceNode(name), ' = ', sourceValue, '({ self: ', i, ' })\n',
             '   if (', sourceNode(name), ' === undefined) { return }\n',
             statements.map(jsStatement),
-            '}\n'
+            '}\n',
+            extent ? [iterator, '.extent', ' = function () { ', jsExpression(extent), ' }\n'] : '',
+            'return ', iterator, '\n'
         ]
 }
 
@@ -207,7 +223,7 @@ const jsStatement = (statement) => {
         case 'assignWith':
             return ['const ', jsLocation(statement.location), ' ', jsOperator(statement.operator), ' ', jsExpression(statement.expression), '\n']
 
-        // TODO: these ones are a little trickier. Deduplicate parameters code
+        // TODO: these ones are a little trickier. Deduplicate inputs code
         case 'assignExpandData':
             return ['const ', symbol('assignExpandData'), ' = null /* todo: assignExpandData */\n']
         case 'assignExpandList':
@@ -246,42 +262,42 @@ if (parser.results.length === 0) {
 
     results.forEach(({namespaceDeclaration, using, methods}) => {
 
-        methods.forEach(({comments, definition: {name, of, receiver, parameters, statements}}) => {
+        methods.forEach(({comments, definition: {name, of, receiver, inputs, statements}}) => {
 
-            parameters = parameters || []
+            inputs = inputs || []
 
-            const names = parameters.filter(({entry: {type}}) => type === 'parameter')
-            const group = parameters.filter(({entry: {type}}) =>
-                ['parameterSingleton', 'parameterGroup'].includes(type))
+            const names = inputs.filter(({entry: {type}}) => type === 'input')
+            const group = inputs.filter(({entry: {type}}) =>
+                ['inputSingleton', 'inputGroup'].includes(type))
 
             // TODO: validate there is at most one group and it's at the end
             if (group.length > 1) {
-                throw new Error('Cannot have more than one parameter group per method')
+                throw new Error('Cannot have more than one input group per method')
             }
 
             // TODO: validate the groups can't have an otherwise or an 'as' rename
             // TODO: validate only data names may have an otherwise
             // TODO: validate that a destructuring list or data has at least 1 thing in it
-            // TODO: check all parameters, dependencies and assignment statements to prevent name clash
+            // TODO: check all inputs, dependencies and assignment statements to prevent name clash
 
         })
     })
 
     const compiled = results.map(({namespaceDeclaration, using, methods}) => {
 
-        const dependencies = using && jsParameters(using.definition) || []
+        const dependencies = using && jsInputs(using.definition) || []
 
-        const functions = methods.map(({comments, definition: {name, of, receiver, parameters, statements, sequence}}) => {
+        const functions = methods.map(({comments, definition: {name, of, receiver, inputs, statements, sequence}}) => {
 
             console.log()
             console.log(JSON.stringify(name))
 
-            parameters = parameters || []
+            inputs = inputs || []
             receiver && receiver.reverse().forEach(name => {
-                parameters.unshift({
+                inputs.unshift({
                     type: 'entry',
                     entry: {
-                        type: 'parameter',
+                        type: 'input',
                         name,
                         ...(name.value === 'self' && {
                             otherwise: {
@@ -296,39 +312,39 @@ if (parser.results.length === 0) {
                 })
             })
 
-            const deconstruct = parameters.length
+            const deconstruct = inputs.length
                 ? [{
-                    name: {line: parameters.line, col: parameters.col, value: '$parameters'},
-                    parameters: parameters.map(({entry}) => entry),
+                    name: {line: inputs.line, col: inputs.col, value: '$inputs'},
+                    inputs: inputs.map(({entry}) => entry),
                     type: 'data'
                 }]
                 : []
 
-            const deconstructedParameters = []
+            const deconstructedInputs = []
 
             while (deconstruct.length) {
-                const {name, parameters, type} = deconstruct.shift()
+                const {name, inputs, type} = deconstruct.shift()
 
-                console.log(JSON.stringify(parameters))
+                console.log(JSON.stringify(inputs))
 
                 // We destructure one layer at a time so intermediate variables also get defined, eg. in
                 // var { main: { content: { title } } } = ...
                 // JavaScript will only define 'title' variable, but we also want 'main' and 'content'
                 // (using renames as needed to avoid naming collision)
 
-                deconstructedParameters.push([
+                deconstructedInputs.push([
                     'const ',
-                    parameters.length === 1 && parameters[0].grouping
-                        ? [sourceNode(parameters[0].name), ' = ', sourceNode(name)]
+                    inputs.length === 1 && inputs[0].grouping
+                        ? [sourceNode(inputs[0].name), ' = ', sourceNode(name)]
                         : [
                             type === 'list' ? '[' : '{ ',
-                            parameters.map(({grouping, name, as, otherwise, destructuringList, destructuringData}) =>
+                            inputs.map(({grouping, name, as, otherwise, destructuringList, destructuringData}) =>
                                 [', ', grouping ? sourceNode(grouping) : '', sourceNode(name), as ? sourceNode(as, [': ', sourceNode(as)]) : '',
                                     otherwise ? sourceNode(otherwise, [' = ', jsExpression(otherwise)])
                                         // NB. this is a bit inefficient as it fully walks the rest of the structure for each layer
                                         // as it goes inward
-                                        : (destructuringList && allParametersOptional(destructuringList) ? ' = []'
-                                        : (destructuringData && allParametersOptional(destructuringData) ? ' = {}' : ''))]
+                                        : (destructuringList && allInputsOptional(destructuringList) ? ' = []'
+                                        : (destructuringData && allInputsOptional(destructuringData) ? ' = {}' : ''))]
                             ).flat().slice(1),
                             type === 'list' ? ']' : ' }',
                             ' = ',
@@ -338,9 +354,9 @@ if (parser.results.length === 0) {
                     '\n'
                 ])
 
-                parameters.forEach(({name, destructuringList, destructuringData}) => {
-                    destructuringList && deconstruct.push({name, parameters: destructuringList, type: 'list'})
-                    destructuringData && deconstruct.push({name, parameters: destructuringData, type: 'data'})
+                inputs.forEach(({name, destructuringList, destructuringData}) => {
+                    destructuringList && deconstruct.push({name, inputs: destructuringList, type: 'list'})
+                    destructuringData && deconstruct.push({name, inputs: destructuringData, type: 'data'})
                 })
             }
 
@@ -349,8 +365,8 @@ if (parser.results.length === 0) {
             return ['\n\n',
                 sourceNode(name, [
                     jsComments(comments),
-                    'function ', sourceNode(name), '(', parameters.length ? ['$parameters', allParametersOptional(parameters.map(({entry}) => entry)) ? ' = {}' : ''] : '', ') {\n',
-                    deconstructedParameters,
+                    'function ', sourceNode(name), '(', inputs.length ? ['$inputs', allInputsOptional(inputs.map(({entry}) => entry)) ? ' = {}' : ''] : '', ') {\n',
+                    deconstructedInputs,
                     body,
                     '}\n'
                 ])
@@ -360,7 +376,7 @@ if (parser.results.length === 0) {
         return sourceNode(namespaceDeclaration, [
             '\n\n',
             'namespace = {\n',
-            // methods go here, each enclosed by the namespace's parameters
+            // methods go here, each enclosed by the namespace's inputs
             functions,
             '\n\n',
             '}\n'
