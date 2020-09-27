@@ -167,11 +167,11 @@ const jsFor = (statement) => {
                 : '',
             'const ', source, ' = ', jsExpression(expression), '\n',
             extent ? ['const ', sourceExtent, ' = ', sourceExtentMethod, '\n'] : '',
-            'function ', items, '({ self: ', n, ' = this }) {\n',
+            'function ', items, '({ self: ', n, ' = this } = {}) {\n',
             memorizeThrough
                 ? [
                     '   if (', memory, '.length > ', n, ') { return ', memory, '[', n, '] }\n',
-                    '   for (let ', i, ' = ', memory, '.length; ', i, ' < ', n, '; ++', i, ') { ', items, '(', i ,') }\n',
+                    '   for (let ', i, ' = ', memory, '.length; ', i, ' < ', n, '; ++', i, ') { ', items, '({ self: ', i ,' }) }\n',
                     '   return ', memory, '[', n, '] = (function () {\n',
                     body,
                     '   })()\n'
@@ -195,7 +195,7 @@ const jsCase = ({comments, definition: {expression, statements}}) => {
 const jsWhen = (statement) => {
     const {expression, cases, otherwise} = statement
     return [
-        'switch (', jsExpression(expression), ') { ', '{\n',
+        'switch (', jsExpression(expression), ') {\n',
         cases.map(jsCase),
         otherwise
             ? [
@@ -309,7 +309,7 @@ if (parser.results.length === 0) {
             methodName = name.value
 
             inputs = inputs || []
-            receiver && receiver.reverse().forEach(name => {
+            receiver && !sequence && receiver.reverse().forEach(name => {
                 inputs.unshift({
                     type: 'entry',
                     entry: {
@@ -328,6 +328,7 @@ if (parser.results.length === 0) {
                 })
             })
 
+            // TODO: what does it mean for a sequence to have parameters?
             const deconstruct = inputs.length
                 ? [{
                     name: {line: inputs.line, col: inputs.col, value: '$inputs'},
@@ -376,16 +377,22 @@ if (parser.results.length === 0) {
                 })
             }
 
-            const body = sequence ? jsStatement(sequence) : statements.map(jsStatement)
-
             return ['\n\n',
-                sourceNode(name, [
-                    jsComments(comments),
-                    'function ', sourceNode(name), '(', inputs.length ? ['$inputs', allInputsOptional(inputs.map(({entry}) => entry)) ? ' = {}' : ''] : '', ') {\n',
-                    deconstructedInputs,
-                    body,
-                    '}\n'
-                ])
+                sourceNode(name,
+                    sequence
+                        ? [
+                            jsComments(comments),
+                            'const ', sourceNode(name), ' = (function () {\n',
+                            jsStatement(sequence),
+                            '})()\n'
+                        ]
+                        : [
+                            jsComments(comments),
+                            'function ', sourceNode(name), '(', inputs.length ? ['$inputs', allInputsOptional(inputs.map(({entry}) => entry)) ? ' = {}' : ''] : '', ') {\n',
+                            deconstructedInputs,
+                            statements.map(jsStatement),
+                            '}\n'
+                        ])
             ]
         })
 

@@ -229,13 +229,9 @@ sequence ->
 	newline
 	newline
 	standalone[(
-			identifier methodInputs ":"
+			identifier ":"
 				block[for {% take %} ]
-			{%	([name, inputs, , sequence]) => ({
-				name,
-				...(inputs && { inputs }),
-				sequence
-			}) %}
+			{%	([name, , sequence]) => ({ name, sequence }) %}
 		) {% take %} ,
 		null {% ignore %} ]
 	{%	takeThird	%}
