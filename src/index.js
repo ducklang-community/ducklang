@@ -155,8 +155,8 @@ const jsFor = (statement) => {
         ]
         : [
             !simple(expression) ? ['const ', iterator, ' = ', jsExpression(expression), '\n'] : [],
-            'return function ({ self }) {\n',
-            'const ', sourceNode(name), ' = ', !simple(expression) ? iterator : jsExpression(expression), '({ self })\n',
+            'return function ({ self: ', i, ' }) {\n',
+            'const ', sourceNode(name), ' = ', !simple(expression) ? iterator : jsExpression(expression), '({ self: ', i, ' })\n',
             statements.map(jsStatement),
             '}\n'
         ]
