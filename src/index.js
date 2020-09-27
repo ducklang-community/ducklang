@@ -1,6 +1,6 @@
 const fs = require('fs')
 const nearley = require("nearley")
-const { SourceNode } = require("source-map")
+const {SourceNode} = require("source-map")
 const grammar = require("../dist/grammar.js")
 
 
@@ -16,12 +16,12 @@ const symbol = (name) => {
 const sourceNode = (ref, code) =>
     new SourceNode(ref.line, ref.col - 1, fileName, code || ref.value)
 
-const jsComment = ({ line, annotation, literal }) =>
+const jsComment = ({line, annotation, literal}) =>
     line
         ? sourceNode(line, `// ${line.value}\n`)
         : (literal.value.includes('\n')
-            ? sourceNode(annotation, `/*\n${annotation.value}: ${literal.value}\n*/\n`)
-            : sourceNode(annotation, `// ${annotation.value}: ${literal.value}\n`))
+        ? sourceNode(annotation, `/*\n${annotation.value}: ${literal.value}\n*/\n`)
+        : sourceNode(annotation, `// ${annotation.value}: ${literal.value}\n`))
 
 
 const jsComments = (comments) =>
@@ -30,10 +30,10 @@ const jsComments = (comments) =>
         : []
 
 const jsParameters = (items) =>
-    join(items.map(({ entry: { name } }) => sourceNode(name)))
+    join(items.map(({entry: {name}}) => sourceNode(name)))
 
 const allParametersOptional = (parameters) =>
-    parameters.every(({ grouping, otherwise, destructuringList, destructuringData }) =>
+    parameters.every(({grouping, otherwise, destructuringList, destructuringData}) =>
         grouping
         || otherwise
         || (destructuringList && allParametersOptional(destructuringList))
@@ -44,8 +44,10 @@ const jsLocation = (location) => [sourceNode(location.name), location.locators ?
 const dataDefinition = (definition) => {
     console.log(JSON.stringify(definition))
     switch (definition.type) {
-        case 'dataDefinition':   return jsLocation(definition.location)
-        case 'assignExpandData': return 'null /* todo: assignExpandData */'
+        case 'dataDefinition':
+            return jsLocation(definition.location)
+        case 'assignExpandData':
+            return 'null /* todo: assignExpandData */'
         default:
             console.error(`Unknown definition type ${definition.type}`);
             return sourceNode(definition)
@@ -59,7 +61,7 @@ const jsData = (definitions) => {
 const simple = (expression) => ['locate', 'digitNumber', 'decimalNumber', 'literal'].includes(expression.type)
 
 const jsMethodExecution = (expression) => {
-    const { method, receiver, arguments, otherwise } = expression
+    const {method, receiver, arguments, otherwise} = expression
     const receiverValue = sourceNode(receiver, symbol('receiver'))
     const methodCall = ['.', sourceNode(method), '(', arguments ? jsData(arguments) : [], ')']
     return [
@@ -80,19 +82,32 @@ const jsMethodExecution = (expression) => {
 const jsExpression = (expression) => {
     console.log(JSON.stringify(expression))
     switch (expression.type) {
-        case 'locate':          return jsLocation(expression.location)
-        case 'digitNumber':     return sourceNode(expression)
-        case 'decimalNumber':   return sourceNode(expression)
-        case 'text':            return [sourceNode(expression), '/* todo: formatting */']
-        case 'literal':         return sourceNode(expression)
-        case 'list':            return ['[', join(expression.list.map(jsExpression)), ']']
-        case 'data':            return ['{ /* todo: data */ }']
-        case 'exponentiation':  return [jsExpression(expression.a), ' ** ', jsExpression(expression.b)]
-        case 'multiplication':  return [jsExpression(expression.a), ' * ',  jsExpression(expression.b)]
-        case 'division':        return [jsExpression(expression.a), ' / ',  jsExpression(expression.b)]
-        case 'addition':        return [jsExpression(expression.a), ' + ',  jsExpression(expression.b)]
-        case 'subtraction':     return [jsExpression(expression.a), ' - ',  jsExpression(expression.b)]
-        case 'methodExecution': return jsMethodExecution(expression)
+        case 'locate':
+            return jsLocation(expression.location)
+        case 'digitNumber':
+            return sourceNode(expression)
+        case 'decimalNumber':
+            return sourceNode(expression)
+        case 'text':
+            return [sourceNode(expression), '/* todo: formatting */']
+        case 'literal':
+            return sourceNode(expression)
+        case 'list':
+            return ['[', join(expression.list.map(jsExpression)), ']']
+        case 'data':
+            return ['{ /* todo: data */ }']
+        case 'exponentiation':
+            return [jsExpression(expression.a), ' ** ', jsExpression(expression.b)]
+        case 'multiplication':
+            return [jsExpression(expression.a), ' * ', jsExpression(expression.b)]
+        case 'division':
+            return [jsExpression(expression.a), ' / ', jsExpression(expression.b)]
+        case 'addition':
+            return [jsExpression(expression.a), ' + ', jsExpression(expression.b)]
+        case 'subtraction':
+            return [jsExpression(expression.a), ' - ', jsExpression(expression.b)]
+        case 'methodExecution':
+            return jsMethodExecution(expression)
         default:
             console.error(`Unknown expression type ${expression.type}`);
             return sourceNode(expression)
@@ -104,7 +119,7 @@ const jsDoes = (statement) => {
         'result': 'return',
         'collect': 'return'
     }
-    const { operator, expression } = statement
+    const {operator, expression} = statement
     if (!operator.type in operators) {
         console.log(`Unknown 'does' operator ${operator.type}`)
     }
@@ -112,7 +127,7 @@ const jsDoes = (statement) => {
 }
 
 const jsFor = (statement) => {
-    const { name, iteration, expression, statements } = statement
+    const {name, iteration, expression, statements} = statement
     // TODO: we can use iteration for 'do' case, but otherwise must build and return an iterator
     const iterator = symbol('iterator')
     const i = symbol('i')
@@ -120,7 +135,7 @@ const jsFor = (statement) => {
     return statement.do
         ? [
             !simple(expression) ? ['const ', iterator, ' = ', jsExpression(expression), '\n'] : [],
-            'for (let ', i, ' = 0; ; ++', i,') {\n',
+            'for (let ', i, ' = 0; ; ++', i, ') {\n',
             '   const ', sourceNode(name), ' = ', !simple(expression) ? iterator : jsExpression(expression), '({ self: ', i, ' })\n',
             '   if (', sourceNode(name), ' === undefined) { break }\n',
             statements.map(jsStatement),
@@ -135,7 +150,7 @@ const jsFor = (statement) => {
         ]
 }
 
-const jsCase = ({ comments, definition: { expression, statements } }) => {
+const jsCase = ({comments, definition: {expression, statements}}) => {
     return [
         jsComments(comments),
         '   case ', jsExpression(expression), ':\n',
@@ -145,9 +160,9 @@ const jsCase = ({ comments, definition: { expression, statements } }) => {
 }
 
 const jsWhen = (statement) => {
-    const { expression, cases, otherwise } = statement
+    const {expression, cases, otherwise} = statement
     return [
-        'switch (',  jsExpression(expression), ') { ', '{\n',
+        'switch (', jsExpression(expression), ') { ', '{\n',
         cases.map(jsCase),
         otherwise
             ? [
@@ -162,39 +177,47 @@ const jsWhen = (statement) => {
 
 const operators = {
     'updateExponential': '**=',
-    'updateTimes':       '*=',
-    'updateDividedBy':   '/=',
-    'updatePlus':        '+=',
-    'updateMinus':       '-=',
-    'set':               '='
+    'updateTimes': '*=',
+    'updateDividedBy': '/=',
+    'updatePlus': '+=',
+    'updateMinus': '-=',
+    'set': '='
 }
 const jsOperator = (operator) => operators[operator ? operator.type : 'set']
 
 const jsAssignExpandData = (statement) => {
-    const { location, destructuringData, expression } = statement
+    const {location, destructuringData, expression} = statement
 
     if (location) {
         return ['const ', jsLocation(statement.location), ' = ', jsExpression(statement.methodNaming)]
-    }
-    else {
+    } else {
     }
 }
 
 const jsStatement = (statement) => {
     console.log(JSON.stringify(statement))
     switch (statement.type) {
-        case 'standalone':          return [jsComments(statement.comments), jsStatement(statement.definition)]
-        case 'does':                return jsDoes(statement)
-        case 'assignWith':          return ['const ', jsLocation(statement.location), ' ', jsOperator(statement.operator), ' ', jsExpression(statement.expression), '\n']
+        case 'standalone':
+            return [jsComments(statement.comments), jsStatement(statement.definition)]
+        case 'does':
+            return jsDoes(statement)
+        case 'assignWith':
+            return ['const ', jsLocation(statement.location), ' ', jsOperator(statement.operator), ' ', jsExpression(statement.expression), '\n']
 
         // TODO: these ones are a little trickier. Deduplicate parameters code
-        case 'assignExpandData':    return ['const ', symbol('assignExpandData'), ' = null /* todo: assignExpandData */\n']
-        case 'assignExpandList':    return ['const ', symbol('assignExpandList'), ' = null /* todo: assignExpandList */\n']
+        case 'assignExpandData':
+            return ['const ', symbol('assignExpandData'), ' = null /* todo: assignExpandData */\n']
+        case 'assignExpandList':
+            return ['const ', symbol('assignExpandList'), ' = null /* todo: assignExpandList */\n']
 
-        case 'assignMethodResult':  return ['const ', sourceNode(statement.methodNaming.method), ' = ', jsExpression(statement.methodNaming), '\n']
-        case 'methodExecution':     return [jsMethodExecution(statement), '\n']
-        case 'for':                 return jsFor(statement)
-        case 'when':                return jsWhen(statement)
+        case 'assignMethodResult':
+            return ['const ', sourceNode(statement.methodNaming.method), ' = ', jsExpression(statement.methodNaming), '\n']
+        case 'methodExecution':
+            return [jsMethodExecution(statement), '\n']
+        case 'for':
+            return jsFor(statement)
+        case 'when':
+            return jsWhen(statement)
         default:
             console.error(`Unknown statement type ${statement.type}`);
     }
@@ -211,22 +234,21 @@ parser.feed(data)
 
 if (parser.results.length === 0) {
     console.error('Expected more input')
-}
-else if (parser.results.length === 1) {
+} else if (parser.results.length === 1) {
 
     const results = parser.results[0]
 
     console.log(JSON.stringify(results, null, 2))
     console.log('Good parse');
 
-    results.forEach(({ namespaceDeclaration, using, methods }) => {
+    results.forEach(({namespaceDeclaration, using, methods}) => {
 
-        methods.forEach(({ comments, definition: { name, of, receiver, parameters, statements } }) => {
+        methods.forEach(({comments, definition: {name, of, receiver, parameters, statements}}) => {
 
             parameters = parameters || []
 
-            const names = parameters.filter(({ entry: { type } }) => type === 'parameter')
-            const group = parameters.filter(({ entry: { type } }) =>
+            const names = parameters.filter(({entry: {type}}) => type === 'parameter')
+            const group = parameters.filter(({entry: {type}}) =>
                 ['parameterSingleton', 'parameterGroup'].includes(type))
 
             // TODO: validate there is at most one group and it's at the end
@@ -242,11 +264,11 @@ else if (parser.results.length === 1) {
         })
     })
 
-    const compiled = results.map(({ namespaceDeclaration, using, methods }) => {
+    const compiled = results.map(({namespaceDeclaration, using, methods}) => {
 
         const dependencies = using && jsParameters(using.definition) || []
 
-        const functions = methods.map(({ comments, definition: { name, of, receiver, parameters, statements, sequence } }) => {
+        const functions = methods.map(({comments, definition: {name, of, receiver, parameters, statements, sequence}}) => {
 
             console.log()
             console.log(JSON.stringify(name))
@@ -257,24 +279,24 @@ else if (parser.results.length === 1) {
                     type: 'entry',
                     entry: {
                         type: 'parameter',
-                            name,
-                            ...(name.value === 'self' && {
-                                otherwise: {
-                                    type: 'locate',
-                                    location: {
-                                        type: 'location',
-                                        name: {line: name.line, col: name.col, value: 'this'}
-                                    }
+                        name,
+                        ...(name.value === 'self' && {
+                            otherwise: {
+                                type: 'locate',
+                                location: {
+                                    type: 'location',
+                                    name: {line: name.line, col: name.col, value: 'this'}
                                 }
-                            })
+                            }
+                        })
                     }
                 })
             })
 
             const deconstruct = parameters.length
                 ? [{
-                    name: { line: parameters.line, col: parameters.col, value: '$parameters' },
-                    parameters: parameters.map(({ entry }) => entry),
+                    name: {line: parameters.line, col: parameters.col, value: '$parameters'},
+                    parameters: parameters.map(({entry}) => entry),
                     type: 'data'
                 }]
                 : []
@@ -282,7 +304,7 @@ else if (parser.results.length === 1) {
             const deconstructedParameters = []
 
             while (deconstruct.length) {
-                const { name, parameters, type } = deconstruct.shift()
+                const {name, parameters, type} = deconstruct.shift()
 
                 console.log(JSON.stringify(parameters))
 
@@ -297,13 +319,13 @@ else if (parser.results.length === 1) {
                         ? [sourceNode(parameters[0].name), ' = ', sourceNode(name)]
                         : [
                             type === 'list' ? '[' : '{ ',
-                            parameters.map(({ grouping, name, as, otherwise, destructuringList, destructuringData }) =>
+                            parameters.map(({grouping, name, as, otherwise, destructuringList, destructuringData}) =>
                                 [', ', grouping ? sourceNode(grouping) : '', sourceNode(name), as ? sourceNode(as, [': ', sourceNode(as)]) : '',
                                     otherwise ? sourceNode(otherwise, [' = ', jsExpression(otherwise)])
                                         // NB. this is a bit inefficient as it fully walks the rest of the structure for each layer
                                         // as it goes inward
                                         : (destructuringList && allParametersOptional(destructuringList) ? ' = []'
-                                            : (destructuringData && allParametersOptional(destructuringData) ? ' = {}' : ''))]
+                                        : (destructuringData && allParametersOptional(destructuringData) ? ' = {}' : ''))]
                             ).flat().slice(1),
                             type === 'list' ? ']' : ' }',
                             ' = ',
@@ -313,9 +335,9 @@ else if (parser.results.length === 1) {
                     '\n'
                 ])
 
-                parameters.forEach(({ name, destructuringList, destructuringData }) => {
-                    destructuringList && deconstruct.push({ name, parameters: destructuringList, type: 'list' })
-                    destructuringData && deconstruct.push({ name, parameters: destructuringData, type: 'data' })
+                parameters.forEach(({name, destructuringList, destructuringData}) => {
+                    destructuringList && deconstruct.push({name, parameters: destructuringList, type: 'list'})
+                    destructuringData && deconstruct.push({name, parameters: destructuringData, type: 'data'})
                 })
             }
 
@@ -324,7 +346,7 @@ else if (parser.results.length === 1) {
             return ['\n\n',
                 sourceNode(name, [
                     jsComments(comments),
-                    'function ', sourceNode(name), '(', parameters.length ? ['$parameters', allParametersOptional(parameters.map(({ entry }) => entry)) ? ' = {}' : ''] : '', ') {\n',
+                    'function ', sourceNode(name), '(', parameters.length ? ['$parameters', allParametersOptional(parameters.map(({entry}) => entry)) ? ' = {}' : ''] : '', ') {\n',
                     deconstructedParameters,
                     body,
                     '}\n'
@@ -342,15 +364,14 @@ else if (parser.results.length === 1) {
         ])
     })
 
-    const { code, map } = new SourceNode(0, 0, fileName, compiled).toStringWithSourceMap()
+    const {code, map} = new SourceNode(0, 0, fileName, compiled).toStringWithSourceMap()
     console.log(code)
 
     // TODO: make the output as pretty as possible
     // (nb. prettier isn't viable as it doesn't do source mapping. Workarounds exist but are slow)
 
     // TODO: set the line,col of closing tags to be something at the end of the source
-}
-else {
+} else {
     console.log(JSON.stringify(parser.results, null, 2))
     console.error('Ambiguous parse')
 }
