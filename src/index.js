@@ -4,13 +4,16 @@ const {SourceNode} = require("source-map")
 const grammar = require("../dist/grammar.js")
 
 
+let methodName;
+
+
 const join = (array) => array.map(item => [', ', item]).flat().slice(1)
 
 
 const symbols = {}
 const symbol = (name) => {
     symbols[name] = name in symbols ? (symbols[name] + 1) : 0
-    return '$' + name + symbols[name]
+    return name + (symbols[name] && '$' + symbols[name] || '$')
 }
 
 const sourceNode = (ref, code) =>
@@ -128,17 +131,13 @@ const jsDoes = (statement) => {
     return [sourceNode(operator, operators[operator.type]), ' ', jsExpression(expression), '\n']
 }
 
-// TODO:
-// itemizers taking their parent method name as prefix
-// extent taking their itemizers name as prefix
-// fibonnaci as a (() => { })() wrapper
-// extents as functions
+// TODO: sequences like fibonnaci should execute in-situe as a (() => { })() wrapper
 
 const jsFor = (statement) => {
     const {name, itemizing, expression, extent, statements} = statement
     const source = symbol('source')
     const i = symbol('i')
-    const items = symbol('items')
+    const items = symbol(methodName + 'Items')
     const sourceValue = !simple(expression) ? source : jsExpression(expression)
 
     return statement.do
@@ -157,7 +156,7 @@ const jsFor = (statement) => {
             '   if (', sourceNode(name), ' === undefined) { return }\n',
             statements.map(jsStatement),
             '}\n',
-            extent ? [items, '.extent', ' = function () { ', jsExpression(extent), ' }\n'] : '',
+            extent ? [items, '.extent', ' = function ', symbol(methodName + 'Extent'), '() { return ', jsExpression(extent), ' }\n'] : '',
             'return ', items, '\n'
         ]
 }
@@ -284,6 +283,7 @@ if (parser.results.length === 0) {
 
             console.log()
             console.log(JSON.stringify(name))
+            methodName = name.value
 
             inputs = inputs || []
             receiver && receiver.reverse().forEach(name => {
