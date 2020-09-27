@@ -89,6 +89,8 @@ const jsExpression = (expression) => {
         case 'decimalNumber':
             return sourceNode(expression)
         case 'text':
+            // The best way to do formattion is replace ' -> ` and { -> ${
+            // so we can use JavaScripts own string formatting
             return [sourceNode(expression), '/* todo: formatting */']
         case 'literal':
             return sourceNode(expression)
@@ -145,6 +147,7 @@ const jsFor = (statement) => {
             !simple(expression) ? ['const ', iterator, ' = ', jsExpression(expression), '\n'] : [],
             'return function ({ self: ', i, ' }) {\n',
             '   const ', sourceNode(name), ' = ', !simple(expression) ? iterator : jsExpression(expression), '({ self: ', i, ' })\n',
+            '   if (', sourceNode(name), ' === undefined) { return }\n',
             statements.map(jsStatement),
             '}\n'
         ]
