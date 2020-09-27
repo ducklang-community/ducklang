@@ -23,7 +23,7 @@ selfsame of self:
 
 
 
-::2020-09::Iterator::
+::2020-09::Sequenceable::
 
 
 
@@ -33,7 +33,7 @@ resultFromEach of self with ...parameter: [mapping]:
 
 
 
-::2020-09::Iteration::
+::2020-09::Sequence::
 
 
 
