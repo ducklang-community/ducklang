@@ -12,8 +12,9 @@ const join = (array) => array.map(item => [', ', item]).flat().slice(1)
 
 const symbols = {}
 const symbol = (name) => {
+    name = name.replace(/[^a-zA-Z0-9_]/g, '_')
     symbols[name] = name in symbols ? (symbols[name] + 1) : 0
-    return name + (symbols[name] && '$' + symbols[name] || '$')
+    return name + '$' + (symbols[name] || '')
 }
 
 const sourceNode = (ref, code) =>
