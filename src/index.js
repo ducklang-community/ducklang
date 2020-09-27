@@ -136,39 +136,35 @@ const jsDoes = (statement) => {
 const jsFor = (statement) => {
     const {name, itemizing, expression, extent, statements} = statement
     const source = symbol('source')
-    const sourceExtent = symbol('extent')
+    const sourceExtent = symbol('sourceExtent')
+    const itemsExtent = symbol('extent')
     const i = symbol('i')
     const items = symbol(methodName + 'Items')
 
-    // TODO: should 'extent' be considered advice from the server to the client,
-    // or should it be inlined into the function of the 'server'?
-    // advice to the client is more performant.
-
     const sourceExtentCode = [source, '.extent !== undefined ? ', source, '.extent() : Infinity']
+    const sourceExtentMethod = [source, '.extent !== undefined ? ', source, '.extent : function () { return Infinity }']
+    const body = [
+        '   const ', sourceNode(name), ' = ', source, '({ self: ', i, ' })\n',
+        // Needed for cases like character streams where number of elements is unknown
+        '   if (', sourceNode(name), ' === undefined) { return }\n',
+        statements.map(jsStatement)
+    ]
 
     return statement.do
         ? [
             'const ', source, ' = ', jsExpression(expression), '\n',
-            'const ', sourceExtent, ' = ', extent ? ['Math.min(', jsExpression(extent), ', ', sourceExtentCode, ')'] : sourceExtentCode, '\n',
-            // FIXME: should invoke source's extent if present (&& it with the extent if present). Always pre-define source?
-            'for (let ', i, ' = 0; ', i, ' < ', sourceExtent, '; ++', i, ') {\n',
-            '   const ', sourceNode(name), ' = ', source, '({ self: ', i, ' })\n',
-            // XXX: not sure this check is needed now?
-            //'   if (', sourceNode(name), ' === undefined) { return }\n',
-            statements.map(jsStatement),
+            'const ', itemsExtent, ' = ', extent ? ['Math.min(', jsExpression(extent), ', ', sourceExtentCode, ')'] : sourceExtentCode, '\n',
+            'for (let ', i, ' = 0; ', i, ' < ', itemsExtent, '; ++', i, ') {\n',
+            body,
             '}\n',
         ]
         : [
             'const ', source, ' = ', jsExpression(expression), '\n',
-            // FIXME: currently this occurs at creation of the itemizer and not at time it is to be used...
-            // Might need to place it inside the function body.
+            extent ? ['const ', sourceExtent, ' = ', sourceExtentMethod, '\n'] : '',
             'function ', items, '({ self: ', i, ' }) {\n',
-            '   const ', sourceNode(name), ' = ', source, '({ self: ', i, ' })\n',
-            // XXX: not sure this check is needed now?
-            //'   if (', sourceNode(name), ' === undefined) { return }\n',
-            statements.map(jsStatement),
+            body,
             '}\n',
-            items, '.extent', ' = function ', symbol(methodName + 'Extent'), '() { return ', extent ? ['Math.min(', jsExpression(extent), ', ', source, '.extent !== undefined ? ', source, '.extent() : Infinity'] : [source, '.extent !== undefined ? ', source, '.extent() : Infinity'], ' }\n',
+            items, '.extent', ' = ', extent ? ['function ', symbol(methodName + 'Extent'), '() { return Math.min(', jsExpression(extent), ', ', sourceExtent, '()) }'] : sourceExtentMethod, '\n',
             'return ', items, '\n'
         ]
 }
