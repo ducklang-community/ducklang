@@ -148,15 +148,15 @@ const jsFor = (statement) => {
         ? [
             !simple(expression) ? ['const ', iterator, ' = ', jsExpression(expression), '\n'] : [],
             'for (let ', i, ' = 0; ; ++', i,') {\n',
-            'const ', sourceNode(name), ' = ', !simple(expression) ? iterator : jsExpression(expression), '({ self: ', i, '++ })\n',
-            'if (', sourceNode(name), ' === undefined) { break }\n',
+            '   const ', sourceNode(name), ' = ', !simple(expression) ? iterator : jsExpression(expression), '({ self: ', i, ' })\n',
+            '   if (', sourceNode(name), ' === undefined) { break }\n',
             statements.map(jsStatement),
             '}\n',
         ]
         : [
             !simple(expression) ? ['const ', iterator, ' = ', jsExpression(expression), '\n'] : [],
             'return function ({ self: ', i, ' }) {\n',
-            'const ', sourceNode(name), ' = ', !simple(expression) ? iterator : jsExpression(expression), '({ self: ', i, ' })\n',
+            '   const ', sourceNode(name), ' = ', !simple(expression) ? iterator : jsExpression(expression), '({ self: ', i, ' })\n',
             statements.map(jsStatement),
             '}\n'
         ]
@@ -165,9 +165,9 @@ const jsFor = (statement) => {
 const jsCase = ({ comments, definition: { expression, statements } }) => {
     return [
         jsComments(comments),
-        'case ', jsExpression(expression), ':\n',
+        '   case ', jsExpression(expression), ':\n',
         statements.map(jsStatement),
-        'break\n'
+        '       break\n'
     ]
 }
 
@@ -179,7 +179,7 @@ const jsWhen = (statement) => {
         otherwise
             ? [
                 jsComments(otherwise.comments),
-                'default:\n',
+                '   default:\n',
                 otherwise.definition.map(jsStatement),
             ]
             : '',
