@@ -9,6 +9,11 @@ const lexer = new IndentationLexer({
         	match: /`(?:\\[`\\]|[^`\\])*`/,
         	lineBreaks: true,
         },
+        quote: {
+        	match: /"(?:\\["\\]|[^"\\])*"/,
+        	value: s => s.slice(1, -1),
+        	lineBreaks: true,
+        },
         text: {
         	match: /'(?:\\['\\]|[^'\\])*'/,
         	lineBreaks: true,
@@ -240,7 +245,7 @@ sequence ->
 methodInputs -> (_ with _ elongated[(_ _ _ _ _ _ _ _ _:+) {% ignore %} , input {% take %} ] {% takeFourth %} ):? {% take %}
 
 input ->
-	"...":? identifier (_ as _ identifier {% takeFourth %} ):?
+	"...":? ( identifier {% take %} | quote {% take %} ) (_ as _ identifier {% takeFourth %} ):?
 		(  ":" _:+ destructuringList {% takeThird %}
 		 | ":" _:+ destructuringData {% takeThird %} ):?
 		(_:+ "(" otherwise _ default _ expression ")" {% takeSeventh %} ):?
@@ -445,6 +450,7 @@ idea		-> %idea		{% take %}
 note		-> %note		{% take %}
 
 literal			-> %literal			{% take %}
+quote			-> %quote			{% take %}
 text			-> %text			{% take %}
 decimalNumber	-> %decimalNumber	{% take %}
 digitNumber		-> %digitNumber		{% take %}

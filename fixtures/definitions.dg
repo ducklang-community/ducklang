@@ -27,8 +27,8 @@ selfsame of self:
 
 
 
-resultFromEach of self with ...parameter: [mapping]:
-	items... self
+resultFromEach of self with ...input: ["mapping"]:
+	items... of self
 	result resultFromEach of items with mapping
 
 
@@ -37,7 +37,7 @@ resultFromEach of self with ...parameter: [mapping]:
 
 
 
-resultFromEach of self with ...parameter: [mapping]:
+resultFromEach of self with ...input: ["mapping"]:
 	for each x in self,
 		collect resultOf (mapping in x)
 
@@ -245,9 +245,9 @@ engageBoosters of self with thrust,
 
 
 testStructuring of self with options: { name, color, speed },
-                             ...parameter: [mapping]:
+                             ...input: ["mapping"]:
 
-	...[first, ...rest] = parameter
+	...["first", ..."rest"] = input
 
 	l1 = [1, 2, 3]
 	l2 = [1, 2]
@@ -256,12 +256,12 @@ testStructuring of self with options: { name, color, speed },
 	l3 = [1, l4]
 
 	note: should give error at runtime
-	...[a, b] = l1
+	...["a", "b"] = l1
 
 	note: should be fine
-	...[a, b, ...remainder] = l1
+	...["a", "b", ..."remainder"] = l1
 
-	bob:foo:...[a, innerList: [b, c, ...rest]] = l3
+	bob:foo:...["a", "innerList": ["b", "c", ..."rest"]] = l3
 
 	variable:resultFromEach... of numbers with square
 
@@ -279,11 +279,31 @@ testStructuring of self with options: { name, color, speed },
 	                            thrust, angle, offset, color } otherwise default 'done'
 
 
-test1 of self with a: { b: { c: [d (otherwise default 2), e: { f (otherwise default 1) }] } }:
+test1 of self with a: { b: { c: ["d" (otherwise default 2), "e": { f (otherwise default 1) }] } }:
 	result a
 
 
-test2 of self with a: [...bob]:
+test2 of self with a: [..."bob"]:
 	result bob
+
+
+firstFive self:
+	for each number in infinity, to extent of 5,
+		collect number
+
+
+firstFiveDoubled self:
+	for each number in firstFive,
+		collect number * 2
+
+
+firstTwoDoubled self:
+	for each number in firstFiveDoubled, to extent of 2,
+		collect number
+
+
+printFirstDoubled self:
+	for each number in firstTwoDoubled, to extent of 1, do:
+		display number
 
 

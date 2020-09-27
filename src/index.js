@@ -279,6 +279,7 @@ if (parser.results.length === 0) {
             // TODO: validate only data names may have an otherwise
             // TODO: validate that a destructuring list or data has at least 1 thing in it
             // TODO: check all inputs, dependencies and assignment statements to prevent name clash
+            // TODO: validate the list destructure names are of type "quote"
 
         })
     })
