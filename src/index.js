@@ -4,16 +4,6 @@ const { SourceNode } = require("source-map")
 const grammar = require("../dist/grammar.js")
 
 
-function findLastIndexOf(array, predicate) {
-    for (let i = array.length - 1; i >= 0; --i) {
-        const x = array[i];
-        if (predicate(x)) {
-            return i;
-        }
-    }
-    return -1
-}
-
 const join = (array) => array.map(item => [', ', item]).flat().slice(1)
 
 
@@ -48,23 +38,6 @@ const allParametersOptional = (parameters) =>
         || otherwise
         || (destructuringList && allParametersOptional(destructuringList))
         || (destructuringData && allParametersOptional(destructuringData)))
-
-const numberOfRequiredParameters = (parameters) =>
-    findLastIndexOf(parameters, ({ grouping, otherwise, destructuringList, destructuringData }) =>
-        !grouping
-        && !otherwise
-        && (!destructuringList || !allParametersOptional(destructuringList))
-        && (!destructuringData || !allParametersOptional(destructuringData))) + 1
-
-
-const numberOfAllowedParameters = (parameters) => {
-    if (parameters.slice(-1).find(({ grouping }) => grouping)) {
-        return Infinity
-    }
-    else {
-        return parameters.length
-    }
-}
 
 const jsLocation = (location) => [sourceNode(location.name), location.locators ? ' /* todo: locators */ ' : '']
 
@@ -313,9 +286,6 @@ else if (parser.results.length === 1) {
 
                 console.log(JSON.stringify(parameters))
 
-                const requiredArgs = numberOfRequiredParameters(parameters)
-                const allowedArgs = numberOfAllowedParameters(parameters)
-
                 // We destructure one layer at a time so intermediate variables also get defined, eg. in
                 // var { main: { content: { title } } } = ...
                 // JavaScript will only define 'title' variable, but we also want 'main' and 'content'
@@ -338,9 +308,7 @@ else if (parser.results.length === 1) {
                             type === 'list' ? ']' : ' }',
                             ' = ',
                             // TODO: pick these values by iteration as needed, not by evaluating an entire iterator
-                            type === 'list' && !(requiredArgs === 0 && allowedArgs === Infinity) ? '(() => { const values = Object.values(' : '',
                             sourceNode(name),
-                            type === 'list' && !(requiredArgs === 0 && allowedArgs === Infinity) ? [`); if (`, requiredArgs === allowedArgs ? `values.length === ${requiredArgs}` : [requiredArgs > 0 ? `values.length >= ${requiredArgs}` : '', allowedArgs < Infinity ? `values.length <= ${allowedArgs}` : ''].filter(x => x).join(' && '), `) { return values } else { throw new $IncorrectNumberOfParameters(${requiredArgs}, ${allowedArgs}, values.length) })()`] : ''
                         ],
                     '\n'
                 ])
@@ -374,12 +342,7 @@ else if (parser.results.length === 1) {
         ])
     })
 
-    const { code, map } = new SourceNode(0, 0, fileName, [
-        '\n\n',
-        'const $Infinity = Infinity\n\n',
-        'class $IncorrectNumberOfParameters extends Error { constructor(required, allowed, actual) { super(`Expected between ${required} and ${allowed} parameters, received ${actual}`) } }\n\n',
-        compiled
-    ]).toStringWithSourceMap()
+    const { code, map } = new SourceNode(0, 0, fileName, compiled).toStringWithSourceMap()
     console.log(code)
 
     // TODO: make the output as pretty as possible
