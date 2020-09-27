@@ -68,19 +68,17 @@ const jsMethodExecution = (expression) => {
     const {method, receiver, arguments, otherwise} = expression
     const receiverValue = sourceNode(receiver, symbol('receiver'))
     const methodCall = ['.', sourceNode(method), '(', arguments ? jsData(arguments) : [], ')']
-    return [
-        otherwise
-            ? (!simple(receiver)
-                ? [
-                    '(() => { ',
-                    `const ${receiverValue} = `, jsExpression(receiver), '; ',
-                    'return ', receiverValue, '.', sourceNode(method), ' !== undefined ? ', receiverValue, methodCall, ' : ', jsExpression(otherwise),
-                    ' })()'
-                ]
-                : [jsExpression(receiver), '.', sourceNode(method), ' !== undefined ? ', jsExpression(receiver), methodCall, ' : ', jsExpression(otherwise)]
-            )
-            : [jsExpression(receiver), methodCall]
-    ]
+    return otherwise
+        ? (!simple(receiver)
+            ? [
+                '(() => { ',
+                `const ${receiverValue} = `, jsExpression(receiver), '; ',
+                'return ', receiverValue, '.', sourceNode(method), ' !== undefined ? ', receiverValue, methodCall, ' : ', jsExpression(otherwise),
+                ' })()'
+            ]
+            : [jsExpression(receiver), '.', sourceNode(method), ' !== undefined ? ', jsExpression(receiver), methodCall, ' : ', jsExpression(otherwise)]
+        )
+        : [jsExpression(receiver), methodCall]
 }
 
 const jsExpression = (expression) => {
