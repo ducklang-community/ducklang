@@ -101,15 +101,15 @@ const jsExpression = (expression) => {
         case 'data':
             return ['{ /* todo: data */ }']
         case 'exponentiation':
-            return [jsExpression(expression.a), ' ** ', jsExpression(expression.b)]
+            return ['(', jsExpression(expression.a), ' ** ', jsExpression(expression.b), ')']
         case 'multiplication':
-            return [jsExpression(expression.a), ' * ', jsExpression(expression.b)]
+            return ['(', jsExpression(expression.a), ' * ', jsExpression(expression.b), ')']
         case 'division':
-            return [jsExpression(expression.a), ' / ', jsExpression(expression.b)]
+            return ['(', jsExpression(expression.a), ' / ', jsExpression(expression.b), ')']
         case 'addition':
-            return [jsExpression(expression.a), ' + ', jsExpression(expression.b)]
+            return ['(', jsExpression(expression.a), ' + ', jsExpression(expression.b), ')']
         case 'subtraction':
-            return [jsExpression(expression.a), ' - ', jsExpression(expression.b)]
+            return ['(', jsExpression(expression.a), ' - ', jsExpression(expression.b), ')']
         case 'methodExecution':
             return jsMethodExecution(expression)
         default:
