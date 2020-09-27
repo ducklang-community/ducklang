@@ -138,14 +138,12 @@ const jsFor = (statement) => {
     const {name, itemizing, expression, extent, statements} = statement
     const source = symbol('source')
     const i = symbol('i')
-    const extentVariable = symbol('extent')
     const items = symbol('items')
     const sourceValue = !simple(expression) ? source : jsExpression(expression)
 
     return statement.do
         ? [
             !simple(expression) ? ['const ', source, ' = ', jsExpression(expression), '\n'] : [],
-            extent ? ['const ', extentVariable, ' = ', jsExpression(extent), '\n'] : '',
             'for (let ', i, ' = 0; ', extent ? [i, ' < ', jsExpression(extent)]: '','; ++', i, ') {\n',
             '   const ', sourceNode(name), ' = ', sourceValue, '({ self: ', i, ' })\n',
             '   if (', sourceNode(name), ' === undefined) { break }\n',
