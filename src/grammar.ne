@@ -10,9 +10,8 @@ const lexer = new IndentationLexer({
         	lineBreaks: true,
         },
         quote: {
-        	match: /"(?:\\["\\]|[^"\\])*"/,
+        	match: /"[a-zA-Z]+[a-zA-Z0-9]*"/,
         	value: s => s.slice(1, -1),
-        	lineBreaks: true,
         },
         text: {
         	match: /'(?:\\['\\]|[^'\\])*'/,
