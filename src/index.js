@@ -137,31 +137,46 @@ const jsFor = (statement) => {
     const source = symbol('source')
     const sourceExtent = symbol('sourceExtent')
     const itemsExtent = symbol('extent')
-    const i = symbol('i')
+    const n = symbol('n')
     const items = symbol(methodName + 'Items')
 
     const sourceExtentCode = [source, '.extent !== undefined ? ', source, '.extent() : Infinity']
     const sourceExtentMethod = [source, '.extent !== undefined ? ', source, '.extent : function () { return Infinity }']
     const body = [
-        '   const ', sourceNode(name), ' = ', source, '({ self: ', i, ' })\n',
+        '   const ', sourceNode(name), ' = ', source, '({ self: ', n, ' })\n',
         // Needed for cases like character streams where number of elements is unknown
         '   if (', sourceNode(name), ' === undefined) { return }\n',
         statements.map(jsStatement)
     ]
 
+    const memorizeThrough = itemizing && itemizing.value === 'through'
+    const memory = symbol('memory')
+    const i = symbol('i')
+
     return statement.do
         ? [
             'const ', source, ' = ', jsExpression(expression), '\n',
             'const ', itemsExtent, ' = ', extent ? ['Math.min(', jsExpression(extent), ', ', sourceExtentCode, ')'] : sourceExtentCode, '\n',
-            'for (let ', i, ' = 0; ', i, ' < ', itemsExtent, '; ++', i, ') {\n',
+            'for (let ', n, ' = 0; ', n, ' < ', itemsExtent, '; ++', n, ') {\n',
             body,
             '}\n',
         ]
         : [
+            memorizeThrough
+                ? ['const ', memory, ' = []\n']
+                : '',
             'const ', source, ' = ', jsExpression(expression), '\n',
             extent ? ['const ', sourceExtent, ' = ', sourceExtentMethod, '\n'] : '',
-            'function ', items, '({ self: ', i, ' }) {\n',
-            body,
+            'function ', items, '({ self: ', n, ' = this }) {\n',
+            memorizeThrough
+                ? [
+                    '   if (', memory, '.length > ', n, ') { return ', memory, '[', n, '] }\n',
+                    '   for (let ', i, ' = ', memory, '.length; ', i, ' < ', n, '; ++', i, ') { ', items, '(', i ,') }\n',
+                    '   return ', memory, '[', n, '] = (function () {\n',
+                    body,
+                    '   })()\n'
+                ]
+                : body,
             '}\n',
             items, '.extent', ' = ', extent ? ['function ', symbol(methodName + 'Extent'), '() { return Math.min(', jsExpression(extent), ', ', sourceExtent, '()) }'] : sourceExtentMethod, '\n',
             'return ', items, '\n'
@@ -374,9 +389,11 @@ if (parser.results.length === 0) {
             ]
         })
 
+        const namespaceSymbol = symbol(namespaceDeclaration.value)
+
         return sourceNode(namespaceDeclaration, [
             '\n\n',
-            'namespace = {\n',
+            'function ', namespaceSymbol, '() {\n',
             functions,
             '\n\n',
             '}\n'
