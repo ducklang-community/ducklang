@@ -27,7 +27,7 @@ selfsame of self:
 
 
 
-resultFromEach of self with ...input: ["mapping"]:
+resultFromEach of self with ..."input": ["mapping"]:
 	items... of self
 	result resultFromEach of items with mapping
 
@@ -37,7 +37,7 @@ resultFromEach of self with ...input: ["mapping"]:
 
 
 
-resultFromEach of self with ...input: ["mapping"]:
+resultFromEach of self with ..."input": ["mapping"]:
 	for each x in self,
 		collect resultOf (mapping in x)
 
@@ -72,7 +72,7 @@ factorial:
 			otherwise: collect n * (factorial (n - 1))
 
 
-note:`The benefit using a 'through' sequence than a plain function is language-provided memoization.
+note:`The benefit using a 'through' sequence than a plain function is language-provided memory.
       A nice property here is that recursion is allowed but only in the very narrow sense of f(N).
       Because 'through' works from 0->infinity, it does not actually recurse deeply, as f(n-1) is already memoized.`
 fibonacci:
@@ -245,7 +245,7 @@ engageBoosters of self with thrust,
 
 
 testStructuring of self with options: { name, color, speed },
-                             ...input: ["mapping"]:
+                             ..."input": ["mapping"]:
 
 	...["first", ..."rest"] = input
 
