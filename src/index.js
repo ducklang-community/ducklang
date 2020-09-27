@@ -129,23 +129,18 @@ const jsDoes = (statement) => {
 }
 
 // TODO:
-// iterators taking their parent method name as prefix
-// extent taking their iterators name as prefix
+// itemizers taking their parent method name as prefix
+// extent taking their itemizers name as prefix
 // fibonnaci as a (() => { })() wrapper
 // extents as functions
 
 const jsFor = (statement) => {
-    const {name, iteration, expression, extent, statements} = statement
-    // TODO: we can use iteration for 'do' case, but otherwise must build and return an iterator
+    const {name, itemizing, expression, extent, statements} = statement
     const source = symbol('source')
     const i = symbol('i')
     const extentVariable = symbol('extent')
-    const iterator = symbol('iterator')
+    const items = symbol('items')
     const sourceValue = !simple(expression) ? source : jsExpression(expression)
-
-    // TODO: should all iterators be wrapped in function () { } so as to return a fresh iterator each time?
-    // This would give an opportunity for length of list to be invoked and cached.
-    // Is it even that important to cache like that? Node may be able to invariant it all away.
 
     return statement.do
         ? [
@@ -159,13 +154,13 @@ const jsFor = (statement) => {
         ]
         : [
             !simple(expression) ? ['const ', source, ' = ', jsExpression(expression), '\n'] : [],
-            'function ', iterator, '({ self: ', i, ' }) {\n',
+            'function ', items, '({ self: ', i, ' }) {\n',
             '   const ', sourceNode(name), ' = ', sourceValue, '({ self: ', i, ' })\n',
             '   if (', sourceNode(name), ' === undefined) { return }\n',
             statements.map(jsStatement),
             '}\n',
-            extent ? [iterator, '.extent', ' = function () { ', jsExpression(extent), ' }\n'] : '',
-            'return ', iterator, '\n'
+            extent ? [items, '.extent', ' = function () { ', jsExpression(extent), ' }\n'] : '',
+            'return ', items, '\n'
         ]
 }
 
@@ -348,7 +343,7 @@ if (parser.results.length === 0) {
                             ).flat().slice(1),
                             type === 'list' ? ']' : ' }',
                             ' = ',
-                            // TODO: pick these values by iteration as needed, not by evaluating an entire iterator
+                            // TODO: pick these values as needed, not by retrieving the entire set of items
                             sourceNode(name),
                         ],
                     '\n'

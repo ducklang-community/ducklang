@@ -261,7 +261,7 @@ for -> For _ each _ identifier _ (in {% take %} | through {% take %} ) _ express
 		(_ to _ extent _ of _ expression "," {% takeEighth %} ):?
 		(_ do ":" {% takeSecond %} ):?
 	blockOf[statement {% take %} ]
-	{% ([, , , , name, , iteration, , expression, , extent, Do, statements]) => ({ type: 'for', name, iteration, expression, ...(extent && { extent }), ...(Do && { do: Do }), statements }) %}
+	{% ([, , , , name, , itemizing, , expression, , extent, Do, statements]) => ({ type: 'for', name, itemizing, expression, ...(extent && { extent }), ...(Do && { do: Do }), statements }) %}
 
 when -> When _ expression
 	indented[(

@@ -23,17 +23,17 @@ selfsame of self:
 
 
 
-::2020-09::Sequenceable::
+::2020-09::Itemizing::
 
 
 
 resultFromEach of self with ...parameter: [mapping]:
-	iterator... of self
-	result resultFromEach of iterator with mapping
+	items... self
+	result resultFromEach of items with mapping
 
 
 
-::2020-09::Sequence::
+::2020-09::Items::
 
 
 
