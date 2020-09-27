@@ -261,7 +261,7 @@ input ->
 destructuringList -> "["   flowing[input {% take %} ]   "]" {% ([, destructuringList])   => ({ destructuringList }) %}
 destructuringData -> "{" _ flowing[input {% take %} ] _ "}" {% ([, , destructuringData]) => ({ destructuringData }) %}
 
-for -> For _ each _ identifier _ (in {% take %} | through {% take %} ) _ expression ","
+for -> For _ each _ identifier _ (in {% take %} | through {% take %} | of {% take %} ) _ expression ","
 		(_ to _ extent _ of _ expression "," {% takeEighth %} ):?
 		(_ do ":" {% takeSecond %} ):?
 	blockOf[statement {% take %} ]
