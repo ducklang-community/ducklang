@@ -47,19 +47,6 @@ resultFromEach of self with ..."input": ["mapping"]:
 
 
 
-use infinity
-
-
-evenNumbers:
-	for each number in infinity,
-		collect number * 2
-
-
-oddNumbers:
-	for each number in evenNumbers,
-		collect number + 1
-
-
 power of self:
 	for each number in infinity,
 		collect self ** number
@@ -89,6 +76,32 @@ lucas:
 			is 0: collect 2
 			is 1: collect 1
 			otherwise: collect (lucas (n - 1)) + (lucas (n - 2))
+
+
+
+::2020-09::Sequences::Even::
+
+
+
+use infinity
+
+
+evenNumbers:
+	for each number in infinity,
+		collect number * 2
+
+
+
+::2020-09::Sequences::Odd::
+
+
+
+use evenNumbers
+
+
+oddNumbers:
+	for each number in evenNumbers,
+		collect number + 1
 
 
 
