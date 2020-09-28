@@ -100,6 +100,8 @@ const jsExpression = (expression) => {
             return ['[', join(expression.list.map(jsExpression)), ']']
         case 'data':
             return ['{ /* todo: data */ }']
+
+        // FIXME: use symbolic mathematics
         case 'exponentiation':
             return ['(', jsExpression(expression.a), ' ** ', jsExpression(expression.b), ')']
         case 'multiplication':
@@ -110,6 +112,7 @@ const jsExpression = (expression) => {
             return ['(', jsExpression(expression.a), ' + ', jsExpression(expression.b), ')']
         case 'subtraction':
             return ['(', jsExpression(expression.a), ' - ', jsExpression(expression.b), ')']
+
         case 'methodExecution':
             return jsMethodExecution(expression)
         default:
