@@ -108,7 +108,7 @@ yarn parse-fixtures
 ## Code of conduct
 
 * Be vocal
-* Be polite
+* Be pleasant
 * Be succinct
 
 ## Project organisation
