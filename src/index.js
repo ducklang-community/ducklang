@@ -357,6 +357,7 @@ if (parser.results.length === 0) {
                 deconstructedInputs.push([
                     'const ',
                     inputs.length === 1 && inputs[0].grouping
+                        // FIXME: for list destructuring, "name" means the value, name means the entry
                         ? [sourceNode(inputs[0].name), ' = ', sourceNode(name)]
                         : [
                             type === 'list' ? '[' : '{ ',
