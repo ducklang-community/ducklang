@@ -300,6 +300,12 @@ test2 of self with a: [..."bob"]:
 	result bob
 
 
+test3 of self with ...inputs:
+	...[entry1, ...entries] = inputs
+	...["value1", ..."values"] = inputs
+	result values
+
+
 firstFive self:
 	for each number in infinity, to extent of 5,
 		collect number
