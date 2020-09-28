@@ -76,9 +76,9 @@ const jsMethodExecution = (expression) => {
                 'return ', receiverValue, '.', sourceNode(method), ' !== undefined ? ', receiverValue, methodCall, ' : ', jsExpression(otherwise),
                 ' })()'
             ]
-            : [jsExpression(receiver), '.', sourceNode(method), ' !== undefined ? ', jsExpression(receiver), methodCall, ' : ', jsExpression(otherwise)]
+            : ['(', jsExpression(receiver), ').', sourceNode(method), ' !== undefined ? (', jsExpression(receiver), ')', methodCall, ' : ', jsExpression(otherwise)]
         )
-        : [jsExpression(receiver), methodCall]
+        : ['(', jsExpression(receiver), ')', methodCall]
 }
 
 const jsExpression = (expression) => {
