@@ -84,6 +84,20 @@ const take			= takeFirst
 %}
 
 
+# In future: add a "reference" or "see also" or "source" or "origin"
+# for code that is derived in relation to something else
+# I think I like 'Origin'
+#
+# Allow 'In future', and 'Why' with Description?
+#
+# Just use 'Why' instead of Description?
+
+# In future: use the term 'match' instead of 'destructure'
+
+# In future: use the term 'module' instead of namespace, or 'collection',
+# or another term entirely
+
+
 @lexer lexer
 
 @builtin "postprocessors.ne"

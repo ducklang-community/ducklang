@@ -361,7 +361,7 @@ if (parser.results.length === 0) {
                 deconstructedInputs.push([
                     'const ',
                     inputs.length === 1 && inputs[0].grouping
-                        // FIXME: for list destructuring, "name" means the value, name means the entry
+                        // In future: for list destructuring, "name" means the value, name means the entry
                         ? [sourceNode(inputs[0].name), ' = ', sourceNode(name)]
                         : [
                             type === 'list' ? '[' : '{ ',
@@ -370,7 +370,7 @@ if (parser.results.length === 0) {
                                     otherwise ? sourceNode(otherwise, [' = ', jsExpression(otherwise)])
                                         // In future: this is a bit inefficient as it fully walks the rest of the structure for each layer
                                         // as it goes inward
-                                        // In future: fix as this incorrectly things that a group destructure into a required list is optional
+                                        // In future: fix - this incorrectly believes that a group destructure to a required list is optional
                                         : (destructuringList && allInputsOptional(destructuringList) ? ' = []'
                                         : (destructuringData && allInputsOptional(destructuringData) ? ' = {}' : ''))]
                             ).flat().slice(1),
