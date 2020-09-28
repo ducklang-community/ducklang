@@ -190,7 +190,7 @@ const jsFor = (statement) => {
 const jsCase = ({comments, definition: {expression, statements}}) => {
     return [
         jsComments(comments),
-        '   case ', jsExpression(expression), ':\n',
+        '   case ', jsExpression(expression), '.valueOf():\n',
         statements.map(jsStatement),
         '       break\n'
     ]
@@ -199,7 +199,9 @@ const jsCase = ({comments, definition: {expression, statements}}) => {
 const jsWhen = (statement) => {
     const {expression, cases, otherwise} = statement
     return [
-        'switch (', jsExpression(expression), ') {\n',
+        // Why: valueOf is used to allow objects to implement different comparison semantics than strict reference check
+        // For example objects may decide to implement this using JSON.stringify, if field ordering is required
+        'switch (', jsExpression(expression), '.valueOf()) {\n',
         cases.map(jsCase),
         otherwise
             ? [
