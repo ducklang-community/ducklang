@@ -133,8 +133,6 @@ const jsDoes = (statement) => {
     return [sourceNode(operator, operators[operator.type]), ' ', jsExpression(expression), '\n']
 }
 
-// TODO: sequences like fibonnaci should execute in-situe as a (() => { })() wrapper
-
 const jsFor = (statement) => {
     const {name, itemizing, expression, extent, statements} = statement
     const source = symbol('source')
@@ -282,6 +280,12 @@ if (parser.results.length === 0) {
     results.forEach(({namespaceDeclaration, using, methods}) => {
 
         methods.forEach(({comments, definition: {name, of, receiver, inputs, statements}}) => {
+
+            // TODO: can / should we try to reorder statements in a method
+            //  so that depenencies don't need to be defined before their uses? eg.
+            // a = [b]
+            // b = 1
+            //  personally I generally prefer bottom up ordering of statements anyway
 
             inputs = inputs || []
 
