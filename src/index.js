@@ -43,7 +43,7 @@ const allInputsOptional = (inputs) =>
         || (destructuringList && allInputsOptional(destructuringList))
         || (destructuringData && allInputsOptional(destructuringData)))
 
-const jsLocation = (location) => [sourceNode(location.name), location.locators ? ' /* todo: locators */ ' : '']
+const jsLocation = (location) => [sourceNode(location.name), location.locators ? ' /* To do: locators */ ' : '']
 
 const dataDefinition = (definition) => {
     console.log(JSON.stringify(definition))
@@ -51,7 +51,7 @@ const dataDefinition = (definition) => {
         case 'dataDefinition':
             return jsLocation(definition.location)
         case 'assignExpandData':
-            return 'null /* todo: assignExpandData */'
+            return 'null /* To do: assignExpandData */'
         default:
             console.error(`Unknown definition type ${definition.type}`);
             return sourceNode(definition)
@@ -91,15 +91,15 @@ const jsExpression = (expression) => {
         case 'decimalNumber':
             return sourceNode(expression)
         case 'text':
-            // The best way to do formattion is replace ' -> ` and { -> ${
+            // To do: The best way to do formattion is replace ' -> ` and { -> ${
             // so we can use JavaScripts own string formatting
-            return [sourceNode(expression), '/* todo: formatting */']
+            return [sourceNode(expression), '/* To do: formatting */']
         case 'literal':
             return sourceNode(expression)
         case 'list':
             return ['[', join(expression.list.map(jsExpression)), ']']
         case 'data':
-            return ['{ /* todo: data */ }']
+            return ['{ /* To do: data */ }']
 
         // FIXME: use symbolic mathematics
         case 'exponentiation':
@@ -243,11 +243,11 @@ const jsStatement = (statement) => {
         case 'assignWith':
             return ['const ', jsLocation(statement.location), ' ', jsOperator(statement.operator), ' ', jsExpression(statement.expression), '\n']
 
-        // TODO: these ones are a little trickier. Deduplicate inputs code
+        // To do: these ones are a little trickier. Deduplicate inputs code
         case 'assignExpandData':
-            return ['const ', symbol('assignExpandData'), ' = null /* todo: assignExpandData */\n']
+            return ['const ', symbol('assignExpandData'), ' = null /* To do: assignExpandData */\n']
         case 'assignExpandList':
-            return ['const ', symbol('assignExpandList'), ' = null /* todo: assignExpandList */\n']
+            return ['const ', symbol('assignExpandList'), ' = null /* To do: assignExpandList */\n']
 
         case 'assignMethodResult':
             return ['const ', sourceNode(statement.methodNaming.method), ' = ', jsExpression(statement.methodNaming), '\n']
@@ -284,7 +284,7 @@ if (parser.results.length === 0) {
 
         methods.forEach(({comments, definition: {name, of, receiver, inputs, statements}}) => {
 
-            // TODO: can / should we try to reorder statements in a method
+            // To do: can / should we try to reorder statements in a method
             //  so that depenencies don't need to be defined before their uses? eg.
             // a = [b]
             // b = 1
@@ -296,16 +296,16 @@ if (parser.results.length === 0) {
             const group = inputs.filter(({entry: {type}}) =>
                 ['inputSingleton', 'inputGroup'].includes(type))
 
-            // TODO: validate there is at most one group and it's at the end
+            // To do: validate there is at most one group and it's at the end
             if (group.length > 1) {
                 throw new Error('Cannot have more than one input group per method')
             }
 
-            // TODO: validate the groups can't have an otherwise or an 'as' rename
-            // TODO: validate only data names may have an otherwise
-            // TODO: validate that a destructuring list or data has at least 1 thing in it
-            // TODO: check all inputs, dependencies and assignment statements to prevent name clash
-            // TODO: validate the list destructure names are of type "quote"
+            // To do: validate the groups can't have an otherwise or an 'as' rename
+            // To do: validate only data names may have an otherwise
+            // To do: validate that a destructuring list or data has at least 1 thing in it
+            // To do: check all inputs, dependencies and assignment statements to prevent name clash
+            // To do: validate the list destructure names are of type "quote"
 
         })
     })
@@ -318,6 +318,8 @@ if (parser.results.length === 0) {
 
             console.log()
             console.log(JSON.stringify(name))
+
+            // To do: make 'of' keyword identical to the name of method plus 'Of'
             methodName = name.value
 
             inputs = inputs || []
@@ -363,22 +365,22 @@ if (parser.results.length === 0) {
                 deconstructedInputs.push([
                     'const ',
                     inputs.length === 1 && inputs[0].grouping
-                        // In future: for list destructuring, "name" means the value, name means the entry
+                        // To do: for list destructuring, "name" means the value, name means the entry
                         ? [sourceNode(inputs[0].name), ' = ', sourceNode(name)]
                         : [
                             type === 'list' ? '[' : '{ ',
                             inputs.map(({grouping, name, as, otherwise, destructuringList, destructuringData}) =>
                                 [', ', grouping ? sourceNode(grouping) : '', sourceNode(name), as ? sourceNode(as, [': ', sourceNode(as)]) : '',
                                     otherwise ? sourceNode(otherwise, [' = ', jsExpression(otherwise)])
-                                        // In future: this is a bit inefficient as it fully walks the rest of the structure for each layer
+                                        // To do: this is a bit inefficient as it fully walks the rest of the structure for each layer
                                         // as it goes inward
-                                        // In future: fix - this incorrectly believes that a group destructure to a required list is optional
+                                        // To do: fix - this incorrectly believes that a group destructure to a required list is optional
                                         : (destructuringList && allInputsOptional(destructuringList) ? ' = []'
                                         : (destructuringData && allInputsOptional(destructuringData) ? ' = {}' : ''))]
                             ).flat().slice(1),
                             type === 'list' ? ']' : ' }',
                             ' = ',
-                            // In future: implementing for list destructure, pick the values as needed (not by consuming the entirety of items)
+                            // To do: implementing for list destructure, pick the values as needed (not by consuming the entirety of items)
                             sourceNode(name),
                         ],
                     '\n'
@@ -411,26 +413,26 @@ if (parser.results.length === 0) {
 
         const namespaceSymbol = symbol(namespaceDeclaration.value)
 
-        // In future: should we do module.exports['::2020-09::Number::'].square = ... ?
+        // To do: should we do module.exports['::2020-09::Number::'].square = ... ?
         return sourceNode(namespaceDeclaration, [
             '\n\n',
             'function ', namespaceSymbol, '() {\n',
             '   return {\n\n',
-            // In future: put functions directly in an object (they shouldn't reference themselves anyway)
+            // To do: put functions directly in an object (they shouldn't reference themselves anyway)
             functions,
             '   }\n',
             '}\n\n',
         ])
     })
 
-    // In future: add the description to the top of the generated code
+    // To do: add the description to the top of the generated code
     const {code, map} = new SourceNode(0, 0, fileName, ['\n', compiled, '\n']).toStringWithSourceMap()
     console.log(code)
 
-    // TODO: make the output as pretty as possible
+    // To do: make the output as pretty as possible
     // (nb. prettier isn't viable as it doesn't do source mapping. Workarounds exist but are slow)
 
-    // TODO: set the line,col of closing tags to be something at the end of the source
+    // To do: set the line,col of closing tags to be something at the end of the source
 } else {
     console.log(JSON.stringify(parser.results, null, 2))
     console.error('Ambiguous parse')

@@ -18,8 +18,9 @@ const lexer = new IndentationLexer({
         	lineBreaks: true,
         },
 
-    	why:			/Why: .*$/,
-    	inFuture:		/In future: .*$/,
+    	origin:	/Origin: .*$/,
+    	why:	/Why: .*$/,
+    	toDo:	/To do: .*$/,
 
 		namespaceIdentifier: /^::.*::$/,
 
@@ -84,17 +85,17 @@ const take			= takeFirst
 %}
 
 
-# In future: add a "reference" or "see also" or "source" or "origin"
+# To do: add a "reference" or "see also" or "source" or "origin"
 # for code that is derived in relation to something else
 # I think I like 'Origin'
 #
-# Allow 'In future', and 'Why' with Description?
+# Allow 'To do', and 'Why' with Description?
 #
 # Just use 'Why' instead of Description?
 
-# In future: use the term 'match' instead of 'destructure'
+# To do: use the term 'match' instead of 'destructure'
 
-# In future: use the term 'module' instead of namespace, or 'collection',
+# To do: use the term 'module' instead of namespace, or 'collection',
 # or another term entirely
 
 
@@ -139,7 +140,7 @@ flowing[definition] -> items[$definition	{% take %} ] ("," newline
 	{% takeFifth %}	):*
 	{%	([first, rest]) => [...first, ...rest.flat()]	%}
 
-# TODO: there is some duplication between listed/elongated which would be nice to extract and simplify
+# To do: there is some duplication between listed/elongated which would be nice to extract and simplify
 
 listed[adjusted, entry] -> listing[(
 		($adjusted comment		{% takeSecond %} ):*
@@ -212,15 +213,15 @@ using ->
 	{%	takeThird	%}
 
 
-# TODO: support (method in Z)		- binds a method with receiver Z
-# TODO: support (method using X)	- partially applies input X
-# TODO: support (method from Y)		- applies using inputs data Y
+# To do: support (method in Z)		- binds a method with receiver Z
+# To do: support (method using X)	- partially applies input X
+# To do: support (method from Y)		- applies using inputs data Y
 
 # But (method of from Z) is not pretty...
 # 'of' could be completely optional and just for readability?
 # How about: (method-of from Z)
 
-# TODO: improve the { self, this, inner } to make any part optional
+# To do: improve the { self, this, inner } to make any part optional
 method ->
 	newline
 	newline
@@ -318,7 +319,7 @@ statement ->
 	| skip							newline	{% take %}
 
 
-# TODO: Require all binary operations be grouped with parentheses except additions and multiplications
+# To do: Require all binary operations be grouped with parentheses except additions and multiplications
 # eg. (a / b) / c , (a - b) - c, a + b + c , a * b * c
 
 expression ->
@@ -405,8 +406,8 @@ methodNaming    -> methodCall["..."	{% take %}		] {% take %}
 
 comment ->
 	(  why		{% ([line]) => ({ line }) %}
-	 | inFuture {% ([line]) => ({ line }) %}
-	 | ("Why" {% take %} | "In future" {% take %} ) ":" literal
+	 | toDo		{% ([line]) => ({ line }) %}
+	 | ("Why" {% take %} | "To do" {% take %} ) ":" literal
 	 	{% ([annotation, , literal]) => ({ annotation, literal }) %} )
 	newline
 	{% ([comment]) => ({ type: 'comment', ...comment }) %}
@@ -415,8 +416,9 @@ description ->
 	newline
 	newline
 	newline
-	"Description" ":" literal newline
-	{% takeFifth %}
+	"Why" ":" literal newline
+	comment:*
+	{% ([, , , , , why, , comments]) => ({ why, ...(comments.length && { comments }) }) %}
 
 
 location -> identifier (":" locator {% takeSecond %} ):*
@@ -457,7 +459,7 @@ with		-> %With		{% ignore %}
 otherwise	-> %otherwise	{% ignore %}
 
 why			-> %why			{% take %}
-inFuture	-> %inFuture	{% take %}
+toDo		-> %toDo	{% take %}
 
 literal			-> %literal			{% take %}
 quote			-> %quote			{% take %}
