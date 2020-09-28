@@ -1,6 +1,12 @@
 
 
 
+Description:`
+This file is a collection of various methods to exercise and hash out various ideas in Ducklang.
+`
+
+
+
 ::2020-09::Number::
 
 
@@ -59,10 +65,9 @@ factorial:
 			otherwise: collect n * (factorial (n - 1))
 
 
-note:`The benefit using a 'through' sequence than a plain function is language-provided memory.
-      A nice property here is that recursion is allowed but only in the very narrow sense of f(N).
-      Because 'through' works from 0->infinity, it does not actually recurse deeply, as f(n-1) is already memoized.`
 fibonacci:
+	Why:`A benefit of using a 'through' sequence versus 'in' itemization is language-provided memory of results
+		 which means it does not take extra time to recurse - f(n-1) and f(n-2) is already memorized.`
 	for each n through infinity,
 		when n
 			is 0: collect 0
@@ -268,11 +273,8 @@ testStructuring of self with options: { name, color, speed },
 	l4 = [2, 3, 9]
 	l3 = [1, l4]
 
-	note: should give error at runtime
+	Why: an example to show list matching is possible with different input length
 	...["a", "b"] = l1
-
-	note: should be fine
-	...["a", "b", ..."remainder"] = l1
 
 	bob:foo:...["a", "innerList": ["b", "c", ..."rest"]] = l3
 

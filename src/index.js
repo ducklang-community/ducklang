@@ -140,6 +140,7 @@ const jsFor = (statement) => {
     const itemsExtent = symbol('extent')
     const n = symbol('n')
     const items = symbol(methodName + 'Items')
+    const item = symbol(methodName + 'Item')
 
     const extentSymbol = symbol(methodName + 'Extent')
     const sourceExtentCode = [source, '.extent !== undefined ? ', source, '.extent() : Infinity']
@@ -272,12 +273,12 @@ if (parser.results.length === 0) {
     console.error('Expected more input')
 } else if (parser.results.length === 1) {
 
-    const results = parser.results[0]
+    const {description, modules} = parser.results[0]
 
-    console.log(JSON.stringify(results, null, 2))
+    console.log(JSON.stringify(modules, null, 2))
     console.log('Good parse');
 
-    results.forEach(({namespaceDeclaration, using, methods}) => {
+    modules.forEach(({namespaceDeclaration, using, methods}) => {
 
         methods.forEach(({comments, definition: {name, of, receiver, inputs, statements}}) => {
 
@@ -307,7 +308,7 @@ if (parser.results.length === 0) {
         })
     })
 
-    const compiled = results.map(({namespaceDeclaration, using, methods}) => {
+    const compiled = modules.map(({namespaceDeclaration, using, methods}) => {
 
         const dependencies = using && jsInputs(using.definition) || []
 
@@ -337,7 +338,6 @@ if (parser.results.length === 0) {
                 })
             })
 
-            // TODO: what does it mean for a sequence to have parameters?
             const deconstruct = inputs.length
                 ? [{
                     name: {line: inputs.line, col: inputs.col, value: '$inputs'},
@@ -368,14 +368,15 @@ if (parser.results.length === 0) {
                             inputs.map(({grouping, name, as, otherwise, destructuringList, destructuringData}) =>
                                 [', ', grouping ? sourceNode(grouping) : '', sourceNode(name), as ? sourceNode(as, [': ', sourceNode(as)]) : '',
                                     otherwise ? sourceNode(otherwise, [' = ', jsExpression(otherwise)])
-                                        // NB. this is a bit inefficient as it fully walks the rest of the structure for each layer
+                                        // In future: this is a bit inefficient as it fully walks the rest of the structure for each layer
                                         // as it goes inward
+                                        // In future: fix as this incorrectly things that a group destructure into a required list is optional
                                         : (destructuringList && allInputsOptional(destructuringList) ? ' = []'
                                         : (destructuringData && allInputsOptional(destructuringData) ? ' = {}' : ''))]
                             ).flat().slice(1),
                             type === 'list' ? ']' : ' }',
                             ' = ',
-                            // FIXME: for list destructure, pick the values as needed (not by consuming the entirety of items)
+                            // In future: implementing for list destructure, pick the values as needed (not by consuming the entirety of items)
                             sourceNode(name),
                         ],
                     '\n'
@@ -408,18 +409,19 @@ if (parser.results.length === 0) {
 
         const namespaceSymbol = symbol(namespaceDeclaration.value)
 
-        // todo Should we do module.exports['::2020-09::Number::'].square = ... ?
+        // In future: should we do module.exports['::2020-09::Number::'].square = ... ?
         return sourceNode(namespaceDeclaration, [
             '\n\n',
             'function ', namespaceSymbol, '() {\n',
             '   return {\n\n',
-            // TODO: put functions directly in an object (they shouldn't reference themselves anyway)
+            // In future: put functions directly in an object (they shouldn't reference themselves anyway)
             functions,
             '   }\n',
             '}\n\n',
         ])
     })
 
+    // In future: add the description to the top of the generated code
     const {code, map} = new SourceNode(0, 0, fileName, ['\n', compiled, '\n']).toStringWithSourceMap()
     console.log(code)
 

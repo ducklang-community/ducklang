@@ -18,9 +18,8 @@ const lexer = new IndentationLexer({
         	lineBreaks: true,
         },
 
-    	todo: /todo: .*$/,
-    	idea: /idea: .*$/,
-    	note: /note: .*$/,
+    	why:			/Why: .*$/,
+    	inFuture:		/In future: .*$/,
 
 		namespaceIdentifier: /^::.*::$/,
 
@@ -163,6 +162,7 @@ invokeWith[nameModifier] -> identifier $nameModifier (_ of {% takeSecond %} ):? 
 
 
 main ->
+	description
 	(
 		namespaceDeclaration
 		using:?
@@ -176,7 +176,7 @@ main ->
 	):+
 	newline
 	newline
-	{%	take	%}
+	{%	([description, modules]) => ({ description, modules })	%}
 
 namespaceDeclaration ->
 	newline
@@ -390,17 +390,19 @@ methodNaming    -> methodCall["..."	{% take %}		] {% take %}
 
 
 comment ->
-	(  todo {% ([line]) => ({ line }) %}
-	 | idea {% ([line]) => ({ line }) %}
-	 | note {% ([line]) => ({ line }) %}
-		| annotation ":" literal  {% ([annotation, , literal]) => ({ annotation, literal }) %} )
+	(  why		{% ([line]) => ({ line }) %}
+	 | inFuture {% ([line]) => ({ line }) %}
+	 | ("Why" {% take %} | "In future" {% take %} ) ":" literal
+	 	{% ([annotation, , literal]) => ({ annotation, literal }) %} )
 	newline
 	{% ([comment]) => ({ type: 'comment', ...comment }) %}
 
-annotation ->
-	  "note"	{% take %}
-	| "idea"	{% take %}
-	| "todo"	{% take %}
+description ->
+	newline
+	newline
+	newline
+	"Description" ":" literal newline
+	{% takeFifth %}
 
 
 location -> identifier (":" locator {% takeSecond %} ):*
@@ -440,9 +442,8 @@ of			-> %of			{% take %}
 with		-> %With		{% ignore %}
 otherwise	-> %otherwise	{% ignore %}
 
-todo		-> %todo		{% take %}
-idea		-> %idea		{% take %}
-note		-> %note		{% take %}
+why			-> %why			{% take %}
+inFuture	-> %inFuture	{% take %}
 
 literal			-> %literal			{% take %}
 quote			-> %quote			{% take %}
