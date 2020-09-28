@@ -104,3 +104,18 @@ yarn parse-fixtures
 ## Any time
 
 * Switch to 4-space indentation, not tabs
+
+## Code of conduct
+
+* Be vocal
+* Be polite
+* Be succinct
+
+## Project organisation
+
+Ducklang takes a *keep it as simple as needed* approach to community organisation.
+At the moment that means the language originator acting as a de-facto
+product manager, shepherding the language between alternating concepts and goals.
+
+The project code is young, and as such any code is welcome, however unprofessional
+(though good quality code is of course welcome too :).
