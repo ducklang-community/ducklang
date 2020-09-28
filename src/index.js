@@ -143,8 +143,10 @@ const jsFor = (statement) => {
     const n = symbol('n')
     const items = symbol(methodName + 'Items')
 
+    const extentSymbol = symbol(methodName + 'Extent')
     const sourceExtentCode = [source, '.extent !== undefined ? ', source, '.extent() : Infinity']
-    const sourceExtentMethod = [source, '.extent !== undefined ? ', source, '.extent : function () { return Infinity }']
+    const sourceExtentMethod = [source, '.extent !== undefined ? ', source, '.extent : function ', extentSymbol, '() { return Infinity }']
+
     const body = [
         '   const ', sourceNode(name), ' = ', source, '({ self: ', n, ' })\n',
         // Needed for cases like character streams where number of elements is unknown
@@ -175,13 +177,13 @@ const jsFor = (statement) => {
                 ? [
                     '   if (', memory, '.length > ', n, ') { return ', memory, '[', n, '] }\n',
                     '   for (let ', i, ' = ', memory, '.length; ', i, ' < ', n, '; ++', i, ') { ', items, '({ self: ', i ,' }) }\n',
-                    '   return ', memory, '[', n, '] = (function () {\n',
+                    '   return ', memory, '[', n, '] = (function ', item, '() {\n',
                     body,
                     '   })()\n'
                 ]
                 : body,
             '}\n',
-            items, '.extent', ' = ', extent ? ['function ', symbol(methodName + 'Extent'), '() { return Math.min(', jsExpression(extent), ', ', sourceExtent, '()) }'] : sourceExtentMethod, '\n',
+            items, '.extent', ' = ', extent ? ['function ', extentSymbol, '() { return Math.min(', jsExpression(extent), ', ', sourceExtent, '()) }'] : sourceExtentMethod, '\n',
             'return ', items, '\n'
         ]
 }
@@ -368,7 +370,7 @@ if (parser.results.length === 0) {
                             ).flat().slice(1),
                             type === 'list' ? ']' : ' }',
                             ' = ',
-                            // TODO: pick these values as needed, not by retrieving the entire set of items
+                            // FIXME: for list destructure, pick the values as needed (not by consuming the entirety of items)
                             sourceNode(name),
                         ],
                     '\n'
@@ -385,32 +387,35 @@ if (parser.results.length === 0) {
                     sequence
                         ? [
                             jsComments(comments),
-                            'const ', sourceNode(name), ' = (function () {\n',
+                            sourceNode(name), ': ', ' (function ', sourceNode(name), ' () {\n',
                             jsStatement(sequence),
-                            '})()\n'
+                            '})(),\n'
                         ]
                         : [
                             jsComments(comments),
-                            'function ', sourceNode(name), '(', inputs.length ? ['$inputs', allInputsOptional(inputs.map(({entry}) => entry)) ? ' = {}' : ''] : '', ') {\n',
+                            sourceNode(name), ': ', 'function ', sourceNode(name), '(', inputs.length ? ['$inputs', allInputsOptional(inputs.map(({entry}) => entry)) ? ' = {}' : ''] : '', ') {\n',
                             deconstructedInputs,
                             statements.map(jsStatement),
-                            '}\n'
+                            '},\n'
                         ])
             ]
         })
 
         const namespaceSymbol = symbol(namespaceDeclaration.value)
 
+        // todo Should we do module.exports['::2020-09::Number::'].square = ... ?
         return sourceNode(namespaceDeclaration, [
             '\n\n',
             'function ', namespaceSymbol, '() {\n',
+            '   return {\n\n',
+            // TODO: put functions directly in an object (they shouldn't reference themselves anyway)
             functions,
-            '\n\n',
-            '}\n'
+            '   }\n',
+            '}\n\n',
         ])
     })
 
-    const {code, map} = new SourceNode(0, 0, fileName, compiled).toStringWithSourceMap()
+    const {code, map} = new SourceNode(0, 0, fileName, ['\n', compiled, '\n']).toStringWithSourceMap()
     console.log(code)
 
     // TODO: make the output as pretty as possible
