@@ -413,6 +413,8 @@ if (parser.results.length === 0) {
 
         const namespaceSymbol = symbol(namespaceDeclaration.value)
 
+        // To do: Use Map for the Data type
+
         // To do: should we do module.exports['::2020-09::Number::'].square = ... ?
         return sourceNode(namespaceDeclaration, [
             '\n\n',
