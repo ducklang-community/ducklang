@@ -148,6 +148,10 @@ const jsFor = (statement) => {
 
     const body = [
         '   const ', sourceNode(name), ' = ', source, '({ self: ', n, ' })\n',
+        // Why: This is only *really* needed for one-by-one itemization.
+        // But the other alternative is to duplicate the loop with exactly the same code minus this check
+        // to make the usual case not have this line. Nb. one-by-one can also be limited by its source's extent.
+        '   if (', sourceNode(name), ' === undefined) { return }\n',
         statements.map(jsStatement)
     ]
 
@@ -160,10 +164,6 @@ const jsFor = (statement) => {
             'const ', itemsExtent, ' = ', extent ? ['Math.min(', jsExpression(extent), ', ', source, '.extentOf()', ')'] : [source, '.extentOf()'], '\n',
             'for (let ', n, ' = 0; ', n, ' < ', itemsExtent, '; ++', n, ') {\n',
             body,
-            // Why: This is only *really* needed for one-by-one itemization.
-            // But the other alternative is to duplicate the loop with exactly the same code minus this check
-            // to make the usual case not have this line. Nb. one-by-one can also be limited by its source's extent.
-            '   if (', sourceNode(name), ' === undefined) { return }\n',
             '}\n',
         ]
         : [
