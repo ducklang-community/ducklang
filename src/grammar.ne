@@ -18,9 +18,9 @@ const lexer = new IndentationLexer({
         	lineBreaks: true,
         },
 
-    	origin:	/Origin: .*$/,
     	why:	/Why: .*$/,
-    	toDo:	/To do: .*$/,
+    	see:	/See: .*:\/\/.*$/,
+    	issue:	/Issue: .*$/,
 
 		namespaceIdentifier: /^::.*::$/,
 
@@ -85,18 +85,9 @@ const take			= takeFirst
 %}
 
 
-# To do: add a "reference" or "see also" or "source" or "origin"
-# for code that is derived in relation to something else
-# I think I like 'Origin'
-#
-# Allow 'To do', and 'Why' with Description?
-#
-# Just use 'Why' instead of Description?
+# Issue: the term 'match' would be simpler than 'destructure'
 
-# To do: use the term 'match' instead of 'destructure'
-
-# To do: use the term 'module' instead of namespace, or 'collection',
-# or another term entirely
+# Issue: namespace is a strange name. Use the term 'module' (or 'collection' ?) or another term entirely?
 
 
 @lexer lexer
@@ -140,7 +131,7 @@ flowing[definition] -> items[$definition	{% take %} ] ("," newline
 	{% takeFifth %}	):*
 	{%	([first, rest]) => [...first, ...rest.flat()]	%}
 
-# To do: there is some duplication between listed/elongated which would be nice to extract and simplify
+# Issue: there is some duplication between listed/elongated which would be nice to extract and simplify
 
 listed[adjusted, entry] -> listing[(
 		($adjusted comment		{% takeSecond %} ):*
@@ -213,15 +204,15 @@ using ->
 	{%	takeThird	%}
 
 
-# To do: support (method in Z)		- binds a method with receiver Z
-# To do: support (method using X)	- partially applies input X
-# To do: support (method from Y)		- applies using inputs data Y
+# Issue: lacks support (method in Z)	- binding a method with receiver Z
+# Issue: lacks support (method using X)	- partially applying input X
+# Issue: lacks support (method from Y)	- applying using inputs data Y
 
 # But (method of from Z) is not pretty...
 # 'of' could be completely optional and just for readability?
 # How about: (method-of from Z)
 
-# To do: improve the { self, this, inner } to make any part optional
+# Issue: any part of { self, this, inner } should be optional
 method ->
 	newline
 	newline
@@ -319,8 +310,9 @@ statement ->
 	| skip							newline	{% take %}
 
 
-# To do: Require all binary operations be grouped with parentheses except additions and multiplications
-# eg. (a / b) / c , (a - b) - c, a + b + c , a * b * c
+# Issue: both (a / b / c) or (a - b - c) are ambiguous for those who don't yet know the associativity of "/" and "-"
+# Should require parentheses to make this clearer visually, eg. (a / b) / c , (a - b) - c
+# Addition and multiplication are unambiguous no matter the associativity so can be grouped: (a + b + c), (a * b * c)
 
 expression ->
 	  expression _ "-" _ expressionWithoutAddition {% ([a, , , , b]) => ({ type: 'subtraction', a, b }) %}
@@ -406,8 +398,9 @@ methodNaming    -> methodCall["..."	{% take %}		] {% take %}
 
 comment ->
 	(  why		{% ([line]) => ({ line }) %}
-	 | toDo		{% ([line]) => ({ line }) %}
-	 | ("Why" {% take %} | "To do" {% take %} ) ":" literal
+	 | see		{% ([line]) => ({ line }) %}
+	 | issue	{% ([line]) => ({ line }) %}
+	 | ("Why" {% take %} | "See" {% take %} | "Issue" {% take %} ) ":" literal
 	 	{% ([annotation, , literal]) => ({ annotation, literal }) %} )
 	newline
 	{% ([comment]) => ({ type: 'comment', ...comment }) %}
@@ -458,8 +451,9 @@ of			-> %of			{% take %}
 with		-> %With		{% ignore %}
 otherwise	-> %otherwise	{% ignore %}
 
-why			-> %why			{% take %}
-toDo		-> %toDo	{% take %}
+why			-> %why		{% take %}
+see			-> %see		{% take %}
+issue		-> %issue	{% take %}
 
 literal			-> %literal			{% take %}
 quote			-> %quote			{% take %}
