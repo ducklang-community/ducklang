@@ -168,18 +168,26 @@ const jsFor = (statement) => {
         ]
         : [
             memorizeThrough ? ['const ', memory, ' = []\n'] : '',
+            oneByOne ? ['let ', i, ' = 0\n'] : '',
             'const ', source, ' = ', jsExpression(expression), '\n',
             extent ? ['const ', sourceExtent, ' = ', source, '.extentOf', '\n'] : '',
+
             'function ', items, '({ self: ', n, ' = this } = {}) {\n',
-            memorizeThrough
+            oneByOne
                 ? [
-                    '   if (', memory, '.length > ', n, ') { return ', memory, '[', n, '] }\n',
-                    '   for (let ', i, ' = ', memory, '.length; ', i, ' < ', n, '; ++', i, ') { ', items, '({ self: ', i ,' }) }\n',
-                    '   return ', memory, '[', n, '] = (function ', item, '() {\n',
-                    body,
-                    '   })()\n'
+                    '   if (', n, '!== ', i, ') { return undefined }\n',
+                    '   ++i\n',
+                    body
                 ]
-                : body,
+                : (memorizeThrough
+                    ? [
+                        '   if (', memory, '.length > ', n, ') { return ', memory, '[', n, '] }\n',
+                        '   for (let ', i, ' = ', memory, '.length; ', i, ' < ', n, '; ++', i, ') { ', items, '({ self: ', i ,' }) }\n',
+                        '   return ', memory, '[', n, '] = (function ', item, '() {\n',
+                        body,
+                        '   })()\n'
+                    ]
+                    : body),
             '}\n',
             items, '.kindOf', ' = ',
             !oneByOne && !memorizeThrough
