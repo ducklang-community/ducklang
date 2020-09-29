@@ -100,12 +100,6 @@ yarn parse-fixtures
 * Add validations on the parse-tree prior to generating output
 * NPM-style method and namespace repository, using github sources direct and Certificate Transparency style consistency
 
-## Code of conduct
-
-* Be vocal
-* Be pleasant
-* Be succinct
-
 ## Project organisation
 
 Ducklang takes a *keep it as simple as needed* approach to community organisation.
@@ -114,3 +108,9 @@ product manager, shepherding the language between differing concepts and goals.
 
 The project code is young, and as such any code is welcome, however unprofessional
 (though good quality code is of course welcome too :).
+
+## Code of conduct
+
+* Be vocal
+* Be pleasant
+* Be succinct
