@@ -81,11 +81,34 @@ const jsMethodExecution = (expression) => {
         : ['(', jsExpression(receiver), ')', methodCall]
 }
 
+const expressionOperators = {
+    'exponentiation': 'raised',
+    'multiplication': 'times',
+    'division': 'into',
+    'addition': 'plus',
+    'subtraction': 'minus'
+}
+
+const operatorMethod = (operator, a, b) =>
+    jsExpression({
+        type: 'methodExecution',
+        method: {
+            line: operator.line,
+            col: operator.col,
+            value: expressionOperators[operator]
+        },
+        receiver: a,
+        // Issue: arguments is expected to be a Data structure
+        arguments: [b]
+    })
+
 const jsExpression = (expression) => {
     console.log(JSON.stringify(expression))
     switch (expression.type) {
+        case 'location':
+            return jsLocation(expression)
         case 'locate':
-            return jsLocation(expression.location)
+            return jsExpression(expression.location)
         case 'digitNumber':
             return sourceNode(expression)
         case 'decimalNumber':
@@ -100,17 +123,13 @@ const jsExpression = (expression) => {
         case 'data':
             return ['{ /* Issue: Data expressions not implemented */ }']
 
-        // FIXME: use symbolic mathematics
+        // Issue: mathematics should be symbolic, which has not been implemented yet
         case 'exponentiation':
-            return ['(', jsExpression(expression.a), ' ** ', jsExpression(expression.b), ')']
         case 'multiplication':
-            return ['(', jsExpression(expression.a), ' * ', jsExpression(expression.b), ')']
         case 'division':
-            return ['(', jsExpression(expression.a), ' / ', jsExpression(expression.b), ')']
         case 'addition':
-            return ['(', jsExpression(expression.a), ' + ', jsExpression(expression.b), ')']
         case 'subtraction':
-            return ['(', jsExpression(expression.a), ' - ', jsExpression(expression.b), ')']
+            return operatorMethod(expression.type, expression.a, expression.b)
 
         case 'methodExecution':
             return jsMethodExecution(expression)
@@ -265,7 +284,7 @@ const jsStatement = (statement) => {
                         col: statement.operator.col,
                         value: operators[statement.operator.type]
                     },
-                    receiver: {type: 'locate', location: statement.location},
+                    receiver: statement.location,
                     arguments: [statement.expression]
                 })
                 : ['const ', jsLocation(statement.location), ' = ', jsExpression(statement.expression), '\n']
