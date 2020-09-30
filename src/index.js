@@ -232,14 +232,12 @@ const jsWhen = (statement) => {
 }
 
 const operators = {
-    'updateExponential': '**=',
-    'updateTimes': '*=',
-    'updateDividedBy': '/=',
-    'updatePlus': '+=',
-    'updateMinus': '-=',
-    'set': '='
+    'updateExponential': 'raise',
+    'updateTimes': 'multiply',
+    'updateDividedBy': 'divide',
+    'updatePlus': 'add',
+    'updateMinus': 'subtract'
 }
-const jsOperator = (operator) => operators[operator ? operator.type : 'set']
 
 const jsAssignExpandData = (statement) => {
     const {location, destructuringData, expression} = statement
@@ -258,8 +256,19 @@ const jsStatement = (statement) => {
         case 'does':
             return jsDoes(statement)
         case 'assignWith':
-            return [statement.operator && statement.operator.type === 'set' ? 'const ' : '', jsLocation(statement.location), ' ', jsOperator(statement.operator), ' ', jsExpression(statement.expression), '\n']
-
+            // Issue: only works for location without locators
+            return statement.operator && statement.operator.type in operators
+                ? jsStatement({
+                    type: 'methodExecution',
+                    method: {
+                        line: statement.operator.line,
+                        col: statement.operator.col,
+                        value: operators[statement.operator.type]
+                    },
+                    receiver: {type: 'locate', location: statement.location},
+                    arguments: [statement.expression]
+                })
+                : ['const ', jsLocation(statement.location), ' = ', jsExpression(statement.expression), '\n']
         // Issue: these ones are a little trickier. Can use the parameter input matching code as a starting point
         case 'assignExpandData':
             return ['const ', symbol('assignExpandData'), ' = null /* Issue: assignExpandData not implemented */\n']
@@ -395,7 +404,9 @@ if (parser.results.length === 0) {
                                     // To do: fix - this incorrectly believes that a group matching to a required list is optional
                                     : (destructuringList && allInputsOptional(destructuringList) ? ' = []'
                                     : (destructuringData && allInputsOptional(destructuringData) ? ' = {}' : ''))
-                            ])
+                            ]),
+
+                            '\n'
                         ]
                         : [
                             // To do: use get(name) for data itemization
@@ -410,7 +421,8 @@ if (parser.results.length === 0) {
                                     // To do: fix - this incorrectly believes that a group matching to a required list is optional
                                     : (destructuringList && allInputsOptional(destructuringList) ? ' = []'
                                     : (destructuringData && allInputsOptional(destructuringData) ? ' = {}' : ''))
-                            ])
+                            ]),
+                            '\n'
                         ])
                 ])
 
