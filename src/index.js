@@ -214,6 +214,12 @@ const jsFor = (statement) => {
                     ]
                     : body),
             '}\n',
+            // Why: having offsetOf be a separate method while leaving the "items" object as
+            // a plain function is intended to allow extensibility for user code to define itemizations
+            // easily in Ducklang code, while also keeping conformity with the automatic "itemizable"
+            // nature of every method defined in Ducklang, which should help the interpreter to compile
+            // monomorphic code in the usual case.
+            items, '.offsetOf', ' = ', '$self\n',
             items, '.kindOf', ' = ',
             !oneByOne && !memorizeThrough
                 ? [source, '.kindOf\n']
