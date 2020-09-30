@@ -175,8 +175,7 @@ const jsFor = (statement) => {
             'function ', items, '({ self: ', n, ' = this } = {}) {\n',
             oneByOne
                 ? [
-                    '   if (', n, '!== ', i, ') { return undefined }\n',
-                    '   ++i\n',
+                    '   if (', n, '!== ', i, ') { return } else { ++i }\n',
                     body
                 ]
                 : (memorizeThrough
