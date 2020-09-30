@@ -155,6 +155,7 @@ const jsFor = (statement) => {
     const {name, itemizing, expression, extent, statements} = statement
     const source = symbol('source')
     const sourceExtent = symbol('sourceExtent')
+    const sourceOffset = symbol('sourceOffset')
     const itemsExtent = symbol('extent')
     const n = symbol('n')
     const items = symbol(methodName + 'Items')
@@ -166,7 +167,7 @@ const jsFor = (statement) => {
     const extentSymbol = symbol(methodName + 'Extent')
 
     const body = [
-        '   const ', sourceNode(name), ' = ', source, '({ self: ', n, ' })\n',
+        '   const ', sourceNode(name), ' = ', sourceOffset, '({ self: ', n, ' })\n',
         // Why: This is only *really* needed for one-by-one itemization.
         // But the other alternative is to duplicate the loop with exactly the same code minus this check
         // to make the usual case not have this line. Nb. one-by-one can also be limited by its source's extent.
@@ -180,6 +181,7 @@ const jsFor = (statement) => {
     return statement.do
         ? [
             'const ', source, ' = ', jsExpression(expression), '\n',
+            'const ', sourceOffset, ' = ', source, '.offsetOf()', '\n',
             'const ', itemsExtent, ' = ', extent ? ['Math.min(', jsExpression(extent), ', ', source, '.extentOf()', ')'] : [source, '.extentOf()'], '\n',
             'for (let ', n, ' = 0; ', n, ' < ', itemsExtent, '; ++', n, ') {\n',
             body,
@@ -189,6 +191,7 @@ const jsFor = (statement) => {
             memorizeThrough ? ['const ', memory, ' = []\n'] : '',
             oneByOne ? ['let ', i, ' = 0\n'] : '',
             'const ', source, ' = ', jsExpression(expression), '\n',
+            'const ', sourceOffset, ' = ', source, '.offsetOf()', '\n',
             extent ? ['const ', sourceExtent, ' = ', source, '.extentOf', '\n'] : '',
 
             'function ', items, '({ self: ', n, ' = this } = {}) {\n',
@@ -504,6 +507,7 @@ if (parser.results.length === 0) {
         'function $self() { return this }\n',
         '\n',
         'function $method(fn) {\n',
+        '   fn.offsetOf = $self\n',
         '   fn.kindOf = $offset\n',
         '   fn.extentOf = $infinity\n',
         '   fn.itemsOf = $self\n',
