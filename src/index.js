@@ -420,7 +420,7 @@ if (parser.results.length === 0) {
 
                     (type === 'list'
                         ? [
-                            // To do: use itemization instead of JavaScript destructuring, with input.itemsOf()
+                            // Issue: should use itemization instead of JavaScript destructuring, with input.itemsOf()
                             //   [...rest] should be = input.itemsOf()
                             //   [a, ...rest] should create an anonymous itemization which shifts i by 1 element on input, and shifts extent down by 1
                             //   [a, ..."rest"] should create an anonymous itemization which shifts i by 1 element on input, does get('value') on it, and shifts extent down by 1
@@ -441,16 +441,16 @@ if (parser.results.length === 0) {
                             '\n'
                         ]
                         : [
-                            // To do: use get(name) for data itemization
+                            // Issue: should use get(name) for data itemization
 
                             'const ',
                             inputs.map(({grouping, name, as, otherwise, destructuringList, destructuringData}) => [
                                 ', ', grouping ? sourceNode(grouping) : '',
                                 sourceNode(name), as ? sourceNode(as, [': ', sourceNode(as)]) : '',
                                 otherwise ? sourceNode(otherwise, [' = ', jsExpression(otherwise)])
-                                    // To do: this is a bit inefficient as it fully walks the rest of the structure for each layer
+                                    // Issue: this is a bit inefficient as it fully walks the rest of the structure for each layer
                                     // as it goes inward
-                                    // To do: fix - this incorrectly believes that a group matching to a required list is optional
+                                    // Issue: this incorrectly believes that a group which is matching to a required list is optional
                                     : (destructuringList && allInputsOptional(destructuringList) ? ' = []'
                                     : (destructuringData && allInputsOptional(destructuringData) ? ' = {}' : ''))
                             ]),
@@ -485,9 +485,8 @@ if (parser.results.length === 0) {
 
         const namespaceSymbol = symbol(namespaceDeclaration.value)
 
-        // To do: Use Map for the Data type
+        // Issue: Should use Map for the Data type, not Object
 
-        // To do: should we do module.exports['::2020-09::Number::'].square = ... ?
         return sourceNode(namespaceDeclaration, [
             '\n\n',
             '[\'', sourceNode(namespaceDeclaration), '\']: ',
