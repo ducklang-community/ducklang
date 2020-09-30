@@ -197,9 +197,9 @@ const jsFor = (statement) => {
                         ? '\'one-by-one\''
                         : [source, '.kindOf() === \'one-by-one\' ? \'one-by-one\' : \'sequence\''],
                     ' }\n',
-            ],
-            items, '.extentOf', ' = ', extent ? ['function ', extentSymbol, '() { return Math.min(', jsExpression(extent), ', ', sourceExtent, '()) }'] : [source, '.extent'], '\n',
-            items, '.itemsOf', ' = ', 'function () { return this }\n',
+                ],
+            items, '.extentOf', ' = ', extent ? ['function ', extentSymbol, '() { return Math.min(', jsExpression(extent), ', ', sourceExtent, '()) }'] : [source, '.extentOf'], '\n',
+            items, '.itemsOf', ' = ', '$self\n',
             'return ', items, '\n'
         ]
 }
@@ -468,12 +468,17 @@ if (parser.results.length === 0) {
     // To do: add the description to the top of the generated code
     const {code, map} = new SourceNode(0, 0, fileName, [
         '\n',
+        'function $offset() { return \'offset\' }\n',
+        'function $infinity() { return Infinity }\n',
+        'function $self() { return this }\n',
+        '\n',
         'function $method(fn) {\n',
-        '   fn.kindOf = function () { return \'offset\' }\n',
-        '   fn.extentOf = function () { return Infinity }\n',
-        '   fn.itemsOf = function () { return this }\n',
+        '   fn.kindOf = $offset\n',
+        '   fn.extentOf = $infinity\n',
+        '   fn.itemsOf = $self\n',
         '   return fn\n',
-        '}\n\n',
+        '}\n',
+        '\n',
         'module.exports = {\n',
         join(compiledModules, '\n\n'),
         '}\n',
