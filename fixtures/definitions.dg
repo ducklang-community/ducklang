@@ -33,7 +33,7 @@ selfsame of self:
 
 
 
-resultFromEach of self with ..."input": ["mapping"]:
+resultFromEach of self with ...input: ["mapping"]:
 	items... of self
 	result resultFromEach of items with mapping
 
@@ -43,7 +43,7 @@ resultFromEach of self with ..."input": ["mapping"]:
 
 
 
-resultFromEach of self with ..."input": ["mapping"]:
+resultFromEach of self with ...input: ["mapping"]:
 	for each x in self,
 		collect resultOf (mapping in x)
 
@@ -266,7 +266,7 @@ engageBoosters of self with thrust,
 
 
 testStructuring of self with options: { name, color, speed },
-                             ..."input": ["mapping"]:
+                             ...input: ["mapping"]:
 
 	...["first", ..."rest"] = input
 
