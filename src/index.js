@@ -10,6 +10,12 @@ let methodName;
 const join = (array, space=' ') => array.map(item => [','+space, item]).flat().slice(1)
 
 
+const traceLog = (message) => {
+    if (options['show-parse-trace']) {
+        console.log(message)
+    }
+}
+
 const symbols = {}
 const symbol = (name) => {
     name = name.replace(/[^a-zA-Z0-9_]/g, '_')
@@ -46,7 +52,7 @@ const allInputsOptional = (inputs) =>
 const jsLocation = (location) => [sourceNode(location.name), location.locators ? ' /* Issue: locators not implemented */ ' : '']
 
 const dataDefinition = (definition) => {
-    console.log(JSON.stringify(definition))
+    traceLog(JSON.stringify(definition))
     switch (definition.type) {
         case 'dataDefinition':
             return jsLocation(definition.location)
@@ -107,7 +113,7 @@ const operatorMethod = (operator, a, b) =>
     })
 
 const jsExpression = (expression) => {
-    console.log(JSON.stringify(expression))
+    traceLog(JSON.stringify(expression))
     switch (expression.type) {
         case 'location':
             return jsLocation(expression)
@@ -150,7 +156,7 @@ const jsDoes = (statement) => {
     }
     const {operator, expression} = statement
     if (!operator.type in operators) {
-        console.log(`Unknown 'does' operator ${operator.type}`)
+        console.error(`Unknown 'does' operator ${operator.type}`)
     }
     return [sourceNode(operator, operators[operator.type]), ' ', jsExpression(expression), '\n']
 }
@@ -281,7 +287,7 @@ const jsAssignExpandData = (statement) => {
 }
 
 const jsStatement = (statement) => {
-    console.log(JSON.stringify(statement))
+    traceLog(JSON.stringify(statement))
     switch (statement.type) {
         case 'standalone':
             return [jsComments(statement.comments), jsStatement(statement.definition)]
@@ -321,22 +327,58 @@ const jsStatement = (statement) => {
 }
 
 
+
+
+const optionator = require('optionator')({
+    prepend: 'Usage: cmd [options]',
+    append: 'Version 1.0.0',
+    options: [{
+        option: 'help',
+        alias: 'h',
+        type: 'Boolean',
+        description: 'displays help'
+    }, {
+        option: 'file',
+        alias: 'f',
+        type: 'String',
+        required: true,
+        description: 'A Ducklang file to compile',
+        example: 'cmd --file definitions.dg'
+    }, {
+        option: 'show-parse-tree',
+        type: 'Boolean',
+        description: 'displays the parse tree'
+    }, {
+        option: 'show-parse-trace',
+        type: 'Boolean',
+        description: 'displays the parse trace as it is walked'
+    }]
+});
+
+var options = optionator.parseArgv(process.argv);
+if (options.help) {
+    console.log(optionator.generateHelp());
+}
+
+const data = fs.readFileSync(options.file).toString()
+const fileName = options.file.split('/').slice(-1)[0]
+
 const parser = new nearley.Parser(nearley.Grammar.fromCompiled(grammar))
-
-
-const fileName = null;
-const data = fs.readFileSync(0, 'utf-8')
 parser.feed(data)
+
 
 
 if (parser.results.length === 0) {
     console.error('Expected more input')
+
 } else if (parser.results.length === 1) {
 
     const {description, modules} = parser.results[0]
 
+    if (options['show-parse-tree']) {
     console.log(JSON.stringify(modules, null, 2))
     console.log('Good parse');
+    }
 
     modules.forEach(({namespaceDeclaration, using, methods}) => {
 
@@ -373,8 +415,7 @@ if (parser.results.length === 0) {
 
         const functions = methods.map(({comments, definition: {name, of, receiver, inputs, statements, sequence}}) => {
 
-            console.log()
-            console.log(JSON.stringify(name))
+            traceLog('\n'+JSON.stringify(name))
 
             // To do: make 'of' keyword identical to the name of method plus 'Of'
             methodName = name.value
@@ -412,7 +453,7 @@ if (parser.results.length === 0) {
             while (deconstruct.length) {
                 const {name, inputs, type} = deconstruct.shift()
 
-                console.log(JSON.stringify(inputs))
+                traceLog(JSON.stringify(inputs))
 
                 const items = symbol('items')
 
@@ -509,7 +550,7 @@ if (parser.results.length === 0) {
     })
 
     // To do: add the description to the top of the generated code
-    const {code, map} = new SourceNode(0, 0, fileName, [
+    const {code, map} = new SourceNode(1, 0, fileName, [
         '\n',
         'function $offset() { return \'offset\' }\n',
         'function $infinity() { return Infinity }\n',
@@ -528,14 +569,18 @@ if (parser.results.length === 0) {
         '}\n',
         '\n'
     ]).toStringWithSourceMap()
-    console.log(code)
+
+    fs.writeFileSync(fileName.replace(/\.dg$/, '.js'), code)
+    fs.writeFileSync(fileName.replace(/\.dg$/, '.map'), JSON.stringify(map))
 
     // To do: make the output as pretty as possible
     // (nb. prettier isn't viable as it doesn't do source mapping. Workarounds exist but are slow)
 
     // To do: set the line,col of closing tags to be something at the end of the source
 } else {
+    if (options['show-parse-tree']) {
     console.log(JSON.stringify(parser.results, null, 2))
+    }
     console.error('Ambiguous parse')
 }
 
