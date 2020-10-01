@@ -355,13 +355,17 @@ const optionator = require('optionator')({
     }]
 });
 
+
+
+
+
 var options = optionator.parseArgv(process.argv);
 if (options.help) {
     console.log(optionator.generateHelp());
 }
 
-const data = fs.readFileSync(options.file).toString()
-const fileName = options.file.split('/').slice(-1)[0]
+const fileName = options.file
+const data = fs.readFileSync(fileName).toString()
 
 const parser = new nearley.Parser(nearley.Grammar.fromCompiled(grammar))
 parser.feed(data)
@@ -570,8 +574,9 @@ if (parser.results.length === 0) {
         '\n'
     ]).toStringWithSourceMap()
 
-    fs.writeFileSync(fileName.replace(/\.dg$/, '.js'), code)
-    fs.writeFileSync(fileName.replace(/\.dg$/, '.map'), JSON.stringify(map))
+    fs.mkdirSync(`dist/${fileName.split('/').slice(0, -1).join('/')}`, {recursive: true})
+    fs.writeFileSync(`dist/${fileName.replace(/\.dg$/, '.js')}`, code)
+    fs.writeFileSync(`dist/${fileName.replace(/\.dg$/, '.map')}`, JSON.stringify(map))
 
     // To do: make the output as pretty as possible
     // (nb. prettier isn't viable as it doesn't do source mapping. Workarounds exist but are slow)

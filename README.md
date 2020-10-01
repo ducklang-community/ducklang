@@ -73,7 +73,7 @@ yarn
 
 ### Run
 ```shell script
-yarn parse-fixtures
+yarn build && yarn start -f fixtures/definitions.dg && cat dist/fixtures/definitions.js
 ```
 
 ### Principles

@@ -8,8 +8,6 @@
   "license": "MIT",
   "scripts": {
     "build": "mkdir -p dist && yarn run nearleyc src/grammar.ne -o dist/grammar.js",
-    "parse": "nearley-test dist/grammar.js",
-    "parse-fixtures": "yarn build && for file in fixtures/*; do yarn parse <$file; echo; echo $file parsed; echo; echo; sleep 2; done",
     "start": "node src/index.js"
   },
   "dependencies": {
