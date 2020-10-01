@@ -331,3 +331,12 @@ printFirstDoubled self:
 		display number
 
 
+test4 of self with input1: [abc, "def", ..."rest"],
+                   input2: { xyz }:
+	result values
+
+
+test5 of self with input1: [...rest]:
+	result rest
+
+
