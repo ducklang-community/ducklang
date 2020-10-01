@@ -374,6 +374,7 @@ parser.feed(data)
 
 if (parser.results.length === 0) {
     console.error('Expected more input')
+    process.exit(1)
 
 } else if (parser.results.length === 1) {
 
@@ -587,6 +588,7 @@ if (parser.results.length === 0) {
     console.log(JSON.stringify(parser.results, null, 2))
     }
     console.error('Ambiguous parse')
+    process.exit(1)
 }
 
 /*
