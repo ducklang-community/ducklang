@@ -185,7 +185,7 @@ const jsFor = (statement) => {
     return statement.do
         ? [
             'const ', source, ' = ', jsExpression(expression), '\n',
-            'const ', sourceOffset, ' = ', source, '.offsetOf()', '\n',
+            'const ', sourceOffset, ' = ', source, '.offsetOf', '\n',
             'const ', itemsExtent, ' = ', extent ? ['Math.min(', jsExpression(extent), ', ', source, '.extentOf()', ')'] : [source, '.extentOf()'], '\n',
             'for (let ', n, ' = 0; ', n, ' < ', itemsExtent, '; ++', n, ') {\n',
             body,
@@ -195,7 +195,7 @@ const jsFor = (statement) => {
             memorizeThrough ? ['const ', memory, ' = []\n'] : '',
             oneByOne ? ['let ', i, ' = 0\n'] : '',
             'const ', source, ' = ', jsExpression(expression), '\n',
-            'const ', sourceOffset, ' = ', source, '.offsetOf()', '\n',
+            'const ', sourceOffset, ' = ', source, '.offsetOf', '\n',
             extent ? ['const ', sourceExtent, ' = ', source, '.extentOf', '\n'] : '',
 
             'function ', items, '({ self: ', n, ' = this } = {}) {\n',
@@ -219,7 +219,7 @@ const jsFor = (statement) => {
             // easily in Ducklang code, while also keeping conformity with the automatic "itemizable"
             // nature of every method defined in Ducklang, which should help the interpreter to compile
             // monomorphic code in the usual case.
-            items, '.offsetOf', ' = ', '$self\n',
+            items, '.offsetOf', ' = ', items, '\n',
             items, '.kindOf', ' = ',
             !oneByOne && !memorizeThrough
                 ? [source, '.kindOf\n']
@@ -516,7 +516,7 @@ if (parser.results.length === 0) {
         'function $self() { return this }\n',
         '\n',
         'function $method(fn) {\n',
-        '   fn.offsetOf = $self\n',
+        '   fn.offsetOf = fn\n',
         '   fn.kindOf = $offset\n',
         '   fn.extentOf = $infinity\n',
         '   fn.itemsOf = $self\n',
