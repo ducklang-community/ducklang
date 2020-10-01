@@ -53,6 +53,9 @@ resultFromEach of self with ..."input": ["mapping"]:
 
 
 
+use infinity
+
+
 power of self:
 	for each number in infinity,
 		collect self ** number
