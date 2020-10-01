@@ -42,6 +42,8 @@ const jsComments = (comments) =>
 const jsInputs = (items) =>
     join(items.map(({entry: {name}}) => sourceNode(name)))
 
+// Issue: allInputsOptional is inefficient as it fully walks the rest of the structure at each layer
+// Issue: allInputsOptional incorrectly believes that a group matching to a required list is optional
 const allInputsOptional = (inputs) =>
     inputs.every(({grouping, otherwise, destructuringList, destructuringData}) =>
         grouping
@@ -176,49 +178,61 @@ const jsFor = (statement) => {
 
     const extentSymbol = symbol(methodName + 'Extent')
 
-    const body = [
+    const itemPrelude = [
         '   const ', sourceNode(name), ' = ', sourceOffset, '({ self: ', n, ' })\n',
         // Why: This is only *really* needed for one-by-one itemization.
         // But the other alternative is to duplicate the loop with exactly the same code minus this check
         // to make the usual case not have this line. Nb. one-by-one can also be limited by its source's extent.
-        '   if (', sourceNode(name), ' === undefined) { return }\n',
-        statements.map(jsStatement)
+        '   if (', sourceNode(name), ' === undefined) { break }\n',
     ]
 
     const memory = symbol('memory')
     const i = symbol('i')
 
+    const codePrelude = [
+        'const ', source, ' = ', jsExpression(expression), '\n',
+        'const ', sourceOffset, ' = ', source, '.offsetOf', '\n',
+        'const ', sourceExtent, ' = ', source, '.extentOf', '\n'
+    ]
+
+    const loopCode = (body) => [
+        'const ', itemsExtent, ' = ', extent ? ['Math.min(', jsExpression(extent), ', ', sourceExtent, '()', ')'] : [sourceExtent, '()'], '\n',
+        'for (let ', n, ' = 0; ', n, ' < ', itemsExtent, '; ++', n, ') {\n',
+        itemPrelude,
+        body,
+        '}\n',
+    ]
+
     return statement.do
         ? [
-            'const ', source, ' = ', jsExpression(expression), '\n',
-            'const ', sourceOffset, ' = ', source, '.offsetOf', '\n',
-            'const ', itemsExtent, ' = ', extent ? ['Math.min(', jsExpression(extent), ', ', source, '.extentOf()', ')'] : [source, '.extentOf()'], '\n',
-            'for (let ', n, ' = 0; ', n, ' < ', itemsExtent, '; ++', n, ') {\n',
-            body,
-            '}\n',
+            codePrelude,
+            loopCode(statements.map(jsStatement))
         ]
         : [
             memorizeThrough ? ['const ', memory, ' = []\n'] : '',
             oneByOne ? ['let ', i, ' = 0\n'] : '',
-            'const ', source, ' = ', jsExpression(expression), '\n',
-            'const ', sourceOffset, ' = ', source, '.offsetOf', '\n',
-            extent ? ['const ', sourceExtent, ' = ', source, '.extentOf', '\n'] : '',
+            codePrelude,
 
             'function ', items, '({ self: ', n, ' = this } = {}) {\n',
             oneByOne
                 ? [
                     '   if (', n, '!== ', i, ') { return } else { ++i }\n',
-                    body
+                    itemPrelude,
+                    statements.map(jsStatement)
                 ]
                 : (memorizeThrough
                     ? [
                         '   if (', memory, '.length > ', n, ') { return ', memory, '[', n, '] }\n',
                         '   for (let ', i, ' = ', memory, '.length; ', i, ' < ', n, '; ++', i, ') { ', items, '({ self: ', i ,' }) }\n',
                         '   return ', memory, '[', n, '] = (function ', item, '() {\n',
-                        body,
+                        itemPrelude,
+                        statements.map(jsStatement),
                         '   })()\n'
                     ]
-                    : body),
+                    : [
+                        itemPrelude,
+                        statements.map(jsStatement)
+                    ]),
             '}\n',
             // Why: having offsetOf be a separate method while leaving the "items" object as
             // a plain function is intended to allow extensibility for user code to define itemizations
@@ -236,8 +250,15 @@ const jsFor = (statement) => {
                         : [source, '.kindOf() === \'one-by-one\' ? \'one-by-one\' : \'sequence\''],
                     ' }\n',
                 ],
-            items, '.extentOf', ' = ', extent ? ['function ', extentSymbol, '() { return Math.min(', jsExpression(extent), ', ', sourceExtent, '()) }'] : [source, '.extentOf'], '\n',
+            items, '.extentOf', ' = ', extent ? ['function ', extentSymbol, '() { return Math.min(', jsExpression(extent), ', ', sourceExtent, '()) }'] : [sourceExtent], '\n',
             items, '.itemsOf', ' = ', '$self\n',
+            items, '.dataOf', ' = ', 'function () {\n',
+            '   const data = new Map()\n',
+            loopCode([
+                'data.set(', n, ', ', sourceNode(name), ')\n',
+            ]),
+            '   return data\n',
+            '}\n',
             'return ', items, '\n'
         ]
 }
@@ -406,10 +427,12 @@ if (parser.results.length === 0) {
                 throw new Error('Cannot have more than one input group per method')
             }
 
-            // Issue: groups shouldn't be able to have an otherwise or an 'as' rename
-            // Issue: only data-matching should allow 'otherwise', not group or list parameters
-            // To do: validate that a matching list or data container is not empty, it has at least 1 thing in it
-            // To do: check all inputs, dependencies and assignment statements to prevent name clash
+            // Issue: groups and lists shouldn't be able to have an otherwise or an 'as' rename,
+            //  as we are already already specifying a new name in their definition
+            // Issue: only data-matching should allow 'otherwise', not group or list parameters?
+            //  Not sure about that - I agree for group, but surely an itemization could have an 'otherwise'.
+            // Issue: validate that a matching list or data container is not empty, it has at least 1 thing in it
+            // Issue: check all inputs, dependencies and assignment statements to prevent name clash
 
         })
     })
@@ -460,48 +483,123 @@ if (parser.results.length === 0) {
 
                 traceLog(JSON.stringify(inputs))
 
+                const n = symbol('n')
                 const items = symbol('items')
+                const itemsOffset = symbol('itemsOffset')
+                const itemsExtentMethod = symbol('itemsExtentMethod')
+                const itemsExtent = symbol('itemsExtent')
+
+                // Issue: if the LHS is like: ..."foo": [] or "foo": []
+                // then foo should be an itemization of the valueOf() each item in the original thing foo
+                // (in very much the same way as in [first, ..."foo"]).
 
                 deconstructedInputs.push([
 
+                    // Issue: for optional data and list structures that are missing,
+                    // We should create the whole optional structure, then destructure that
+                    // (or create it layer by layer)
+
                     (type === 'list'
                         ? [
-                            // Issue: should use itemization instead of JavaScript destructuring, with input.itemsOf()
-                            //   [...rest] should be = input.itemsOf()
-                            //   [a, ...rest] should create an anonymous itemization which shifts i by 1 element on input, and shifts extent down by 1
-                            //   [a, ..."rest"] should create an anonymous itemization which shifts i by 1 element on input, does get('value') on it, and shifts extent down by 1
+                            'const ', items, ' = ', sourceNode(name), ' !== undefined ? ', sourceNode(name), '.itemsOf() : $nullItemization\n',
 
-                            'const ', items, ' = ', sourceNode(name), '.itemsOf()\n',
+                            inputs.some(({grouping}) => grouping) ? ['const ', itemsExtentMethod, ' = ', items, '.extentOf\n'] : '',
+                            inputs.some(({grouping}) => !grouping) ? [
+                                'const ', itemsOffset, ' = ', items, '.offsetOf\n',
+                                'const ', itemsExtent, ' = ', items, '.extentOf()\n'
+                            ] : '',
 
-                            inputs.map(({grouping, name, as, otherwise, destructuringList, destructuringData}) => [
-                                ', ', grouping ? sourceNode(grouping) : '',
-                                sourceNode(name), as ? sourceNode(as, [': ', sourceNode(as)]) : '',
-                                otherwise ? sourceNode(otherwise, [' = ', jsExpression(otherwise)])
-                                    // To do: this is a bit inefficient as it fully walks the rest of the structure for each layer
-                                    // as it goes inward
-                                    // To do: fix - this incorrectly believes that a group matching to a required list is optional
-                                    : (destructuringList && allInputsOptional(destructuringList) ? ' = []'
-                                    : (destructuringData && allInputsOptional(destructuringData) ? ' = {}' : ''))
+                            inputs.map(({grouping, name, as, otherwise, destructuringList, destructuringData}, i) => [
+                                grouping
+                                    ? [
+                                        i === 0
+                                            ? ['const ', sourceNode(name), ' = ', items, '\n']
+                                            : [
+                                                'function ', sourceNode(name), '({ self: ', n, ' = this } = {}) { ', name.type === 'quote' ? ['const item = ', itemsOffset, '({ self: ', n, ' + ', String(i), ' }); ', 'return item !== undefined ? item', '.valueOf()', ' : ', 'undefined'] : ['return ', itemsOffset, '({ self: ', n, ' + ', String(i), ' })'], ' }\n',
+                                                sourceNode(name), '.offsetOf', ' = ', sourceNode(name), '\n',
+                                                sourceNode(name), '.kindOf', ' = ', items, '.kindOf', '\n',
+                                                sourceNode(name), '.extentOf', ' = function () { return ', itemsExtentMethod, '() - ', String(i), ' }', '\n',
+                                                sourceNode(name), '.itemsOf', ' = ', '$self\n',
+                                                sourceNode(name), '.dataOf', ' = ', '$self\n',
+                                            ]
+                                    ]
+                                    : [
+                                        'const ', sourceNode(name), ' = ',
+                                        otherwise || name.type === 'quote'
+                                            ? [
+                                                '(function () { ',
+                                                'const item = ', itemsExtent, ' > ', String(i), ' ? ', itemsOffset, '({ self: ', String(i), ' }) : undefined; ',
+                                                'return item !== undefined ? item', name.type === 'quote' ? '.valueOf()' : '', ' : ', otherwise ? jsExpression(otherwise) : 'undefined',
+                                                ' })()'
+                                            ]
+                                            : [itemsExtent, ' > ', String(i), ' ? ', itemsOffset, '({ self: ', String(i), ' }) : undefined'],
+                                        '\n'
+                                    ]
+
+                                  //  : (destructuringList && allInputsOptional(destructuringList) ? ' = []'
+                                  //  : (destructuringData && allInputsOptional(destructuringData) ? ' = {}' : '')),
+                                //'\n'
                             ]),
 
                             '\n'
                         ]
-                        : [
+                        : //[
+                            // Issue: matching currently would not make sense for data like "foo": {},
+                            // We can make this work with a method $fooData = foo.dataOf(); and then $fooData.get() as needed.
+                            // For an itemization, $fooData becomes { 0: value0, 1: value1, ... }
+
                             // Issue: should use get(name) for data itemization
 
+                            [
+                                'const ', items, ' = ', sourceNode(name), ' !== undefined ? ', sourceNode(name), '.dataOf() : $nullData\n',
+
+                                inputs.map(({grouping, name, as, otherwise, destructuringList, destructuringData}, i) => [
+                                    grouping
+                                        ? [
+                                            i === 0
+                                                // Issue: this should clone, in keeping with { name1, ...rest }
+                                                ? ['const ', sourceNode(name), ' = ', items, '\n']
+                                                : [
+                                                    // Issue: Implement a cloning of the original input map, minus any names matched explicitly.
+                                                    'function ', sourceNode(name), '({ self: ', n, ' = this } = {}) { ', name.type === 'quote' ? ['const item = ', itemsOffset, '({ self: ', n, ' + ', String(i), ' }); ', 'return item !== undefined ? item', '.valueOf()', ' : ', 'undefined'] : ['return ', itemsOffset, '({ self: ', n, ' + ', String(i), ' })'], ' }\n',
+                                                    sourceNode(name), '.offsetOf', ' = ', sourceNode(name), '\n',
+                                                    sourceNode(name), '.kindOf', ' = ', items, '.kindOf', '\n',
+                                                    sourceNode(name), '.extentOf', ' = function () { return ', itemsExtentMethod, '() - ', String(i), ' }', '\n',
+                                                    sourceNode(name), '.itemsOf', ' = ', '$self\n',
+                                                    sourceNode(name), '.dataOf', ' = ', '$self\n',
+                                                ]
+                                        ]
+                                        : [
+                                            'const ', sourceNode(as ? as : name), ' = ',
+                                            otherwise || name.type === 'quote'
+                                                ? [
+                                                    '(function () { ',
+                                                    'const item = ', items, '.get({ name: \'', sourceNode(name), '\' }); ',
+                                                    'return item !== undefined ? item', name.type === 'quote' ? '.valueOf()' : '', ' : ', otherwise ? jsExpression(otherwise) : 'undefined',
+                                                    ' })()'
+                                                ]
+                                                : [items, '.get({ name: \'', sourceNode(name), '\' }); '],
+                                            '\n'
+                                        ]
+    
+                                      //  : (destructuringList && allInputsOptional(destructuringList) ? ' = []'
+                                      //  : (destructuringData && allInputsOptional(destructuringData) ? ' = {}' : '')),
+                                    //'\n'
+                                ]),
+    
+                                '\n'
+                            ])
+                            /*
                             'const ',
                             inputs.map(({grouping, name, as, otherwise, destructuringList, destructuringData}) => [
                                 ', ', grouping ? sourceNode(grouping) : '',
                                 sourceNode(name), as ? sourceNode(as, [': ', sourceNode(as)]) : '',
                                 otherwise ? sourceNode(otherwise, [' = ', jsExpression(otherwise)])
-                                    // Issue: this is a bit inefficient as it fully walks the rest of the structure for each layer
-                                    // as it goes inward
-                                    // Issue: this incorrectly believes that a group which is matching to a required list is optional
                                     : (destructuringList && allInputsOptional(destructuringList) ? ' = []'
                                     : (destructuringData && allInputsOptional(destructuringData) ? ' = {}' : ''))
                             ]),
                             '\n'
-                        ])
+                        ])*/
                 ])
 
                 inputs.forEach(({name, destructuringList, destructuringData}) => {
@@ -557,8 +655,13 @@ if (parser.results.length === 0) {
     // To do: add the description to the top of the generated code
     const {code, map} = new SourceNode(1, 0, fileName, [
         '\n',
+        // Issue: need to implement map. Work out how to do get({ name })
+        'class $Map extends Map { }',
+        '\n\n',
         'function $offset() { return \'offset\' }\n',
         'function $infinity() { return Infinity }\n',
+        'function $empty() { return 0 }\n',
+        'function $null() { }\n',
         'function $self() { return this }\n',
         '\n',
         'function $method(fn) {\n',
@@ -566,8 +669,19 @@ if (parser.results.length === 0) {
         '   fn.kindOf = $offset\n',
         '   fn.extentOf = $infinity\n',
         '   fn.itemsOf = $self\n',
+        '   fn.dataOf = $null\n',
         '   return fn\n',
         '}\n',
+        '\n',
+        'const $nullItemization = (function () {\n',
+        '   const items = $method($null)\n',
+        '   items.extentOf = $empty\n',
+        '   return items\n',
+        '})()\n',
+        '\n',
+        'const $nullItemsOf = function () { return $nullItemization }\n',
+        '\n',
+        'const $nullData = (function () { const data = new Map(); data.itemsOf = $nullItemsOf; return data })()\n',
         '\n',
         'module.exports = {\n',
         join(compiledModules, '\n\n'),
@@ -585,7 +699,7 @@ if (parser.results.length === 0) {
     // To do: set the line,col of closing tags to be something at the end of the source
 } else {
     if (options['show-parse-tree']) {
-    console.log(JSON.stringify(parser.results, null, 2))
+        console.log(JSON.stringify(parser.results, null, 2))
     }
     console.error('Ambiguous parse')
     process.exit(1)
