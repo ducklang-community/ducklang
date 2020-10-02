@@ -170,6 +170,7 @@ const jsFor = (statement) => {
     const sourceOffset = symbol('sourceOffset')
     const itemsExtent = symbol('extent')
     const n = symbol('n')
+    const z = symbol('z')
     const items = symbol(methodName + 'Items')
     const item = symbol(methodName + 'Item')
 
@@ -178,12 +179,17 @@ const jsFor = (statement) => {
 
     const extentSymbol = symbol(methodName + 'Extent')
 
+    // Why: calling `async` on everything is relatively slow.
+    //      To fix this, the code first checks if '.then' exists, and await if so
+    // See: https://github.com/ducklang-community/ducklang/issues/4
+
     const itemPrelude = [
-        '   const ', sourceNode(name), ' = await ', sourceOffset, '({ self: ', n, ' })\n',
+        '   const ', z, ' = ', sourceOffset, '({ self: ', n, ' })\n',
         // Why: This is only *really* needed for one-by-one itemization.
         // But the other alternative is to duplicate the loop with exactly the same code minus this check
         // to make the usual case not have this line. Nb. one-by-one can also be limited by its source's extent.
-        '   if (', sourceNode(name), ' === undefined) { break }\n',
+        '   if (', z, ' === undefined) { break }\n',
+        '   const ', sourceNode(name), ' = ', z, '.then !== undefined ? await ', z, ' : ', z, '\n',
     ]
 
     const memory = symbol('memory')
@@ -483,6 +489,8 @@ if (parser.results.length === 0) {
 
                 traceLog(JSON.stringify(inputs))
 
+                const z = symbol('z')
+                const y = symbol('y')
                 const n = symbol('n')
                 const items = symbol('items')
                 const itemsOffset = symbol('itemsOffset')
@@ -515,7 +523,7 @@ if (parser.results.length === 0) {
                                         i === 0
                                             ? ['const ', sourceNode(name), ' = ', items, '\n']
                                             : [
-                                                'async function ', sourceNode(name), '({ self: ', n, ' = this } = {}) { ', name.type === 'quote' ? ['const item = await ', itemsOffset, '({ self: ', n, ' + ', String(i), ' }); ', 'return item !== undefined ? item', '.valueOf()', ' : ', 'undefined'] : ['return await ', itemsOffset, '({ self: ', n, ' + ', String(i), ' })'], ' }\n',
+                                                'async function ', sourceNode(name), '({ self: ', n, ' = this } = {}) { ', name.type === 'quote' ? ['const ', z, ' = ', itemsOffset, '({ self: ', n, ' })', '; ', 'const item = ', z, ' !== undefined && ', z, '.then !== undefined ? await ', z, ' : ', z, '; ', 'return item !== undefined ? item', '.valueOf()', ' : ', 'item'] : ['const ', z, ' = ', itemsOffset, '({ self: ', n, ' })', '; ', 'return ', z, ' !== undefined && ', z, '.then !== undefined ? await ', z, ' : ', z], ' }\n',
                                                 sourceNode(name), '.offsetOf', ' = ', sourceNode(name), '\n',
                                                 sourceNode(name), '.kindOf', ' = ', items, '.kindOf', '\n',
                                                 sourceNode(name), '.extentOf', ' = function () { return ', itemsExtentMethod, '() - ', String(i), ' }', '\n',
@@ -524,15 +532,15 @@ if (parser.results.length === 0) {
                                             ]
                                     ]
                                     : [
-                                        'const ', sourceNode(name), ' = ',
+                                        'const ', z, ' = ', itemsExtent, ' > ', String(i), ' ? ', itemsOffset, '({ self: ', String(i), ' }) : undefined', '\n',
                                         otherwise || name.type === 'quote'
                                             ? [
-                                                'await (async function () { ',
-                                                'const item = ', itemsExtent, ' > ', String(i), ' ? await ', itemsOffset, '({ self: ', String(i), ' }) : undefined; ',
-                                                'return item !== undefined ? item', name.type === 'quote' ? '.valueOf()' : '', ' : ', otherwise ? jsExpression(otherwise) : 'undefined',
-                                                ' })()'
+                                                'const ', y, ' = ', z, ' !== undefined && ', z, '.then !== undefined ? await ', z, ' : ', z, '\n',
+                                                'const ', sourceNode(name), ' = ', y, ' !== undefined ? ', y, name.type === 'quote' ? '.valueOf()' : '', ' : ', otherwise ? jsExpression(otherwise) : y, '\n',
                                             ]
-                                            : [itemsExtent, ' > ', String(i), ' ? await ', itemsOffset, '({ self: ', String(i), ' }) : undefined'],
+                                            : [
+                                                'const ', sourceNode(name), ' = ', z, ' !== undefined && ', z, '.then !== undefined ? await ', z, ' : ', z, '\n',
+                                            ],
                                         '\n'
                                     ]
 
@@ -570,16 +578,14 @@ if (parser.results.length === 0) {
                                                 ]
                                         ]
                                         : [
-                                            'const ', sourceNode(as ? as : name), ' = ',
                                             otherwise || name.type === 'quote'
                                                 ? [
-                                                    '(function () { ',
-                                                    'const item = ', items, '.get({ name: \'', sourceNode(name), '\' }); ',
-                                                    'return item !== undefined ? item', name.type === 'quote' ? '.valueOf()' : '', ' : ', otherwise ? jsExpression(otherwise) : 'undefined',
-                                                    ' })()'
+                                                    'const ', z, ' = ', items, '.get({ name: \'', sourceNode(name), '\' })\n',
+                                                    'const ', sourceNode(as ? as : name), ' = ', z, ' !== undefined ? ', z, name.type === 'quote' ? '.valueOf()' : '', ' : ', otherwise ? jsExpression(otherwise) : z, '\n'
                                                 ]
-                                                : [items, '.get({ name: \'', sourceNode(name), '\' }); '],
-                                            '\n'
+                                                : [
+                                                    'const ', sourceNode(as ? as : name), ' = ', items, '.get({ name: \'', sourceNode(name), '\' });\n'
+                                                ],
                                         ]
     
                                       //  : (destructuringList && allInputsOptional(destructuringList) ? ' = []'
