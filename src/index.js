@@ -179,7 +179,7 @@ const jsFor = (statement) => {
     const extentSymbol = symbol(methodName + 'Extent')
 
     const itemPrelude = [
-        '   const ', sourceNode(name), ' = ', sourceOffset, '({ self: ', n, ' })\n',
+        '   const ', sourceNode(name), ' = await ', sourceOffset, '({ self: ', n, ' })\n',
         // Why: This is only *really* needed for one-by-one itemization.
         // But the other alternative is to duplicate the loop with exactly the same code minus this check
         // to make the usual case not have this line. Nb. one-by-one can also be limited by its source's extent.
@@ -213,7 +213,7 @@ const jsFor = (statement) => {
             oneByOne ? ['let ', i, ' = 0\n'] : '',
             codePrelude,
 
-            'function ', items, '({ self: ', n, ' = this } = {}) {\n',
+            'async function ', items, '({ self: ', n, ' = this } = {}) {\n',
             oneByOne
                 ? [
                     '   if (', n, '!== ', i, ') { return } else { ++i }\n',
@@ -515,7 +515,7 @@ if (parser.results.length === 0) {
                                         i === 0
                                             ? ['const ', sourceNode(name), ' = ', items, '\n']
                                             : [
-                                                'function ', sourceNode(name), '({ self: ', n, ' = this } = {}) { ', name.type === 'quote' ? ['const item = ', itemsOffset, '({ self: ', n, ' + ', String(i), ' }); ', 'return item !== undefined ? item', '.valueOf()', ' : ', 'undefined'] : ['return ', itemsOffset, '({ self: ', n, ' + ', String(i), ' })'], ' }\n',
+                                                'async function ', sourceNode(name), '({ self: ', n, ' = this } = {}) { ', name.type === 'quote' ? ['const item = await ', itemsOffset, '({ self: ', n, ' + ', String(i), ' }); ', 'return item !== undefined ? item', '.valueOf()', ' : ', 'undefined'] : ['return await ', itemsOffset, '({ self: ', n, ' + ', String(i), ' })'], ' }\n',
                                                 sourceNode(name), '.offsetOf', ' = ', sourceNode(name), '\n',
                                                 sourceNode(name), '.kindOf', ' = ', items, '.kindOf', '\n',
                                                 sourceNode(name), '.extentOf', ' = function () { return ', itemsExtentMethod, '() - ', String(i), ' }', '\n',
@@ -527,12 +527,12 @@ if (parser.results.length === 0) {
                                         'const ', sourceNode(name), ' = ',
                                         otherwise || name.type === 'quote'
                                             ? [
-                                                '(function () { ',
-                                                'const item = ', itemsExtent, ' > ', String(i), ' ? ', itemsOffset, '({ self: ', String(i), ' }) : undefined; ',
+                                                'await (async function () { ',
+                                                'const item = ', itemsExtent, ' > ', String(i), ' ? await ', itemsOffset, '({ self: ', String(i), ' }) : undefined; ',
                                                 'return item !== undefined ? item', name.type === 'quote' ? '.valueOf()' : '', ' : ', otherwise ? jsExpression(otherwise) : 'undefined',
                                                 ' })()'
                                             ]
-                                            : [itemsExtent, ' > ', String(i), ' ? ', itemsOffset, '({ self: ', String(i), ' }) : undefined'],
+                                            : [itemsExtent, ' > ', String(i), ' ? await ', itemsOffset, '({ self: ', String(i), ' }) : undefined'],
                                         '\n'
                                     ]
 
@@ -619,7 +619,7 @@ if (parser.results.length === 0) {
                         ]
                         : [
                             jsComments(comments),
-                            sourceNode(name), ': ', '$method(function ', sourceNode(name), '(', inputs.length ? ['$inputs', allInputsOptional(inputs.map(({entry}) => entry)) ? ' = {}' : ''] : '', ') {\n',
+                            sourceNode(name), ': ', '$method(async function ', sourceNode(name), '(', inputs.length ? ['$inputs', allInputsOptional(inputs.map(({entry}) => entry)) ? ' = {}' : ''] : '', ') {\n',
                             deconstructedInputs,
                             statements.map(jsStatement),
                             '})'
