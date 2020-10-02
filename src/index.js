@@ -180,7 +180,7 @@ const jsFor = (statement) => {
     const extentSymbol = symbol(methodName + 'Extent')
 
     const itemPrelude = [
-        '   const ', sourceNode(name), ' = await ', sourceOffset, '({ self: ', n, ' })\n',
+        '   const ', sourceNode(name), ' = await ', sourceOffset, '(', n, ')\n',
         // Why: This is only *really* needed for one-by-one itemization.
         // But the other alternative is to duplicate the loop with exactly the same code minus this check
         // to make the usual case not have this line. Nb. one-by-one can also be limited by its source's extent.
@@ -214,7 +214,7 @@ const jsFor = (statement) => {
             oneByOne ? ['let ', i, ' = 0\n'] : '',
             codePrelude,
 
-            'async function ', items, '({ self: ', n, ' = this } = {}) {\n',
+            'async function ', items, '(', n, ') {\n',
             oneByOne
                 ? [
                     '   if (', n, '!== ', i, ') { return } else { ++i }\n',
@@ -224,8 +224,8 @@ const jsFor = (statement) => {
                 : (memorizeThrough
                     ? [
                         '   if (', memory, '.length > ', n, ') { return ', memory, '[', n, '] }\n',
-                        '   for (let ', i, ' = ', memory, '.length; ', i, ' < ', n, '; ++', i, ') { ', items, '({ self: ', i ,' }) }\n',
-                        '   return ', memory, '[', n, '] = (function ', item, '() {\n',
+                        '   for (let ', i, ' = ', memory, '.length; ', i, ' < ', n, '; ++', i, ') { await ', items, '(', i ,') }\n',
+                        '   return ', memory, '[', n, '] = (async function ', item, '() {\n',
                         itemPrelude,
                         statements.map(jsStatement),
                         '   })()\n'
@@ -518,7 +518,7 @@ if (parser.results.length === 0) {
                                         i === 0
                                             ? ['const ', sourceNode(name), ' = ', items, '\n']
                                             : [
-                                                'async function ', sourceNode(name), '({ self: ', n, ' = this } = {}) { ', name.type === 'quote' ? ['const item = await ', itemsOffset, '({ self: ', n, ' + ', String(i),' })', '; ', 'return item !== undefined ? item', '.valueOf()', ' : ', 'item'] : ['return ', itemsOffset, '({ self: ', n, ' + ', String(i), ' })'], ' }\n',
+                                                'async function ', sourceNode(name), '(', n, ') { ', name.type === 'quote' ? ['const item = await ', itemsOffset, '(', n, ' + ', String(i),')', '; ', 'return item !== undefined ? item', '.valueOf()', ' : ', 'item'] : ['return ', itemsOffset, '(', n, ' + ', String(i), ')'], ' }\n',
                                                 sourceNode(name), '.offsetOf', ' = ', sourceNode(name), '\n',
                                                 sourceNode(name), '.kindOf', ' = ', items, '.kindOf', '\n',
                                                 sourceNode(name), '.extentOf', ' = function () { return ', itemsExtentMethod, '() - ', String(i), ' }', '\n',
@@ -527,7 +527,7 @@ if (parser.results.length === 0) {
                                             ]
                                     ]
                                     : [
-                                        'const ', z, ' = ', itemsExtent, ' > ', String(i), ' ? await ', itemsOffset, '({ self: ', String(i), ' }) : undefined', '\n',
+                                        'const ', z, ' = ', itemsExtent, ' > ', String(i), ' ? await ', itemsOffset, '(', String(i), ') : undefined', '\n',
                                         otherwise || name.type === 'quote'
                                             ? [
                                                 'const ', sourceNode(name), ' = ', z, ' !== undefined ? ', z, name.type === 'quote' ? '.valueOf()' : '', ' : ', otherwise ? jsExpression(otherwise) : z, '\n',
@@ -563,7 +563,7 @@ if (parser.results.length === 0) {
                                                 ? ['const ', sourceNode(name), ' = ', items, '\n']
                                                 : [
                                                     // Issue: Implement a cloning of the original input map, minus any names matched explicitly.
-                                                    'function ', sourceNode(name), '({ self: ', n, ' = this } = {}) { ', name.type === 'quote' ? ['const item = ', itemsOffset, '({ self: ', n, ' + ', String(i), ' }); ', 'return item !== undefined ? item', '.valueOf()', ' : ', 'undefined'] : ['return ', itemsOffset, '({ self: ', n, ' + ', String(i), ' })'], ' }\n',
+                                                    'function ', sourceNode(name), '(', n, ') { ', name.type === 'quote' ? ['const item = ', itemsOffset, '(', n, ' + ', String(i), '); ', 'return item !== undefined ? item', '.valueOf()', ' : ', 'undefined'] : ['return ', itemsOffset, '(', n, ' + ', String(i), ')'], ' }\n',
                                                     sourceNode(name), '.offsetOf', ' = ', sourceNode(name), '\n',
                                                     sourceNode(name), '.kindOf', ' = ', items, '.kindOf', '\n',
                                                     sourceNode(name), '.extentOf', ' = function () { return ', itemsExtentMethod, '() - ', String(i), ' }', '\n',
@@ -574,11 +574,11 @@ if (parser.results.length === 0) {
                                         : [
                                             otherwise || name.type === 'quote'
                                                 ? [
-                                                    'const ', z, ' = ', items, '.get({ name: \'', sourceNode(name), '\' })\n',
+                                                    'const ', z, ' = ', items, '.get(\'', sourceNode(name), '\')\n',
                                                     'const ', sourceNode(as ? as : name), ' = ', z, ' !== undefined ? ', z, name.type === 'quote' ? '.valueOf()' : '', ' : ', otherwise ? jsExpression(otherwise) : z, '\n'
                                                 ]
                                                 : [
-                                                    'const ', sourceNode(as ? as : name), ' = ', items, '.get({ name: \'', sourceNode(name), '\' });\n'
+                                                    'const ', sourceNode(as ? as : name), ' = ', items, '.get(\'', sourceNode(name), '\');\n'
                                                 ],
                                         ]
     
@@ -663,9 +663,10 @@ if (parser.results.length === 0) {
         'function $empty() { return 0 }\n',
         'function $null() { }\n',
         'function $self() { return this }\n',
+        'function $methodOffsetOf(fn) { return function (self) { return fn({ self }) } }\n',
         '\n',
         'function $method(fn) {\n',
-        '   fn.offsetOf = fn\n',
+        '   fn.offsetOf = $methodOffsetOf(fn)\n',
         '   fn.kindOf = $offset\n',
         '   fn.extentOf = $infinity\n',
         '   fn.itemsOf = $self\n',
