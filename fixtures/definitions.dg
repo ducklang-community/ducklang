@@ -155,9 +155,18 @@ resultFromEach of self with ...input: ["mapping"]:
 
 
 
+use evenNumbers
+
+
 resultFromEach of self with ...input: ["mapping"]:
 	for each x in self,
 		collect resultOf (mapping in x)
+
+
+everyOther of self:
+	lookup = offsetOf in self
+	for each offset in evenNumbers,
+		collect lookup of offset
 
 
 
