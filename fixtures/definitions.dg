@@ -29,26 +29,6 @@ selfsame of self:
 
 
 
-::2020-09::Itemizing::
-
-
-
-resultFromEach of self with ...input: ["mapping"]:
-	items... of self
-	result resultFromEach of items with mapping
-
-
-
-::2020-09::Items::
-
-
-
-resultFromEach of self with ...input: ["mapping"]:
-	for each x in self,
-		collect resultOf (mapping in x)
-
-
-
 ::2020-09::Sequences::
 
 
@@ -158,6 +138,26 @@ evenNumbersLessThan self:
 oddNumbersLessThan self:
 	for each number in oddNumbers, to extent of roundedDown (self / 2),
 		collect number
+
+
+
+::2020-09::Itemizing::
+
+
+
+resultFromEach of self with ...input: ["mapping"]:
+	items... of self
+	result resultFromEach of items with mapping
+
+
+
+::2020-09::Items::
+
+
+
+resultFromEach of self with ...input: ["mapping"]:
+	for each x in self,
+		collect resultOf (mapping in x)
 
 
 
