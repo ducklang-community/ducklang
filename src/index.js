@@ -491,84 +491,64 @@ if (parser.results.length === 0) {
                 const itemsExtentMethod = symbol('itemsExtentMethod')
                 const itemsExtent = symbol('itemsExtent')
 
-                // Issue: if the LHS is like: ..."foo": [] or "foo": []
-                // then foo should be an itemization of the valueOf() each item in the original thing foo
-                // (in very much the same way as in [first, ..."foo"]).
-
                 deconstructedInputs.push([
-
-                    // Issue: for optional data and list structures that are missing,
-                    // We should create the whole optional structure, then destructure that
-                    // (or create it layer by layer)
 
                     (type === 'list'
                         ? [
-                            'const ', items, ' = ', sourceNode(name), ' !== undefined ? ', sourceNode(name), '.itemsOf() : $nullItemization\n',
+                            'const ', items, ' = ', sourceNode(name), ' !== undefined ? ', sourceNode(name), name.type === 'quote' ? '.valueOf()' : '', '.itemsOf() : $nullItemization\n',
 
-                            inputs.some(({grouping}) => grouping) ? ['const ', itemsExtentMethod, ' = ', items, '.extentOf\n'] : '',
+                            inputs.slice(1).some(({grouping}) => grouping) ? ['const ', itemsExtentMethod, ' = ', items, '.extentOf\n'] : '',
                             inputs.some(({grouping}) => !grouping) ? [
                                 'const ', itemsOffset, ' = ', items, '.offsetOf\n',
                                 'const ', itemsExtent, ' = ', items, '.extentOf()\n'
                             ] : '',
 
-                            inputs.map(({grouping, name, as, otherwise, destructuringList, destructuringData}, i) => [
+                            inputs.map(({grouping, name, otherwise}, i) => [
                                 grouping
                                     ? [
                                         i === 0
                                             ? ['const ', sourceNode(name), ' = ', items, '\n']
                                             : [
-                                                'async function ', sourceNode(name), '(', n, ') { ', name.type === 'quote' ? ['const item = await ', itemsOffset, '(', n, ' + ', String(i),')', '; ', 'return item !== undefined ? item', '.valueOf()', ' : ', 'item'] : ['return ', itemsOffset, '(', n, ' + ', String(i), ')'], ' }\n',
+                                                'function ', sourceNode(name), '(', n, ') { ', name.type === 'quote' ? ['const item = ', itemsOffset, '(', n, ' + ', String(i),'); return item !== undefined ? item.valueOf() : item'] : ['return ', itemsOffset, '(', n, ' + ', String(i), ')'], ' }\n',
                                                 sourceNode(name), '.offsetOf', ' = ', sourceNode(name), '\n',
                                                 sourceNode(name), '.kindOf', ' = ', items, '.kindOf', '\n',
                                                 sourceNode(name), '.extentOf', ' = function () { return ', itemsExtentMethod, '() - ', String(i), ' }', '\n',
                                                 sourceNode(name), '.itemsOf', ' = ', '$self\n',
-                                                sourceNode(name), '.dataOf', ' = ', '$self\n',
+                                                sourceNode(name), '.dataOf', ' =  function () {\n',
+                                                '   const data = new $Map()\n',
+                                                '   const extent = this.extentOf()\n',
+                                                '   for (let n = 0; n < extent; ++n) {\n',
+                                                '       const z = ', sourceNode(name), '(n)\n',
+                                                '       if (z === undefined) { break }\n',
+                                                '       data.set(n, z)\n',
+                                                '   }\n',
+                                                '   return data\n',
+                                                '}\n',
+                                                'return ', items, '\n',
                                             ]
                                     ]
                                     : [
-                                        'const ', z, ' = ', itemsExtent, ' > ', String(i), ' ? await ', itemsOffset, '(', String(i), ') : undefined', '\n',
+                                        'const ', otherwise || name.type === 'quote' ? z : sourceNode(name), ' = ', itemsExtent, ' > ', String(i), ' ? ', itemsOffset, '(', String(i), ') : undefined', '\n',
                                         otherwise || name.type === 'quote'
                                             ? [
                                                 'const ', sourceNode(name), ' = ', z, ' !== undefined ? ', z, name.type === 'quote' ? '.valueOf()' : '', ' : ', otherwise ? jsExpression(otherwise) : z, '\n',
                                             ]
-                                            : [
-                                                'const ', sourceNode(name), ' = ', z, '\n',
-                                            ],
+                                            : '',
                                         '\n'
                                     ]
-
-                                  //  : (destructuringList && allInputsOptional(destructuringList) ? ' = []'
-                                  //  : (destructuringData && allInputsOptional(destructuringData) ? ' = {}' : '')),
-                                //'\n'
                             ]),
-
                             '\n'
                         ]
-                        : //[
-                            // Issue: matching currently would not make sense for data like "foo": {},
-                            // We can make this work with a method $fooData = foo.dataOf(); and then $fooData.get() as needed.
-                            // For an itemization, $fooData becomes { 0: value0, 1: value1, ... }
+                        : [
+                            'const ', items, ' = ', sourceNode(name), ' !== undefined ? ', sourceNode(name), name.type === 'quote' ? '.valueOf()' : '', '.dataOf() : $nullData\n',
 
-                            // Issue: should use get(name) for data itemization
-
-                            [
-                                'const ', items, ' = ', sourceNode(name), ' !== undefined ? await ', sourceNode(name), '.dataOf() : $nullData\n',
-
-                                inputs.map(({grouping, name, as, otherwise, destructuringList, destructuringData}, i) => [
+                            inputs.map(({grouping, name, as, otherwise}, i) => [
                                     grouping
                                         ? [
-                                            i === 0
-                                                // Issue: this should clone, in keeping with { name1, ...rest }
-                                                ? ['const ', sourceNode(name), ' = ', items, '\n']
-                                                : [
-                                                    // Issue: Implement a cloning of the original input map, minus any names matched explicitly.
-                                                    'function ', sourceNode(name), '(', n, ') { ', name.type === 'quote' ? ['const item = ', itemsOffset, '(', n, ' + ', String(i), '); ', 'return item !== undefined ? item', '.valueOf()', ' : ', 'undefined'] : ['return ', itemsOffset, '(', n, ' + ', String(i), ')'], ' }\n',
-                                                    sourceNode(name), '.offsetOf', ' = ', sourceNode(name), '\n',
-                                                    sourceNode(name), '.kindOf', ' = ', items, '.kindOf', '\n',
-                                                    sourceNode(name), '.extentOf', ' = function () { return ', itemsExtentMethod, '() - ', String(i), ' }', '\n',
-                                                    sourceNode(name), '.itemsOf', ' = ', '$self\n',
-                                                    sourceNode(name), '.dataOf', ' = ', '$self\n',
-                                                ]
+                                        'const ', sourceNode(name), ' = new $Map(', items, ')\n',
+                                        inputs.slice(0, i).map(({ name: arg }) => [
+                                            sourceNode(name), '.delete(\'', sourceNode(arg), '\')\n'
+                                        ])
                                         ]
                                         : [
                                             otherwise || name.type === 'quote'
@@ -580,25 +560,9 @@ if (parser.results.length === 0) {
                                                     'const ', sourceNode(as ? as : name), ' = ', items, '.get(\'', sourceNode(name), '\');\n'
                                                 ],
                                         ]
-    
-                                      //  : (destructuringList && allInputsOptional(destructuringList) ? ' = []'
-                                      //  : (destructuringData && allInputsOptional(destructuringData) ? ' = {}' : '')),
-                                    //'\n'
                                 ]),
-    
                                 '\n'
                             ])
-                            /*
-                            'const ',
-                            inputs.map(({grouping, name, as, otherwise, destructuringList, destructuringData}) => [
-                                ', ', grouping ? sourceNode(grouping) : '',
-                                sourceNode(name), as ? sourceNode(as, [': ', sourceNode(as)]) : '',
-                                otherwise ? sourceNode(otherwise, [' = ', jsExpression(otherwise)])
-                                    : (destructuringList && allInputsOptional(destructuringList) ? ' = []'
-                                    : (destructuringData && allInputsOptional(destructuringData) ? ' = {}' : ''))
-                            ]),
-                            '\n'
-                        ])*/
                 ])
 
                 inputs.forEach(({name, destructuringList, destructuringData}) => {
