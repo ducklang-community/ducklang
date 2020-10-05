@@ -179,12 +179,12 @@ const jsFor = (statement) => {
 
     const extentSymbol = symbol(methodName + 'Extent')
 
-    const itemPrelude = [
+    const itemPrelude = (exit = 'return') => [
         '   const ', sourceNode(name), ' = await ', sourceOffset, '(', n, ')\n',
         // Why: This is only *really* needed for one-by-one itemization.
         // But the other alternative is to duplicate the loop with exactly the same code minus this check
         // to make the usual case not have this line. Nb. one-by-one can also be limited by its source's extent.
-        '   if (', sourceNode(name), ' === undefined) { break }\n',
+        '   if (', sourceNode(name), ' === undefined) { ', exit, ' }\n',
     ]
 
     const memory = symbol('memory')
@@ -199,7 +199,6 @@ const jsFor = (statement) => {
     const loopCode = (body) => [
         'const ', itemsExtent, ' = ', extent ? ['Math.min(', jsExpression(extent), ', ', sourceExtent, '()', ')'] : [sourceExtent, '()'], '\n',
         'for (let ', n, ' = 0; ', n, ' < ', itemsExtent, '; ++', n, ') {\n',
-        itemPrelude,
         body,
         '}\n',
     ]
@@ -207,7 +206,7 @@ const jsFor = (statement) => {
     return statement.do
         ? [
             codePrelude,
-            loopCode(statements.map(jsStatement))
+            loopCode([itemPrelude('break'), statements.map(jsStatement)])
         ]
         : [
             memorizeThrough ? ['const ', memory, ' = []\n'] : '',
@@ -218,7 +217,7 @@ const jsFor = (statement) => {
             oneByOne
                 ? [
                     '   if (', n, '!== ', i, ') { return } else { ++i }\n',
-                    itemPrelude,
+                    itemPrelude(),
                     statements.map(jsStatement)
                 ]
                 : (memorizeThrough
@@ -226,12 +225,12 @@ const jsFor = (statement) => {
                         '   if (', memory, '.length > ', n, ') { return ', memory, '[', n, '] }\n',
                         '   for (let ', i, ' = ', memory, '.length; ', i, ' < ', n, '; ++', i, ') { await ', items, '(', i ,') }\n',
                         '   return ', memory, '[', n, '] = (async function ', item, '() {\n',
-                        itemPrelude,
+                        itemPrelude(),
                         statements.map(jsStatement),
                         '   })()\n'
                     ]
                     : [
-                        itemPrelude,
+                        itemPrelude(),
                         statements.map(jsStatement)
                     ]),
             '}\n',
