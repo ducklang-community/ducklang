@@ -46,7 +46,7 @@ const dataDefinition = definition => {
     traceLog(JSON.stringify(definition))
     switch (definition.type) {
         case 'dataDefinition':
-            return jsLocation(definition.location)
+            return [jsLocation(definition.location), definition.expression ? [': ', jsExpression(definition.expression)] : '']
         case 'assignExpandData':
             return 'null /* Issue: assignExpandData not implemented */'
         default:
