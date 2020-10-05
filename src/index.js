@@ -697,9 +697,6 @@ if (parser.results.length === 0) {
                                                           '   }\n',
                                                           '   return data\n',
                                                           '}\n',
-                                                          'return ',
-                                                          items,
-                                                          '\n'
                                                       ]
                                             ]
                                           : [
