@@ -615,7 +615,8 @@ if (parser.results.length === 0) {
         ])
     })
 
-    // To do: add the description to the top of the generated code
+    // Issue: add the description comment to the top of the generated code,
+    // if the intention is for the output to be readable
     const {code, map} = new SourceNode(1, 0, fileName, [
         '\n',
         'function $self() { return this }\n',
