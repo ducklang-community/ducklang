@@ -42,15 +42,6 @@ const jsComments = (comments) =>
 const jsInputs = (items) =>
     join(items.map(({entry: {name}}) => sourceNode(name)))
 
-// Issue: allInputsOptional is inefficient as it fully walks the rest of the structure at each layer
-// Issue: allInputsOptional incorrectly believes that a group matching to a required list is optional
-const allInputsOptional = (inputs) =>
-    inputs.every(({grouping, otherwise, destructuringList, destructuringData}) =>
-        grouping
-        || otherwise
-        || (destructuringList && allInputsOptional(destructuringList))
-        || (destructuringData && allInputsOptional(destructuringData)))
-
 const jsLocation = (location) => [sourceNode(location.name), location.locators ? ' /* Issue: locators not implemented */ ' : '']
 
 const dataDefinition = (definition) => {
@@ -592,7 +583,7 @@ if (parser.results.length === 0) {
                         ]
                         : [
                             jsComments(comments),
-                            sourceNode(name, methodName), ': ', '$method(', containsAwaited(statements) ? 'async ' : '', 'function ', sourceNode(name, methodName), '(', inputs.length ? ['$inputs', allInputsOptional(inputs.map(({entry}) => entry)) ? ' = {}' : ''] : '', ') {\n',
+                            sourceNode(name, methodName), ': ', '$method(', containsAwaited(statements) ? 'async ' : '', 'function ', sourceNode(name, methodName), '(', inputs.length ? '$inputs' : '', ') {\n',
                             deconstructedInputs,
                             statements.map(jsStatement),
                             '})'
