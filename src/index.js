@@ -544,26 +544,26 @@ if (parser.results.length === 0) {
                             'const ', items, ' = ', sourceNode(name), ' !== undefined ? ', sourceNode(name), name.type === 'quote' ? '.valueOf()' : '', '.dataOf() : $nullData\n',
 
                             inputs.map(({grouping, name, as, otherwise}, i) => [
-                                    grouping
-                                        ? [
+                                grouping
+                                    ? [
                                         'const ', sourceNode(name), ' = new $Map(', items, ')\n',
                                         inputs.slice(0, i).map(({ name: arg }) => [
                                             sourceNode(name), '.delete(\'', sourceNode(arg), '\')\n'
                                         ])
-                                        ]
-                                        : [
-                                            otherwise || name.type === 'quote'
-                                                ? [
-                                                    'const ', z, ' = ', items, '.get(\'', sourceNode(name), '\')\n',
-                                                    'const ', sourceNode(as ? as : name), ' = ', z, ' !== undefined ? ', z, name.type === 'quote' ? '.valueOf()' : '', ' : ', otherwise ? jsExpression(otherwise) : z, '\n'
-                                                ]
-                                                : [
-                                                    'const ', sourceNode(as ? as : name), ' = ', items, '.get(\'', sourceNode(name), '\');\n'
-                                                ],
-                                        ]
-                                ]),
-                                '\n'
-                            ])
+                                    ]
+                                    : [
+                                        otherwise || name.type === 'quote'
+                                            ? [
+                                                'const ', z, ' = ', items, '.get(\'', sourceNode(name), '\')\n',
+                                                'const ', sourceNode(as ? as : name), ' = ', z, ' !== undefined ? ', z, name.type === 'quote' ? '.valueOf()' : '', ' : ', otherwise ? jsExpression(otherwise) : z, '\n'
+                                            ]
+                                            : [
+                                                'const ', sourceNode(as ? as : name), ' = ', items, '.get(\'', sourceNode(name), '\');\n'
+                                            ],
+                                    ]
+                            ]),
+                            '\n'
+                        ])
                 ])
 
                 inputs.forEach(({name, destructuringList, destructuringData}) => {
