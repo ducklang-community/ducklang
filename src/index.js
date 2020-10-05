@@ -709,10 +709,10 @@ if (parser.results.length === 0) {
     fs.writeFileSync(`dist/${fileName.replace(/\.dg$/, '.js')}`, code)
     fs.writeFileSync(`dist/${fileName.replace(/\.dg$/, '.map')}`, JSON.stringify(map))
 
-    // To do: make the output as pretty as possible
+    // Issue: make the output prettier, eg. with right indentation and nice variable names
     // (nb. prettier isn't viable as it doesn't do source mapping. Workarounds exist but are slow)
 
-    // To do: set the line,col of closing tags to be something at the end of the source
+    // Issue: set the line,col source mapping of closing tags to be something at the end of the source
 } else {
     if (options['show-parse-tree']) {
         console.log(JSON.stringify(parser.results, null, 2))
