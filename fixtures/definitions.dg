@@ -166,6 +166,7 @@ resultFromEach of self with ...input: ["mapping"]:
 everyOther of self:
 	lookup = offsetOf in self
 	for each offset in evenNumbers,
+		Issue: Needs to be something like resultFrom lookup ...
 		collect lookup of offset
 
 
