@@ -733,6 +733,8 @@ if (parser.results.length === 0) {
         '\n',
         'const $nullData = (function () { const data = new $Map(); data.itemsOf = $nullItemsOf; return data })()\n',
         '\n',
+        '\n',
+        '\n',
         'module.exports = {\n',
         join(compiledModules, '\n\n'),
         '}\n',
