@@ -62,9 +62,10 @@ const jsData = definitions => {
 const simple = expression => ['locate', 'digitNumber', 'decimalNumber', 'literal'].includes(expression.type)
 
 const jsMethodExecution = expression => {
-    const { method, receiver, arguments, otherwise } = expression
+    const { method, of, receiver, arguments, otherwise } = expression
+    const methodSymbol = sourceNode(method, method.value + (of ? 'Of' : ''))
     const receiverValue = sourceNode(receiver, symbol('receiver'))
-    const methodCall = ['.', sourceNode(method), '(', arguments ? jsData(arguments) : [], ')']
+    const methodCall = ['.', methodSymbol, '(', arguments ? jsData(arguments) : [], ')']
     return otherwise
         ? !simple(receiver)
             ? [
@@ -75,7 +76,7 @@ const jsMethodExecution = expression => {
                   'return ',
                   receiverValue,
                   '.',
-                  sourceNode(method),
+                  methodSymbol,
                   ' !== undefined ? ',
                   receiverValue,
                   methodCall,
@@ -87,7 +88,7 @@ const jsMethodExecution = expression => {
                   '(',
                   jsExpression(receiver),
                   ').',
-                  sourceNode(method),
+                  methodSymbol,
                   ' !== undefined ? (',
                   jsExpression(receiver),
                   ')',
