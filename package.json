@@ -8,6 +8,7 @@
     "license": "MIT",
     "scripts": {
         "build": "mkdir -p dist && yarn run nearleyc src/grammar.ne -o dist/grammar.js",
+        "prettier": "prettier -w package.json src/**.js",
         "start": "node src/index.js"
     },
     "dependencies": {
