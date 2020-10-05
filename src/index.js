@@ -252,10 +252,14 @@ const jsFor = (statement) => {
                 ],
             items, '.extentOf', ' = ', extent ? ['function ', extentSymbol, '() { return Math.min(', jsExpression(extent), ', ', sourceExtent, '()) }'] : [sourceExtent], '\n',
             items, '.itemsOf', ' = ', '$self\n',
-            items, '.dataOf', ' = ', 'async function () {\n',
-            '   const data = new Map()\n',
+            // Why: This method intentionally does not await, that's left to be done explicitly later if required,
+            // firstly to maintain consistency with dataOf() elsewhere, and secondly to not do a slower one-by-one awaiting
+            items, '.dataOf', ' = function () {\n',
+            '   const data = new $Map()\n',
             loopCode([
-                'data.set(', n, ', ', sourceNode(name), ')\n',
+                '       const ', z, ' = ', items, '(', n, ')\n',
+                '       if (', z, ' === undefined) { break }\n',
+                '       data.set(', n, ', ', z, ')\n',
             ]),
             '   return data\n',
             '}\n',
