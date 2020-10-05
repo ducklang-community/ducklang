@@ -728,7 +728,7 @@ if (parser.results.length === 0) {
         '\n',
         'const $nullItemsOf = function () { return $nullItemization }\n',
         '\n',
-        'const $nullData = (function () { const data = new Map(); data.itemsOf = $nullItemsOf; return data })()\n',
+        'const $nullData = (function () { const data = new $Map(); data.itemsOf = $nullItemsOf; return data })()\n',
         '\n',
         'module.exports = {\n',
         join(compiledModules, '\n\n'),
