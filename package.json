@@ -1,20 +1,34 @@
 {
-  "name": "ducklang",
-  "version": "0.1.0",
-  "main": "src/index.js",
-  "homepage": "https://ducklang.community",
-  "repository": "github:aliclark/ducklang",
-  "author": "Ali Clark",
-  "license": "MIT",
-  "scripts": {
-    "build": "mkdir -p dist && yarn run nearleyc src/grammar.ne -o dist/grammar.js",
-    "start": "node src/index.js"
-  },
-  "dependencies": {
-    "moo": "aliclark/moo.git#graphical-errors",
-    "moo-indentation-lexer": "^6.0.0",
-    "nearley": "^2.19.7",
-    "optionator": "^0.9.1",
-    "source-map": "^0.7.3"
-  }
+    "name": "ducklang",
+    "version": "0.1.0",
+    "main": "src/index.js",
+    "homepage": "https://ducklang.community",
+    "repository": "github:aliclark/ducklang",
+    "author": "Ali Clark",
+    "license": "MIT",
+    "scripts": {
+        "build": "mkdir -p dist && yarn run nearleyc src/grammar.ne -o dist/grammar.js",
+        "start": "node src/index.js"
+    },
+    "dependencies": {
+        "moo": "aliclark/moo.git#graphical-errors",
+        "moo-indentation-lexer": "^6.0.0",
+        "nearley": "^2.19.7",
+        "optionator": "^0.9.1",
+        "source-map": "^0.7.3"
+    },
+    "devDependencies": {
+        "prettier": "^2.1.2"
+    },
+    "prettier": {
+        "printWidth": 120,
+        "tabWidth": 4,
+        "semi": false,
+        "singleQuote": true,
+        "quoteProps": "consistent",
+        "jsxSingleQuote": true,
+        "trailingComma": "none",
+        "arrowParens": "avoid",
+        "proseWrap": "always"
+    }
 }
