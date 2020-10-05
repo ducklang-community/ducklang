@@ -61,11 +61,29 @@ const jsData = definitions => {
 
 const simple = expression => ['locate', 'digitNumber', 'decimalNumber', 'literal'].includes(expression.type)
 
+const simpleTypes = {
+    'literal': 'text',
+    'quote': 'text',
+    'text': 'text',
+    'digitNumber': 'number',
+    'decimalNumber': 'number',
+    'hexNumber': 'number'
+}
+
+const jsArgument = b =>
+    b.type === 'dataDefinition'
+        ? b
+        : (b.type === 'locate'
+            ? { type: 'dataDefinition', location: b.location }
+            : { type: 'dataDefinition', location: { type: 'location', name: { type: 'identifier', line: b.line, col: b.col, value: simpleTypes[b.type] !== undefined ? simpleTypes[b.type] : 'expression' } }, expression: b })
+
 const jsMethodExecution = expression => {
     const { method, of, receiver, arguments, otherwise } = expression
     const methodSymbol = sourceNode(method, method.value + (of ? 'Of' : ''))
     const receiverValue = sourceNode(receiver, symbol('receiver'))
-    const methodCall = ['.', methodSymbol, '(', arguments ? jsData(arguments) : [], ')']
+    // Issue: arguments should be passed via a $Map instance.
+    // This may require the method execution be wrapped within an anonymous function evaluation
+    const methodCall = ['.', methodSymbol, '(', arguments ? jsData(arguments.map(jsArgument)) : '', ')']
     return otherwise
         ? !simple(receiver)
             ? [
