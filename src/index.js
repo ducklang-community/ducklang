@@ -163,8 +163,13 @@ const jsDoes = (statement) => {
     return [sourceNode(operator, operators[operator.type]), ' ', jsExpression(expression), '\n']
 }
 
+const containsAwaited = (statements) => {
+    // Issue: need to implement containsAwaited
+    return false
+}
+
 const jsFor = (statement) => {
-    const {name, itemizing, expression, extent, statements} = statement
+    const {awaited, name, itemizing, expression, extent, statements} = statement
     const source = symbol('source')
     const sourceExtent = symbol('sourceExtent')
     const sourceOffset = symbol('sourceOffset')
@@ -180,7 +185,7 @@ const jsFor = (statement) => {
     const extentSymbol = symbol(methodName + 'Extent')
 
     const itemPrelude = (exit = 'return') => [
-        '   const ', sourceNode(name), ' = await ', sourceOffset, '(', n, ')\n',
+        '   const ', sourceNode(name), ' = ', awaited ? 'await ' : '', sourceOffset, '(', n, ')\n',
         // Why: This is only *really* needed for one-by-one itemization.
         // But the other alternative is to duplicate the loop with exactly the same code minus this check
         // to make the usual case not have this line. Nb. one-by-one can also be limited by its source's extent.
@@ -203,6 +208,8 @@ const jsFor = (statement) => {
         '}\n',
     ]
 
+    const isAsync = awaited || containsAwaited(statements)
+
     return statement.do
         ? [
             codePrelude,
@@ -213,7 +220,7 @@ const jsFor = (statement) => {
             oneByOne ? ['let ', i, ' = 0\n'] : '',
             codePrelude,
 
-            'async function ', items, '(', n, ') {\n',
+            isAsync ? 'async ' : '', 'function ', items, '(', n, ') {\n',
             oneByOne
                 ? [
                     '   if (', n, '!== ', i, ') { return } else { ++i }\n',
@@ -223,8 +230,8 @@ const jsFor = (statement) => {
                 : (memorizeThrough
                     ? [
                         '   if (', memory, '.length > ', n, ') { return ', memory, '[', n, '] }\n',
-                        '   for (let ', i, ' = ', memory, '.length; ', i, ' < ', n, '; ++', i, ') { await ', items, '(', i ,') }\n',
-                        '   return ', memory, '[', n, '] = (async function ', item, '() {\n',
+                        '   for (let ', i, ' = ', memory, '.length; ', i, ' < ', n, '; ++', i, ') { if (', isAsync ? 'await ' : '', items, '(', i ,') === undefined) { return } }\n',
+                        '   return ', memory, '[', n, '] = ', isAsync ? 'await ' : '', '(', isAsync ? 'async ' : '', 'function () {\n',
                         itemPrelude(),
                         statements.map(jsStatement),
                         '   })()\n'
@@ -585,7 +592,7 @@ if (parser.results.length === 0) {
                         ]
                         : [
                             jsComments(comments),
-                            sourceNode(name, methodName), ': ', '$method(async function ', sourceNode(name, methodName), '(', inputs.length ? ['$inputs', allInputsOptional(inputs.map(({entry}) => entry)) ? ' = {}' : ''] : '', ') {\n',
+                            sourceNode(name, methodName), ': ', '$method(', containsAwaited(statements) ? 'async ' : '', 'function ', sourceNode(name, methodName), '(', inputs.length ? ['$inputs', allInputsOptional(inputs.map(({entry}) => entry)) ? ' = {}' : ''] : '', ') {\n',
                             deconstructedInputs,
                             statements.map(jsStatement),
                             '})'

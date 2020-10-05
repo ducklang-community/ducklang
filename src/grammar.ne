@@ -36,6 +36,7 @@ const lexer = new IndentationLexer({
 				of: 'of',
 				With: 'with',
 				otherwise: 'otherwise',
+				awaited: 'awaited',
 			})
 		},
 
@@ -263,11 +264,11 @@ input ->
 destructuringList -> "["   flowing[input {% take %} ]   "]" {% ([, destructuringList])   => ({ destructuringList }) %}
 destructuringData -> "{" _ flowing[input {% take %} ] _ "}" {% ([, , destructuringData]) => ({ destructuringData }) %}
 
-for -> For _ each _ identifier _ (in {% take %} | through {% take %} | of {% take %} ) _ expression ","
+for -> For _ each _ (awaited _ {% take %}):? identifier _ (in {% take %} | through {% take %} | of {% take %} ) _ expression ","
 		(_ to _ extent _ of _ expression "," {% takeEighth %} ):?
 		(_ do ":" {% takeSecond %} ):?
 	blockOf[statement {% take %} ]
-	{% ([, , , , name, , itemizing, , expression, , extent, Do, statements]) => ({ type: 'for', name, itemizing, expression, ...(extent && { extent }), ...(Do && { do: Do }), statements }) %}
+	{% ([, , , , awaited, name, , itemizing, , expression, , extent, Do, statements]) => ({ type: 'for', ...(awaited && awaited), name, itemizing, expression, ...(extent && { extent }), ...(Do && { do: Do }), statements }) %}
 
 when -> When _ expression
 	indented[(
@@ -450,6 +451,7 @@ collect		-> %collect		{% take %}
 of			-> %of			{% take %}
 with		-> %With		{% ignore %}
 otherwise	-> %otherwise	{% ignore %}
+awaited		-> %awaited		{% take %}
 
 why			-> %why		{% take %}
 see			-> %see		{% take %}
