@@ -713,7 +713,10 @@ if (parser.results.length === 0) {
         '   fn.kindOf = $offset\n',
         '   fn.extentOf = $infinity\n',
         '   fn.itemsOf = $self\n',
-        '   fn.dataOf = $null\n',
+        // Why: dataOf would usually loop up to the extent building a Map of n => value,
+        // but for all methods that would just be an infinite loop.
+        // undefined seems a good alternative
+        '   fn.dataOf = undefined\n',
         '   return fn\n',
         '}\n',
         '\n',
