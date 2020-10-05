@@ -445,8 +445,7 @@ if (parser.results.length === 0) {
 
             traceLog('\n'+JSON.stringify(name))
 
-            // To do: make 'of' keyword identical to the name of method plus 'Of'
-            methodName = name.value
+            methodName = name.value + (of ? 'Of' : '')
 
             inputs = inputs || []
             receiver && !sequence && receiver.reverse().forEach(name => {
@@ -576,13 +575,13 @@ if (parser.results.length === 0) {
                     sequence
                         ? [
                             jsComments(comments),
-                            sourceNode(name), ': ', ' (function ', sourceNode(name), ' () {\n',
+                            sourceNode(name, methodName), ': ', ' (function ', sourceNode(name, methodName), ' () {\n',
                             jsStatement(sequence),
                             '})()'
                         ]
                         : [
                             jsComments(comments),
-                            sourceNode(name), ': ', '$method(async function ', sourceNode(name), '(', inputs.length ? ['$inputs', allInputsOptional(inputs.map(({entry}) => entry)) ? ' = {}' : ''] : '', ') {\n',
+                            sourceNode(name, methodName), ': ', '$method(async function ', sourceNode(name, methodName), '(', inputs.length ? ['$inputs', allInputsOptional(inputs.map(({entry}) => entry)) ? ' = {}' : ''] : '', ') {\n',
                             deconstructedInputs,
                             statements.map(jsStatement),
                             '})'
