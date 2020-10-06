@@ -634,7 +634,6 @@ if (parser.results.length === 0) {
                     traceLog(JSON.stringify(inputs))
 
                     const z = symbol('z')
-                    const y = symbol('y')
                     const n = symbol('n')
                     const items = symbol('items')
                     const itemsOffset = symbol('itemsOffset')
