@@ -633,8 +633,6 @@ if (parser.results.length === 0) {
 
                     traceLog(JSON.stringify(inputs))
 
-                    const z = symbol('z')
-                    const n = symbol('n')
                     const items = symbol('items')
                     const itemsOffset = symbol('itemsOffset')
                     const itemsExtentMethod = symbol('itemsExtentMethod')
@@ -670,7 +668,10 @@ if (parser.results.length === 0) {
                                         ]
                                       : '',
 
-                                  inputs.map(({ grouping, name, otherwise }, i) => [
+                                  inputs.map(({ grouping, name, otherwise }, i) => {
+                                    const z = symbol('z')
+                                    const n = symbol('n')
+                                    return [
                                       grouping
                                           ? [
                                                 i === 0
@@ -761,7 +762,7 @@ if (parser.results.length === 0) {
                                                     : '',
                                                 '\n'
                                             ]
-                                  ]),
+                                  ]}),
                                   '\n'
                               ]
                             : [
@@ -774,7 +775,10 @@ if (parser.results.length === 0) {
                                   name.type === 'quote' ? '.valueOf()' : '',
                                   '.dataOf() : $nullData\n',
 
-                                  inputs.map(({ grouping, name, as, otherwise }, i) => [
+                                  inputs.map(({ grouping, name, as, otherwise }, i) => {
+                                    const z = symbol('z')
+                                    const n = symbol('n')
+                                    return [
                                       grouping
                                           ? [
                                                 'const ',
@@ -822,7 +826,7 @@ if (parser.results.length === 0) {
                                                           "');\n"
                                                       ]
                                             ]
-                                  ]),
+                                  ]}),
                                   '\n'
                               ]
                     ])
