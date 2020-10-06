@@ -18,8 +18,10 @@ const traceLog = message => {
 }
 
 const symbols = {}
-const symbol = name => {
-    name = name.replace(/[^a-zA-Z0-9_]/g, '_')
+const symbol = (name, slug=true) => {
+    if (slug) {
+        name = name.replace(/[^a-zA-Z0-9_]/g, '_')
+    }
     symbols[name] = name in symbols ? symbols[name] + 1 : 0
     return name + '$' + (symbols[name] || '')
 }
