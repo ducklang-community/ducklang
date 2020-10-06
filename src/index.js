@@ -242,9 +242,7 @@ const jsFor = statement => {
     const sourceOffset = symbol('sourceOffset')
     const itemsExtent = symbol('extent')
     const n = symbol('n')
-    const z = symbol('z')
     const items = symbol(methodName + 'Items')
-    const item = symbol(methodName + 'Item')
 
     const memorizeThrough = itemizing && itemizing.value === 'through'
     const oneByOne = itemizing && itemizing.value === 'of'
