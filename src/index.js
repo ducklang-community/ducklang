@@ -105,7 +105,7 @@ const jsArgument = (b, i, inputs) => {
         if (b.type === 'locate') {
             return { type: 'dataDefinition', location: b.location }
         } else {
-            const type = simpleTypes[b.type] !== undefined ? simpleTypes[b.type] : 'expression'
+            const type = simpleTypes[b.type] !== undefined ? simpleTypes[b.type] : 'value'
             const previousOfType = inputs.slice(0, i).filter(x => simpleTypes[x.type] === type).length
             const name = type + (previousOfType > 0 ? previousOfType : '')
             return {
@@ -174,11 +174,6 @@ const operatorMethod = (operator, a, b) =>
             value: expressionOperators[operator]
         },
         receiver: a,
-        // Issue: arguments is expected to be a Data structure
-        // In this case we're passing any expression.
-        // A solution might be to take eg. 2 -> { number: 2 }
-        // where we just give a generic label number/text/list/data on the expression,
-        // or if its type is unknown then "value"
         arguments: [b]
     })
 
