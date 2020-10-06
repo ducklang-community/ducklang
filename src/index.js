@@ -18,7 +18,7 @@ const traceLog = message => {
 }
 
 const symbols = {}
-const symbol = (name, slug=true) => {
+const symbol = (name, slug = true) => {
     if (slug) {
         name = name.replace(/[^a-zA-Z0-9_]/g, '_')
     }
@@ -633,9 +633,9 @@ if (parser.results.length === 0) {
                     traceLog(JSON.stringify(inputs))
 
                     const items = symbol(name.value, false)
-                    const itemsOffset = symbol(name.value+'Offset', false)
-                    const itemsExtentMethod = symbol(name.value+'ExtentMethod', false)
-                    const itemsExtent = symbol(name.value+'Extent', false)
+                    const itemsOffset = symbol(name.value + 'Offset', false)
+                    const itemsExtentMethod = symbol(name.value + 'ExtentMethod', false)
+                    const itemsExtent = symbol(name.value + 'Extent', false)
 
                     deconstructedInputs.push([
                         type === 'list'
@@ -686,13 +686,7 @@ if (parser.results.length === 0) {
                                                                         String(i),
                                                                         '); return item !== undefined ? item.valueOf() : item'
                                                                     ]
-                                                                  : [
-                                                                        'return ',
-                                                                        itemsOffset,
-                                                                        '(n + ',
-                                                                        String(i),
-                                                                        ')'
-                                                                    ],
+                                                                  : ['return ', itemsOffset, '(n + ', String(i), ')'],
                                                               ' }\n',
                                                               sourceNode(name),
                                                               '.offsetOf',
