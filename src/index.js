@@ -250,7 +250,7 @@ const jsFor = statement => {
     const extentSymbol = symbol(methodName + 'Extent')
 
     const extentCalculation = extent
-        ? ['Math.min(', jsExpression(extent), ', ', statement.do ? [source, '.extentOf'] : [sourceExtent, '()'], ')']
+        ? ['Math.min(', jsExpression(extent), ', ', statement.do ? [source, '.extentOf()'] : [sourceExtent, '()'], ')']
         : ''
 
     const itemPrelude = (exit = 'return') => [
