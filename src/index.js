@@ -923,7 +923,7 @@ if (parser.results.length === 0) {
         '       }\n',
         '       items.offsetOf = items\n',
         "       items.kindOf = function () { return 'sequence' }\n",
-        '       items.extentOf = () => this.size()\n',
+        '       items.extentOf = () => this.size\n',
         '       items.itemsOf = $self\n',
         '       items.dataOf = () => this\n',
         '       return items\n',
