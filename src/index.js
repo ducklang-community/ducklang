@@ -56,7 +56,13 @@ const dataDefinition = definition => {
 }
 
 const jsData = definitions => {
-    return ['{ ', join(definitions.map(dataDefinition)), ' }']
+    return [
+        '(function () { const map = new $Map(); ',
+        // Issue: should also support assignExpandData here
+        definitions.filter(({ type }) => type === 'dataDefinition')
+        .map(({ location, expression }) => ['map.set(\'', jsLocation(location) ,'\', ', expression ? jsExpression(expression) : jsLocation(location) ,'); ']),
+        'return map })()'
+    ]
 }
 
 // Why: text is not considered simple for this purpose because of the formatting required

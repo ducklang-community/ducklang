@@ -350,3 +350,4 @@ test5 of self with input1: [...rest]:
 	result rest
 
 
+	result 'input1 is {input1}'
