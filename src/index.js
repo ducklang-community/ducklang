@@ -639,10 +639,10 @@ if (parser.results.length === 0) {
 
                     traceLog(JSON.stringify(inputs))
 
-                    const items = symbol('items')
-                    const itemsOffset = symbol('itemsOffset')
-                    const itemsExtentMethod = symbol('itemsExtentMethod')
-                    const itemsExtent = symbol('itemsExtent')
+                    const items = symbol(name.value, false)
+                    const itemsOffset = symbol(name.value+'Offset', false)
+                    const itemsExtentMethod = symbol(name.value+'ExtentMethod', false)
+                    const itemsExtent = symbol(name.value+'Extent', false)
 
                     deconstructedInputs.push([
                         type === 'list'
@@ -675,8 +675,7 @@ if (parser.results.length === 0) {
                                       : '',
 
                                   inputs.map(({ grouping, name, otherwise }, i) => {
-                                      const z = symbol('z')
-                                      const n = symbol('n')
+                                      const z = symbol(name.value, false)
                                       return [
                                           grouping
                                               ? [
@@ -785,8 +784,7 @@ if (parser.results.length === 0) {
                                   '.dataOf() : $nullData\n',
 
                                   inputs.map(({ grouping, name, as, otherwise }, i) => {
-                                      const z = symbol('z')
-                                      const n = symbol('n')
+                                      const z = symbol(name.value, false)
                                       return [
                                           grouping
                                               ? [
