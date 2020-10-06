@@ -59,7 +59,8 @@ const jsData = definitions => {
     return ['{ ', join(definitions.map(dataDefinition)), ' }']
 }
 
-const simple = expression => ['locate', 'digitNumber', 'decimalNumber', 'literal'].includes(expression.type)
+// Why: text is not considered simple for this purpose because of the formatting required
+const simple = expression => ['locate', 'digitNumber', 'decimalNumber', 'hexNumber', 'literal', 'quote'].includes(expression.type)
 
 const simpleTypes = {
     'literal': 'text',
