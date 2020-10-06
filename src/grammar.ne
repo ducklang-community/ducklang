@@ -14,6 +14,8 @@ const lexer = new IndentationLexer({
         	value: s => s.slice(1, -1),
         },
         text: {
+	        // Issue: This does not allow \{ to display a single bracket
+			// A workaround for now is to concatenate a literal to text as required
         	match: /'(?:\\['\\]|[^'\\])*'/,
         	lineBreaks: true,
         },

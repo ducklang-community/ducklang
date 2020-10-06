@@ -170,10 +170,9 @@ const jsExpression = expression => {
         case 'decimalNumber':
             return sourceNode(expression)
         case 'text':
-            // Issue: String formatting is not implemented yet. Could use JavaScript's own backtick formatting?
-            return [sourceNode(expression), '/* Issue: formatting not implemented */']
+            return sourceNode(expression, expression.value.replace(/'/g, '`').replace(/(?<!(\\\\)*\\){/g, '${'))
         case 'literal':
-            return sourceNode(expression)
+            return sourceNode(expression, expression.value.replace(/`/g, "'").replace())
         case 'list':
             return ['[', join(expression.list.map(jsExpression)), ']']
         case 'data':
