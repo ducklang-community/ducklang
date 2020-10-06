@@ -79,6 +79,7 @@ const simpleTypes = {
 
 
 const jsArgument = (b, i, inputs) => {
+    // Issue: should support assignExpandData too
     if (b.type === 'dataDefinition') {
         return b
     } else {
