@@ -46,7 +46,10 @@ const dataDefinition = definition => {
     traceLog(JSON.stringify(definition))
     switch (definition.type) {
         case 'dataDefinition':
-            return [jsLocation(definition.location), definition.expression ? [': ', jsExpression(definition.expression)] : '']
+            return [
+                jsLocation(definition.location),
+                definition.expression ? [': ', jsExpression(definition.expression)] : ''
+            ]
         case 'assignExpandData':
             return 'null /* Issue: assignExpandData not implemented */'
         default:
@@ -80,17 +83,17 @@ const jsData = definitions => {
 }
 
 // Why: text is not considered simple for this purpose because of the formatting required
-const simple = expression => ['locate', 'digitNumber', 'decimalNumber', 'hexNumber', 'literal', 'quote'].includes(expression.type)
+const simple = expression =>
+    ['locate', 'digitNumber', 'decimalNumber', 'hexNumber', 'literal', 'quote'].includes(expression.type)
 
 const simpleTypes = {
-    'literal': 'text',
-    'quote': 'text',
-    'text': 'text',
-    'digitNumber': 'number',
-    'decimalNumber': 'number',
-    'hexNumber': 'number'
+    literal: 'text',
+    quote: 'text',
+    text: 'text',
+    digitNumber: 'number',
+    decimalNumber: 'number',
+    hexNumber: 'number'
 }
-
 
 const jsArgument = (b, i, inputs) => {
     // Issue: should support assignExpandData too
@@ -100,10 +103,14 @@ const jsArgument = (b, i, inputs) => {
         if (b.type === 'locate') {
             return { type: 'dataDefinition', location: b.location }
         } else {
-            const type = simpleTypes[b.type] !== undefined ? simpleTypes[b.type] : 'expression' 
+            const type = simpleTypes[b.type] !== undefined ? simpleTypes[b.type] : 'expression'
             const previousOfType = inputs.slice(0, i).filter(x => simpleTypes[x.type] === type).length
             const name = type + (previousOfType > 0 ? previousOfType : '')
-            return { type: 'dataDefinition', location: { type: 'location', name: { type: 'identifier', line: b.line, col: b.col, value: name } }, expression: b }
+            return {
+                type: 'dataDefinition',
+                location: { type: 'location', name: { type: 'identifier', line: b.line, col: b.col, value: name } },
+                expression: b
+            }
         }
     }
 }
@@ -674,100 +681,109 @@ if (parser.results.length === 0) {
                                       : '',
 
                                   inputs.map(({ grouping, name, otherwise }, i) => {
-                                    const z = symbol('z')
-                                    const n = symbol('n')
-                                    return [
-                                      grouping
-                                          ? [
-                                                i === 0
-                                                    ? ['const ', sourceNode(name), ' = ', items, '\n']
-                                                    : [
-                                                          'function ',
-                                                          sourceNode(name),
-                                                          '(',
-                                                          n,
-                                                          ') { ',
-                                                          name.type === 'quote'
-                                                              ? [
-                                                                    'const item = ',
-                                                                    itemsOffset,
-                                                                    '(',
-                                                                    n,
-                                                                    ' + ',
-                                                                    String(i),
-                                                                    '); return item !== undefined ? item.valueOf() : item'
-                                                                ]
-                                                              : ['return ', itemsOffset, '(', n, ' + ', String(i), ')'],
-                                                          ' }\n',
-                                                          sourceNode(name),
-                                                          '.offsetOf',
-                                                          ' = ',
-                                                          sourceNode(name),
-                                                          '\n',
-                                                          sourceNode(name),
-                                                          '.kindOf',
-                                                          ' = ',
-                                                          items,
-                                                          '.kindOf',
-                                                          '\n',
-                                                          sourceNode(name),
-                                                          '.extentOf',
-                                                          ' = function () { return ',
-                                                          itemsExtentMethod,
-                                                          '() - ',
-                                                          String(i),
-                                                          ' }',
-                                                          '\n',
-                                                          sourceNode(name),
-                                                          '.itemsOf',
-                                                          ' = ',
-                                                          '$self\n',
-                                                          sourceNode(name),
-                                                          '.dataOf',
-                                                          ' =  function () {\n',
-                                                          '   const data = new $Map()\n',
-                                                          '   const extent = this.extentOf()\n',
-                                                          '   for (let n = 0; n < extent; ++n) {\n',
-                                                          '       const z = ',
-                                                          sourceNode(name),
-                                                          '(n)\n',
-                                                          '       if (z === undefined) { break }\n',
-                                                          '       data.set(n, z)\n',
-                                                          '   }\n',
-                                                          '   return data\n',
-                                                          '}\n',
-                                                      ]
-                                            ]
-                                          : [
-                                                'const ',
-                                                otherwise || name.type === 'quote' ? z : sourceNode(name),
-                                                ' = ',
-                                                itemsExtent,
-                                                ' > ',
-                                                String(i),
-                                                ' ? ',
-                                                itemsOffset,
-                                                '(',
-                                                String(i),
-                                                ') : undefined',
-                                                '\n',
-                                                otherwise || name.type === 'quote'
-                                                    ? [
-                                                          'const ',
-                                                          sourceNode(name),
-                                                          ' = ',
-                                                          z,
-                                                          ' !== undefined ? ',
-                                                          z,
-                                                          name.type === 'quote' ? '.valueOf()' : '',
-                                                          ' : ',
-                                                          otherwise ? jsExpression(otherwise) : z,
-                                                          '\n'
-                                                      ]
-                                                    : '',
-                                                '\n'
-                                            ]
-                                  ]}),
+                                      const z = symbol('z')
+                                      const n = symbol('n')
+                                      return [
+                                          grouping
+                                              ? [
+                                                    i === 0
+                                                        ? ['const ', sourceNode(name), ' = ', items, '\n']
+                                                        : [
+                                                              'function ',
+                                                              sourceNode(name),
+                                                              '(',
+                                                              n,
+                                                              ') { ',
+                                                              name.type === 'quote'
+                                                                  ? [
+                                                                        'const item = ',
+                                                                        itemsOffset,
+                                                                        '(',
+                                                                        n,
+                                                                        ' + ',
+                                                                        String(i),
+                                                                        '); return item !== undefined ? item.valueOf() : item'
+                                                                    ]
+                                                                  : [
+                                                                        'return ',
+                                                                        itemsOffset,
+                                                                        '(',
+                                                                        n,
+                                                                        ' + ',
+                                                                        String(i),
+                                                                        ')'
+                                                                    ],
+                                                              ' }\n',
+                                                              sourceNode(name),
+                                                              '.offsetOf',
+                                                              ' = ',
+                                                              sourceNode(name),
+                                                              '\n',
+                                                              sourceNode(name),
+                                                              '.kindOf',
+                                                              ' = ',
+                                                              items,
+                                                              '.kindOf',
+                                                              '\n',
+                                                              sourceNode(name),
+                                                              '.extentOf',
+                                                              ' = function () { return ',
+                                                              itemsExtentMethod,
+                                                              '() - ',
+                                                              String(i),
+                                                              ' }',
+                                                              '\n',
+                                                              sourceNode(name),
+                                                              '.itemsOf',
+                                                              ' = ',
+                                                              '$self\n',
+                                                              sourceNode(name),
+                                                              '.dataOf',
+                                                              ' =  function () {\n',
+                                                              '   const data = new $Map()\n',
+                                                              '   const extent = this.extentOf()\n',
+                                                              '   for (let n = 0; n < extent; ++n) {\n',
+                                                              '       const z = ',
+                                                              sourceNode(name),
+                                                              '(n)\n',
+                                                              '       if (z === undefined) { break }\n',
+                                                              '       data.set(n, z)\n',
+                                                              '   }\n',
+                                                              '   return data\n',
+                                                              '}\n'
+                                                          ]
+                                                ]
+                                              : [
+                                                    'const ',
+                                                    otherwise || name.type === 'quote' ? z : sourceNode(name),
+                                                    ' = ',
+                                                    itemsExtent,
+                                                    ' > ',
+                                                    String(i),
+                                                    ' ? ',
+                                                    itemsOffset,
+                                                    '(',
+                                                    String(i),
+                                                    ') : undefined',
+                                                    '\n',
+                                                    otherwise || name.type === 'quote'
+                                                        ? [
+                                                              'const ',
+                                                              sourceNode(name),
+                                                              ' = ',
+                                                              z,
+                                                              ' !== undefined ? ',
+                                                              z,
+                                                              name.type === 'quote' ? '.valueOf()' : '',
+                                                              ' : ',
+                                                              otherwise ? jsExpression(otherwise) : z,
+                                                              '\n'
+                                                          ]
+                                                        : '',
+                                                    '\n'
+                                                ]
+                                      ]
+                                  }),
                                   '\n'
                               ]
                             : [
@@ -781,57 +797,58 @@ if (parser.results.length === 0) {
                                   '.dataOf() : $nullData\n',
 
                                   inputs.map(({ grouping, name, as, otherwise }, i) => {
-                                    const z = symbol('z')
-                                    const n = symbol('n')
-                                    return [
-                                      grouping
-                                          ? [
-                                                'const ',
-                                                sourceNode(name),
-                                                ' = new $Map(',
-                                                items,
-                                                ')\n',
-                                                inputs
-                                                    .slice(0, i)
-                                                    .map(({ name: arg }) => [
-                                                        sourceNode(name),
-                                                        ".delete('",
-                                                        sourceNode(arg),
-                                                        "')\n"
-                                                    ])
-                                            ]
-                                          : [
-                                                otherwise || name.type === 'quote'
-                                                    ? [
-                                                          'const ',
-                                                          z,
-                                                          ' = ',
-                                                          items,
-                                                          ".get('",
-                                                          sourceNode(name),
-                                                          "')\n",
-                                                          'const ',
-                                                          sourceNode(as ? as : name),
-                                                          ' = ',
-                                                          z,
-                                                          ' !== undefined ? ',
-                                                          z,
-                                                          name.type === 'quote' ? '.valueOf()' : '',
-                                                          ' : ',
-                                                          otherwise ? jsExpression(otherwise) : z,
-                                                          '\n'
-                                                      ]
-                                                    : [
-                                                          'const ',
-                                                          sourceNode(as ? as : name),
-                                                          ' = ',
-                                                          items,
-                                                          ".get('",
-                                                          sourceNode(name),
-                                                          "');\n"
-                                                      ]
-                                            ]
-                                  ]}),
+                                      const z = symbol('z')
+                                      const n = symbol('n')
+                                      return [
+                                          grouping
+                                              ? [
+                                                    'const ',
+                                                    sourceNode(name),
+                                                    ' = new $Map(',
+                                                    items,
+                                                    ')\n',
+                                                    inputs
+                                                        .slice(0, i)
+                                                        .map(({ name: arg }) => [
+                                                            sourceNode(name),
+                                                            ".delete('",
+                                                            sourceNode(arg),
+                                                            "')\n"
+                                                        ])
+                                                ]
+                                              : [
+                                                    otherwise || name.type === 'quote'
+                                                        ? [
+                                                              'const ',
+                                                              z,
+                                                              ' = ',
+                                                              items,
+                                                              ".get('",
+                                                              sourceNode(name),
+                                                              "')\n",
+                                                              'const ',
+                                                              sourceNode(as ? as : name),
+                                                              ' = ',
+                                                              z,
+                                                              ' !== undefined ? ',
+                                                              z,
+                                                              name.type === 'quote' ? '.valueOf()' : '',
+                                                              ' : ',
+                                                              otherwise ? jsExpression(otherwise) : z,
+                                                              '\n'
+                                                          ]
+                                                        : [
+                                                              'const ',
+                                                              sourceNode(as ? as : name),
+                                                              ' = ',
+                                                              items,
+                                                              ".get('",
+                                                              sourceNode(name),
+                                                              "');\n"
+                                                          ]
+                                                ]
+                                      ]
+                                  }),
                                   '\n'
                               ]
                     ])
