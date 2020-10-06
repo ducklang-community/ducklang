@@ -71,12 +71,21 @@ const simpleTypes = {
     'hexNumber': 'number'
 }
 
-const jsArgument = b =>
-    b.type === 'dataDefinition'
-        ? b
-        : (b.type === 'locate'
-            ? { type: 'dataDefinition', location: b.location }
-            : { type: 'dataDefinition', location: { type: 'location', name: { type: 'identifier', line: b.line, col: b.col, value: simpleTypes[b.type] !== undefined ? simpleTypes[b.type] : 'expression' } }, expression: b })
+
+const jsArgument = (b, i, inputs) => {
+    if (b.type === 'dataDefinition') {
+        return b
+    } else {
+        if (b.type === 'locate') {
+            return { type: 'dataDefinition', location: b.location }
+        } else {
+            const type = simpleTypes[b.type] !== undefined ? simpleTypes[b.type] : 'expression' 
+            const previousOfType = inputs.slice(0, i).filter(x => simpleTypes[x.type] === type).length
+            const name = type + (previousOfType > 0 ? previousOfType : '')
+            return { type: 'dataDefinition', location: { type: 'location', name: { type: 'identifier', line: b.line, col: b.col, value: name } }, expression: b }
+        }
+    }
+}
 
 const jsMethodExecution = expression => {
     const { method, of, receiver, arguments, otherwise } = expression
