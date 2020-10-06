@@ -227,6 +227,10 @@ const jsFor = statement => {
 
     const extentSymbol = symbol(methodName + 'Extent')
 
+    const extentCalculation = extent
+        ? ['Math.min(', jsExpression(extent), ', ', statement.do ? [source, '.extentOf'] : [sourceExtent, '()'], ')']
+        : ''
+
     const itemPrelude = (exit = 'return') => [
         '   const ',
         sourceNode(name),
@@ -250,34 +254,23 @@ const jsFor = statement => {
     const i = symbol('i')
 
     const codePrelude = [
-        !simple(expression)
-        ? [
-            'const ',
-            source,
-            ' = ',
-            jsExpression(expression),
-            '\n'
-        ]
-        : '',
+        !simple(expression) ? ['const ', source, ' = ', jsExpression(expression), '\n'] : '',
         'const ',
         sourceOffset,
         ' = ',
         source,
         '.offsetOf',
         '\n',
-        'const ',
-        sourceExtent,
-        ' = ',
-        source,
-        '.extentOf',
-        '\n'
+        !statement.do ? ['const ', sourceExtent, ' = ', source, '.extentOf', '\n'] : ''
     ]
 
     const loopCode = body => [
         'const ',
         itemsExtent,
         ' = ',
-        extent ? ['Math.min(', jsExpression(extent), ', ', sourceExtent, '()', ')'] : [sourceExtent, '()'],
+        statement.do
+            ? [extent ? extentCalculation : [source, '.extentOf()']]
+            : [extent ? extentSymbol : sourceExtent, '()'],
         '\n',
         'for (let ',
         n,
@@ -371,20 +364,19 @@ const jsFor = statement => {
                         oneByOne ? "'one-by-one'" : [source, ".kindOf() === 'one-by-one' ? 'one-by-one' : 'sequence'"],
                         ' }\n'
                     ],
-              items,
-              '.extentOf',
-              ' = ',
               extent
                   ? [
                         'function ',
                         extentSymbol,
-                        '() { return Math.min(',
-                        jsExpression(extent),
-                        ', ',
-                        sourceExtent,
-                        '()) }'
+                        '() { return ',
+                        extentCalculation,
+                        ' }\n',
+                        items,
+                        '.extentOf',
+                        ' = ',
+                        extentSymbol
                     ]
-                  : [sourceExtent],
+                  : [items, '.extentOf', ' = ', sourceExtent],
               '\n',
               items,
               '.itemsOf',
