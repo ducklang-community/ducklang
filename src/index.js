@@ -26,9 +26,9 @@ Second definition: name "${name.value}" at line ${name.line}, column ${name.col}
     }
 }
 
-const join = (array, space = ' ') =>
+const join = (array, separator = ', ') =>
     array
-        .map(item => [',' + space, item])
+        .map(item => [separator, item])
         .flat()
         .slice(1)
 
@@ -983,18 +983,20 @@ if (parser.results.length === 0) {
                         sequence
                             ? [
                                   jsComments(comments),
+                                  ".set('",
                                   sourceNode(name, methodName),
-                                  ': ',
+                                  "', ",
                                   ' (function ',
                                   sourceNode(name, methodName),
                                   ' () {\n',
                                   jsStatement(sequence),
-                                  '})()'
+                                  '})())'
                               ]
                             : [
                                   jsComments(comments),
+                                  ".set('",
                                   sourceNode(name, methodName),
-                                  ': ',
+                                  "', ",
                                   '$method(',
                                   containsAwaited(statements) ? 'async ' : '',
                                   'function ',
@@ -1004,7 +1006,7 @@ if (parser.results.length === 0) {
                                   ') {\n',
                                   deconstructedInputs,
                                   statements.map(jsStatement),
-                                  '})'
+                                  '}))'
                               ]
                     )
                 ]
@@ -1016,13 +1018,10 @@ if (parser.results.length === 0) {
 
         const namespaceSymbol = symbol(namespaceDeclaration.value)
 
-        // Issue: Should use Map for the Data type, not Object
-
         return sourceNode(namespaceDeclaration, [
-            '\n\n',
-            "['",
+            ".set('",
             sourceNode(namespaceDeclaration),
-            "']: ",
+            "', ",
             dependencies
                 ? [
                       'function ',
@@ -1030,13 +1029,12 @@ if (parser.results.length === 0) {
                       '(',
                       dependencies,
                       ') {\n',
-                      '   return {\n\n',
-                      join(functions, ''),
+                      '   return new $Map()\n\n',
+                      join(functions, '\n'),
                       '\n\n',
-                      '   }\n',
-                      '}'
+                      '\n\n})'
                   ]
-                : ['{\n\n', join(functions, '\n'), '\n\n', '}']
+                : ['new $Map()\n\n', join(functions, '\n'), '\n\n\n\n)'],
         ])
     })
 
@@ -1134,10 +1132,9 @@ if (parser.results.length === 0) {
         '\n',
         '\n',
         '\n',
-        'module.exports = {\n',
-        join(compiledModules, '\n\n'),
-        '}\n',
-        '\n'
+        'module.exports = new $Map()\n',
+        '\n\n\n',
+        join(compiledModules, '\n'),
     ]).toStringWithSourceMap()
 
     fs.mkdirSync(`dist/${fileName.split('/').slice(0, -1).join('/')}`, { recursive: true })
