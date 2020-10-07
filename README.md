@@ -107,8 +107,8 @@ Ducklang takes a *keep it as simple as needed* approach to community organisatio
 At the moment that means the language originator acting as a de-facto
 product manager, shepherding the language between differing concepts and goals.
 
-The project code is young, and as such any code is welcome, however unprofessional
-(though good quality code is of course welcome too :).
+The project code is young, and as such any code is welcome, however scrappy
+(good quality code is welcome too :)
 
 ## Code of conduct
 
