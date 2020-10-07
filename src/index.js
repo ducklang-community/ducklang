@@ -98,27 +98,20 @@ const dataDefinition = definition => {
     }
 }
 
-const dataSymbolSingleton = symbol('data')
-
 const jsData = definitions => {
     return [
-        '(function () { const ',
-        dataSymbolSingleton,
-        ' = new $Map(); ',
+        'new $Map()',
         // Issue: should also support assignExpandData here
+        // Issue: need to implement location:locator reference in Data definition
         definitions
             .filter(({ type }) => type === 'dataDefinition')
             .map(({ location, expression }) => [
-                dataSymbolSingleton,
                 ".set('",
                 jsLocation(location),
                 "', ",
                 expression ? jsExpression(expression) : jsLocation(location),
-                '); '
-            ]),
-        'return ',
-        dataSymbolSingleton,
-        ' })()'
+                ')'
+            ])
     ]
 }
 
