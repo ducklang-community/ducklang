@@ -223,7 +223,8 @@ use category,
     harness,
     blaster,
     turbo,
-    offset
+    offset,
+    square
 
 
 launchBoosters of self with thrust as level,
@@ -243,7 +244,7 @@ launchBoosters of self with thrust as level,
 		engage turbo with thruster: x
 
 	result boost blaster with { ...{ stage }: variable,
-	                            level, trajectory, offset, color } otherwise default 'done'
+	                            level, trajectory, offset } otherwise default 'done'
 
 
 engageBoosters of self with thrust,
@@ -275,6 +276,10 @@ engageBoosters of self with thrust,
 
 
 
+use infinity,
+    square
+
+
 testStructuring of self with options: { name, color, speed },
                              ...input: ["mapping"]:
 
@@ -291,6 +296,7 @@ testStructuring of self with options: { name, color, speed },
 
 	bob:foo:...["a", "innerList": ["b", "c", ..."rest"]] = l3
 
+	numbers = l1
 	variable:resultFromEach... of numbers with square
 
 	variable:...{ foo, bar } = variable:cache
@@ -298,13 +304,6 @@ testStructuring of self with options: { name, color, speed },
 	foo = 1
 	bar = 2
 	variable:...{ foo, bar }
-
-	for each x in turbo, do:
-		variable:stage =+ 1
-		engage turbo with thruster: x
-
-	result boost blaster with { ...{ stage }: variable,
-	                            thrust, angle, offset, color } otherwise default 'done'
 
 
 test1 of self with a: { b: { c: ["d" (otherwise default 2), "e": { f (otherwise default 1) }] } }:
@@ -318,7 +317,9 @@ test2 of self with a: [..."bob"]:
 test3 of self with ...inputs:
 	...[entry1, ...entries] = inputs
 	...["value1", ..."values"] = inputs
-	result values
+	Issue: not implemented yet: result entry1
+	Issue: not implemented yet: result values
+	result inputs
 
 
 firstFive self:
@@ -326,14 +327,39 @@ firstFive self:
 		collect number
 
 
+
+::2020-09::firstFiveDoubled::
+
+
+
+use firstFive
+
+
 firstFiveDoubled self:
 	for each number in firstFive,
 		collect number * 2
 
 
+
+::2020-09::firstTwoDoubled::
+
+
+
+use firstFiveDoubled
+
+
 firstTwoDoubled self:
 	for each number in firstFiveDoubled, to extent of 2,
 		collect number
+
+
+
+::2020-09::printFirstDoubled::
+
+
+
+use category,
+    firstTwoDoubled
 
 
 printFirstDoubled self:
@@ -342,7 +368,8 @@ printFirstDoubled self:
 
 
 test4 of self with input1: [abc, "def", ..."rest"],
-                   input2: { xyz }:
+                   input2: { xyz },
+                   ...values:
 	result values
 
 
