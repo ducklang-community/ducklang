@@ -298,7 +298,6 @@ const jsFor = statement => {
     const memorizeThrough = itemizing && itemizing.value === 'through'
     const oneByOne = itemizing && itemizing.value === 'of'
 
-
     const extentCalculation = extent
         ? ['Math.min(', jsExpression(extent), ', ', statement.do ? [source, '.extentOf()'] : [sourceExtent, '()'], ')']
         : ''
@@ -484,9 +483,7 @@ const jsCase = ({ comments, definition: { is, has, statements } }, source) => {
     return [
         jsComments(comments),
         '   case ',
-        has
-            ? [source, '.has(', jsLocator(has), ')']
-            : ['(', jsExpression(is), ').valueOf()'],
+        has ? [source, '.has(', jsLocator(has), ')'] : ['(', jsExpression(is), ').valueOf()'],
         ':\n',
         has && has.type === 'identifier'
             ? ['const ', sourceNode(has), ' = ', source, '.get(', jsLocator(has), ')\n']
@@ -499,13 +496,11 @@ const jsCase = ({ comments, definition: { is, has, statements } }, source) => {
 const jsWhen = statement => {
     const { expression, cases, otherwise } = statement
     const z = symbol('z')
-    const has = cases.some(({ definition: { has }}) => has)
+    const has = cases.some(({ definition: { has } }) => has)
     return [
         // Why: valueOf is used to allow objects to implement different comparison semantics than strict reference check
         // For example objects may decide to implement this using JSON.stringify, if field ordering is required
-        has
-            ? ['const ', z, ' = (', jsExpression(expression), ').valueOf()\n']
-            : '',
+        has ? ['const ', z, ' = (', jsExpression(expression), ').valueOf()\n'] : '',
         'switch (',
         has ? z : ['(', jsExpression(expression), ').valueOf()'],
         ') {\n',
