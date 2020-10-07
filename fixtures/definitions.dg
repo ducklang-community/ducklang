@@ -377,6 +377,7 @@ test5 of self with input1: [...rest]:
 	result rest
 
 
+stringtest of self with input1:
 	result 'input1 is {input1}'
 
 
