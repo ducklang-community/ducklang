@@ -1104,7 +1104,7 @@ if (parser.results.length === 0) {
         '   }\n',
         '}\n',
         '\n',
-        'function $methodOffsetOf(fn) { return function (self) { return fn({ self }) } }\n',
+        "function $methodOffsetOf(fn) { return function offsetOf(self) { return fn(new $Map().set('self', self)) } }\n",
         '\n',
         'function $method(fn) {\n',
         '   fn.offsetOf = $methodOffsetOf(fn)\n',
