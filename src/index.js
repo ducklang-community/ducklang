@@ -4,6 +4,27 @@ const { SourceNode } = require('source-map')
 const grammar = require('../dist/grammar.js')
 
 let methodName
+let scopes = []
+
+const scopesContains = name => scopes.flat(Infinity).find(({ value }) => value === name.value)
+
+const pushScope = name => {
+    if (typeof name === 'array') {
+        name.forEach(identifier => pushScope(identifier))
+    } else {
+        const predefined = scopesContains(name)
+        if (predefined) {
+            throw new Error(`
+There are two definitions of same name, but a name can be defined only once.
+
+First definition:  name "${predefined.value}" at line ${predefined.line}, column ${predefined.col}
+Second definition: name "${name.value}" at line ${name.line}, column ${name.col}
+`)
+        }
+        scope = scopes[scopes.length - 1]
+        scope.push(name)
+    }
+}
 
 const join = (array, space = ' ') =>
     array
@@ -335,7 +356,9 @@ const jsFor = statement => {
 
     const isAsync = awaited || containsAwaited(statements)
 
-    return statement.do
+    scopes.push([name])
+
+    const code = statement.do
         ? [codePrelude, loopCode([itemPrelude('break'), statements.map(jsStatement)])]
         : [
               memorizeThrough ? ['const ', memory, ' = []\n'] : '',
@@ -445,9 +468,16 @@ const jsFor = statement => {
               items,
               '\n'
           ]
+
+    scopes.pop()
+
+    return code
 }
 
 const jsCase = ({ comments, definition: { is, has, statements } }, source) => {
+    if (has && has.type === 'identifier') {
+        pushScope(has)
+    }
     return [
         jsComments(comments),
         '   case ',
@@ -546,7 +576,9 @@ const jsAssignLocation = (location, expression) => {
         ]
     }
 
-    return ['const ', sourceNode(location.name), ' = ', jsExpression(expression), '\n']
+    const code = ['const ', sourceNode(location.name), ' = ', jsExpression(expression), '\n']
+    pushScope(location.name)
+    return code
 }
 
 const jsStatement = statement => {
@@ -577,13 +609,15 @@ const jsStatement = statement => {
             return ['const ', symbol('assignExpandList'), ' = null /* Issue: assignExpandList implemented */\n']
 
         case 'assignMethodResult':
-            return [
+            code = [
                 'const ',
                 sourceNode(statement.methodNaming.method),
                 ' = ',
                 jsExpression(statement.methodNaming),
                 '\n'
             ]
+            pushScope(statement.methodNaming.method)
+            return code
         case 'methodExecution':
             return [jsMethodExecution(statement), '\n']
         case 'for':
@@ -678,11 +712,16 @@ if (parser.results.length === 0) {
     const compiledModules = modules.map(({ namespaceDeclaration, using, methods }) => {
         const dependencies = (using && jsInputs(using.definition)) || ''
 
+        // Issue: should all method names in this namespace be added to scope?
+        // They are not actually in scope, but would prefer not to allow variables with the same name?
+        scopes = [...(using ? using.definition.map(({ entry: { name, as } }) => (as ? as : name)) : [])]
+
         const functions = methods.map(
             ({ comments, definition: { name, of, receiver, inputs, statements, sequence } }) => {
                 traceLog('\n' + JSON.stringify(name))
 
                 methodName = name.value + (of ? 'Of' : '')
+                scopes.push([])
 
                 inputs = inputs || []
                 receiver &&
@@ -716,10 +755,13 @@ if (parser.results.length === 0) {
                       ]
                     : []
 
+                const scopeVariables = []
                 const deconstructedInputs = []
 
                 while (deconstruct.length) {
                     const { name, inputs, type } = deconstruct.shift()
+
+                    scopeVariables.push(inputs.map(({ name, as }) => (as ? as : name)))
 
                     traceLog(JSON.stringify(inputs))
 
@@ -923,7 +965,9 @@ if (parser.results.length === 0) {
                     })
                 }
 
-                return [
+                scopeVariables.forEach(variables => pushScope(variables))
+
+                const code = [
                     '\n\n',
                     sourceNode(
                         name,
@@ -955,6 +999,9 @@ if (parser.results.length === 0) {
                               ]
                     )
                 ]
+
+                scopes.pop()
+                return code
             }
         )
 
