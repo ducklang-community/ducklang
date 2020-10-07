@@ -67,14 +67,17 @@ const jsLocator = locator => {
     return sourceNode(locator)
 }
 
-const jsLocation = location => {
-    // Issue: if location.name itself is not previously existing in scope,
-    //        then should just return undefined.
-    //        To do this will need to pass a scope along in calls.
+const jsLocation = (location, definition = false) => {
+    const { name } = location
+    if (!definition && name.value !== 'this' && !scopesContains(name)) {
+        throw new Error(
+            `Attempt to use name "${name.value}" in line ${name.line}, column ${name.col}, but it is undefined`
+        )
+    }
 
     if (location.locators && location.locators.length > 1) {
         const allButLast = [
-            { symbol: sourceNode(location.name) },
+            { symbol: sourceNode(name) },
             ...location.locators.slice(0, -1).map(locator => ({ locator, symbol: symbol(locator.value) }))
         ]
         return [
@@ -100,7 +103,7 @@ const jsLocation = location => {
             ') })()'
         ]
     }
-    return [sourceNode(location.name), location.locators ? ['.get(', jsLocator(location.locators[0]), ')'] : '']
+    return [sourceNode(name), location.locators ? ['.get(', jsLocator(location.locators[0]), ')'] : '']
 }
 
 const dataDefinition = definition => {
@@ -128,7 +131,7 @@ const jsData = definitions => {
             .filter(({ type }) => type === 'dataDefinition')
             .map(({ location, expression }) => [
                 ".set('",
-                jsLocation(location),
+                jsLocation(location, true),
                 "', ",
                 expression ? jsExpression(expression) : jsLocation(location),
                 ')'
