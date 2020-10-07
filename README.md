@@ -85,7 +85,7 @@ yarn build && yarn start -f fixtures/definitions.dg && cat dist/fixtures/definit
 * **Readability**: (over concision) - the code which we're most proud about tends to be code which reads like prose
 * **Promises**: Asynchronicity using awaited promises as in JavaScript
 * **Smart tabs**: Indentation-aware syntax like Python
-* **Named arguments**: methods calls pass arguments by name for readability and ease of code evolution
+* **Named inputs**: methods calls pass inputs by name for readability and ease of code evolution. Un-named inputs and positional-matching can also be used.
 * **Extensibility**: most operators expand into method calls so you aren't tied by what comes shipped with the language
 * **Separation of Concerns**: all code is stand-alone and can be "mixed-in" with existing types, allowing for smaller modules which do one thing and do it well
 * **Uniformity**: emphasis on the object oriented paradigm and uniform whitespace makes the community's code much less irregular
