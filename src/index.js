@@ -276,11 +276,11 @@ const jsFor = statement => {
     const itemsExtent = symbol('extent')
     const n = symbol('n')
     const items = symbol(methodName + 'Items')
+    const extentSymbol = symbol(methodName + 'Extent')
 
     const memorizeThrough = itemizing && itemizing.value === 'through'
     const oneByOne = itemizing && itemizing.value === 'of'
 
-    const extentSymbol = symbol(methodName + 'Extent')
 
     const extentCalculation = extent
         ? ['Math.min(', jsExpression(extent), ', ', statement.do ? [source, '.extentOf()'] : [sourceExtent, '()'], ')']
