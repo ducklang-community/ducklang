@@ -39,10 +39,48 @@ const jsComments = comments => (comments ? comments.map(comment => jsComment(com
 
 const jsInputs = items => join(items.map(({ entry: { name } }) => sourceNode(name)))
 
-const jsLocation = location => [
-    sourceNode(location.name),
-    location.locators ? ' /* Issue: locators not implemented */ ' : ''
-]
+const jsLocator = locator => {
+    if (locator.type === 'identifier') {
+        return sourceNode(locator, "'" + locator.value + "'")
+    }
+    return sourceNode(locator)
+}
+
+const jsLocation = location => {
+    // Issue: if location.name itself is not previously existing in scope,
+    //        then should just return undefined.
+    //        To do this will need to pass a scope along in calls.
+
+    if (location.locators && location.locators.length > 1) {
+        const allButLast = [
+            { symbol: sourceNode(location.name) },
+            ...location.locators.slice(0, -1).map(locator => ({ locator, symbol: symbol(locator.value) }))
+        ]
+        return [
+            '(function () { ',
+            allButLast
+                .slice(1)
+                .map(({ locator, symbol }, i) => [
+                    'const ',
+                    symbol,
+                    ' = ',
+                    allButLast[i].symbol,
+                    '.get(',
+                    jsLocator(locator),
+                    '); ',
+                    'if (',
+                    symbol,
+                    ' === undefined) { return } '
+                ]),
+            'return ',
+            allButLast.slice(-1)[0].symbol,
+            '.get(',
+            jsLocator(location.locators.slice(-1)[0]),
+            ') })()'
+        ]
+    }
+    return [sourceNode(location.name), location.locators ? ['.get(', jsLocator(location.locators[0]), ')'] : '']
+}
 
 const dataDefinition = definition => {
     traceLog(JSON.stringify(definition))
@@ -458,6 +496,56 @@ const jsAssignExpandData = statement => {
     }
 }
 
+const jsAssignLocation = (location, expression) => {
+    // Issue: if location.name itself is not previously existing in scope,
+    //        then should first create a fresh $Map for it.
+    //        To do this will need to pass a scope along in calls.
+
+    if (location.locators) {
+        const allButLast = [
+            { symbol: sourceNode(location.name) },
+            ...location.locators.slice(0, -1).map(locator => ({ locator, symbol: symbol(locator.value) }))
+        ]
+
+        return [
+            allButLast.slice(1).map(({ locator, symbol: nameSymbol }, i) => {
+                const z = symbol(locator.value, false)
+                return [
+                    'const ',
+                    z,
+                    ' = ',
+                    allButLast[i].symbol,
+                    '.get(',
+                    jsLocator(locator),
+                    ');\n',
+                    'const ',
+                    nameSymbol,
+                    ' = ',
+                    z,
+                    ' === undefined || ',
+                    z,
+                    '.set === undefined ? ',
+                    allButLast[i].symbol,
+                    '.set(',
+                    jsLocator(locator),
+                    ', new $Map()) : ',
+                    z,
+                    ';\n'
+                ]
+            }),
+
+            allButLast.slice(-1)[0].symbol,
+            '.set(',
+            jsLocator(location.locators.slice(-1)[0]),
+            ', ',
+            jsExpression(expression),
+            ')\n'
+        ]
+    }
+
+    return ['const ', sourceNode(location.name), ' = ', jsExpression(expression), '\n']
+}
+
 const jsStatement = statement => {
     traceLog(JSON.stringify(statement))
     switch (statement.type) {
@@ -478,7 +566,7 @@ const jsStatement = statement => {
                       receiver: statement.location,
                       arguments: [statement.expression]
                   })
-                : ['const ', jsLocation(statement.location), ' = ', jsExpression(statement.expression), '\n']
+                : jsAssignLocation(statement.location, statement.expression)
         // Issue: these ones are a little trickier. Can use the parameter input matching code as a starting point
         case 'assignExpandData':
             return ['const ', symbol('assignExpandData'), ' = null /* Issue: assignExpandData not implemented */\n']
