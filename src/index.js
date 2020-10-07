@@ -287,7 +287,7 @@ const containsAwaited = statements => {
 
 const jsFor = statement => {
     const { awaited, name, itemizing, expression, extent, statements } = statement
-    const source = simple(expression) ? jsExpression(expression) : symbol('source')
+    const source = symbol('source')
     const sourceExtent = symbol('sourceExtent')
     const sourceOffset = symbol('sourceOffset')
     const itemsExtent = symbol('extent')
@@ -325,7 +325,7 @@ const jsFor = statement => {
     const i = symbol('i')
 
     const codePrelude = [
-        !simple(expression) ? ['const ', source, ' = ', jsExpression(expression), '\n'] : '',
+        'const ', source, ' = (', jsExpression(expression), ').itemsOf()\n',
         'const ',
         sourceOffset,
         ' = ',
