@@ -533,11 +533,22 @@ const jsAssignExpandData = statement => {
 }
 
 const jsAssignLocation = (location, expression) => {
-    // Issue: if location.name itself is not previously existing in scope,
-    //        then should first create a fresh $Map for it.
-    //        To do this will need to pass a scope along in calls.
-
     if (location.locators) {
+        if (!scopesContains(location.name)) {
+            const code = [
+                'const ',
+                sourceNode(location.name),
+                ' = ',
+                location.locators.reduceRight(
+                    (acc, cur) => ['new $Map().set(', jsLocator(cur), ', ', acc, ')'],
+                    jsExpression(expression)
+                ),
+                '\n'
+            ]
+            pushScope(location.name)
+            return code
+        }
+
         const allButLast = [
             { symbol: sourceNode(location.name) },
             ...location.locators.slice(0, -1).map(locator => ({ locator, symbol: symbol(locator.value) }))
