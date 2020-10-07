@@ -124,7 +124,7 @@ const dataDefinition = definition => {
 
 const jsData = definitions => {
     return [
-        'new $Map()',
+        'new $Data()',
         // Issue: should also support assignExpandData here
         // Issue: need to implement location:locator reference in Data definition
         definitions
@@ -176,7 +176,7 @@ const jsMethodExecution = expression => {
     const { method, of, receiver, arguments, otherwise } = expression
     const methodSymbol = sourceNode(method, method.value + (of ? 'Of' : ''))
     const receiverValue = sourceNode(receiver, symbol('receiver'))
-    // Issue: arguments should be passed via a $Map instance.
+    // Issue: arguments should be passed via a $Data instance.
     // This may require the method execution be wrapped within an anonymous function evaluation
     const methodCall = ['.', methodSymbol, '(', arguments ? jsData(arguments.map(jsArgument)) : '', ')']
     return otherwise
@@ -452,7 +452,7 @@ const jsFor = statement => {
               items,
               '.dataOf',
               ' = function () {\n',
-              '   const data = new $Map()\n',
+              '   const data = new $Data()\n',
               loopCode([
                   '       const z = ',
                   items,
@@ -535,7 +535,7 @@ const jsAssignLocation = (location, expression) => {
                 sourceNode(location.name),
                 ' = ',
                 location.locators.reduceRight(
-                    (acc, cur) => ['new $Map().set(', jsLocator(cur), ', ', acc, ')'],
+                    (acc, cur) => ['new $Data().set(', jsLocator(cur), ', ', acc, ')'],
                     jsExpression(expression)
                 ),
                 '\n'
@@ -570,7 +570,7 @@ const jsAssignLocation = (location, expression) => {
                     allButLast[i].symbol,
                     '.set(',
                     jsLocator(locator),
-                    ', new $Map()) : ',
+                    ', new $Data()) : ',
                     z,
                     ';\n'
                 ]
@@ -856,7 +856,7 @@ if (parser.results.length === 0) {
                                                               sourceNode(name),
                                                               '.dataOf',
                                                               ' =  function () {\n',
-                                                              '   const data = new $Map()\n',
+                                                              '   const data = new $Data()\n',
                                                               '   const extent = this.extentOf()\n',
                                                               '   for (let n = 0; n < extent; ++n) {\n',
                                                               '       const z = ',
@@ -919,7 +919,7 @@ if (parser.results.length === 0) {
                                               ? [
                                                     'const ',
                                                     sourceNode(name),
-                                                    ' = new $Map(',
+                                                    ' = new $Data(',
                                                     items,
                                                     ')\n',
                                                     inputs
@@ -1029,12 +1029,12 @@ if (parser.results.length === 0) {
                       '(',
                       dependencies,
                       ') {\n',
-                      '   return new $Map()\n\n',
+                      '   return new $Data()\n\n',
                       join(functions, '\n'),
                       '\n\n',
                       '\n\n})'
                   ]
-                : ['new $Map()\n\n', join(functions, '\n'), '\n\n\n\n)'],
+                : ['new $Data()\n\n', join(functions, '\n'), '\n\n\n\n)'],
         ])
     })
 
@@ -1047,7 +1047,7 @@ if (parser.results.length === 0) {
         'function $empty() { return 0 }\n',
         'function $infinity() { return Infinity }\n',
         '\n',
-        'class $Map extends Map {\n',
+        'class $Data extends Map {\n',
         '   itemsOf() {\n',
         '       const saved = []\n',
         '       const entries = this.entries()\n',
@@ -1085,7 +1085,7 @@ if (parser.results.length === 0) {
         '   }\n',
         '}\n',
         '\n',
-        'class $Entry extends $Map {\n',
+        'class $Entry extends $Data {\n',
         '   valueOf() { return this.values().next().value }\n',
         '   itemsOf() {\n',
         '       const items = (n) => {\n',
@@ -1102,7 +1102,7 @@ if (parser.results.length === 0) {
         '   }\n',
         '}\n',
         '\n',
-        "function $methodOffsetOf(fn) { return function offsetOf(self) { return fn(new $Map().set('self', self)) } }\n",
+        "function $methodOffsetOf(fn) { return function offsetOf(self) { return fn(new $Data().set('self', self)) } }\n",
         '\n',
         'function $method(fn) {\n',
         '   fn.offsetOf = $methodOffsetOf(fn)\n',
@@ -1128,11 +1128,11 @@ if (parser.results.length === 0) {
         '\n',
         'const $nullItemsOf = function () { return $nullItemization }\n',
         '\n',
-        'const $nullData = (function () { const data = new $Map(); data.itemsOf = $nullItemsOf; return data })()\n',
+        'const $nullData = (function () { const data = new $Data(); data.itemsOf = $nullItemsOf; return data })()\n',
         '\n',
         '\n',
         '\n',
-        'module.exports = new $Map()\n',
+        'module.exports = new $Data()\n',
         '\n\n\n',
         join(compiledModules, '\n'),
     ]).toStringWithSourceMap()
