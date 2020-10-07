@@ -447,12 +447,17 @@ const jsFor = statement => {
           ]
 }
 
-const jsCase = ({ comments, definition: { expression, statements } }) => {
+const jsCase = ({ comments, definition: { is, has, statements } }, source) => {
     return [
         jsComments(comments),
-        '   case (',
-        jsExpression(expression),
-        ').valueOf():\n',
+        '   case ',
+        has
+            ? [source, '.has(', jsLocator(has), ')']
+            : ['(', jsExpression(is), ').valueOf()'],
+        ':\n',
+        has && has.type === 'identifier'
+            ? ['const ', sourceNode(has), ' = ', source, '.get(', jsLocator(has), ')\n']
+            : '',
         statements.map(jsStatement),
         '       break\n'
     ]
@@ -460,13 +465,18 @@ const jsCase = ({ comments, definition: { expression, statements } }) => {
 
 const jsWhen = statement => {
     const { expression, cases, otherwise } = statement
+    const z = symbol('z')
+    const has = cases.some(({ definition: { has }}) => has)
     return [
         // Why: valueOf is used to allow objects to implement different comparison semantics than strict reference check
         // For example objects may decide to implement this using JSON.stringify, if field ordering is required
-        'switch ((',
-        jsExpression(expression),
-        ').valueOf()) {\n',
-        cases.map(jsCase),
+        has
+            ? ['const ', z, ' = (', jsExpression(expression), ').valueOf()\n']
+            : '',
+        'switch (',
+        has ? z : ['(', jsExpression(expression), ').valueOf()'],
+        ') {\n',
+        cases.map(caseStatement => jsCase(caseStatement, has && z)),
         otherwise ? [jsComments(otherwise.comments), '   default:\n', otherwise.definition.map(jsStatement)] : '',
         '}\n'
     ]

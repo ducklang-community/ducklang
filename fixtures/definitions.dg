@@ -351,3 +351,14 @@ test5 of self with input1: [...rest]:
 
 
 	result 'input1 is {input1}'
+
+
+whenHasTest of self with input1:
+	data = { year: 50, name: 'Sally' }
+	when data
+		has name:
+			result name
+		has year:
+			result year
+
+

@@ -275,9 +275,9 @@ for -> For _ each _ (awaited _ {% take %}):? identifier _ (in {% take %} | throu
 when -> When _ expression
 	indented[(
 		standalone[
-			(is _ expression ":" (_:+ statement	{% ([, statement]) => [statement] %}
+			((is _ expression {% ([, , is]) => ({ is }) %} | has _ ( identifier {% take %} | quote {% take %} ) {% ([, , has]) => ({ has }) %}) ":" (_:+ statement	{% ([, statement]) => [statement] %}
 				| blockOf[statement {% take %} ] {% take %} )
-			{% ([, , expression, , statements]) => ({ type: 'case', expression, statements }) %} ) {% take %} ,
+			{% ([test, , statements]) => ({ type: 'case', ...test, statements }) %} ) {% take %} ,
 			____:+ {% ignore %}	]:+
 
     	standalone[
@@ -434,7 +434,6 @@ value ->
 
 Use			-> "use"		{% ignore %}
 When		-> "when"		{% ignore %}
-is			-> "is"			{% ignore %}
 For			-> "for"		{% ignore %}
 each		-> "each"		{% ignore %}
 to			-> "to"			{% ignore %}
@@ -443,6 +442,8 @@ skip		-> "skip"		{% ignore %}
 stop		-> "stop"		{% ignore %}
 as			-> "as"			{% ignore %}
 default		-> "default"	{% ignore %}
+is			-> "is"			{% take %}
+has			-> "has"		{% take %}
 do			-> "do"			{% take %}
 in			-> "in"			{% take %}
 through		-> "through"	{% take %}
