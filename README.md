@@ -90,6 +90,7 @@ yarn build && yarn start -f fixtures/definitions.dg && cat dist/fixtures/definit
 * **Separation of Concerns**: all code is stand-alone and can be "mixed-in" with existing types, allowing for smaller modules which do one thing and do it well
 * **Uniformity**: emphasis on the object oriented paradigm and uniform whitespace makes the community's code much less irregular
 * **Error propagation**: Errors are signalled using Result objects as in Rust, but the behaviour is inverted - every error is returned immediately to the caller unless the `?=` operator is used
+* **Itemization**: Powerful iterable sequences with offset-ability are truly first-class in the language
 
 ## Roadmap
 
