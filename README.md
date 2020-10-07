@@ -96,7 +96,7 @@ yarn build && yarn start -f fixtures/definitions.dg && cat dist/fixtures/definit
 
 * ~~Define the language grammar~~
 * ~~Clean up the Nearley output using functions~~
-* Compile the program representation into JavaScript (in progress)
+* Compile the program representation into JavaScript (in progress, ~75%)
 * Using the generated JavaScript methods from a JavaScript inversion-control-style program
 * Add validations on the parse-tree prior to generating output
 * NPM-style method and namespace repository, using github sources direct and Certificate Transparency style consistency
