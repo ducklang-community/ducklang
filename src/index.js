@@ -12,7 +12,7 @@ const join = (array, space = ' ') =>
         .slice(1)
 
 const traceLog = message => {
-    if (options['show-parse-trace']) {
+    if (options.showParseTrace) {
         console.log(message)
     }
 }
@@ -640,7 +640,7 @@ if (parser.results.length === 0) {
 } else if (parser.results.length === 1) {
     const { description, modules } = parser.results[0]
 
-    if (options['show-parse-tree']) {
+    if (options.showParseTree) {
         console.log(JSON.stringify(modules, null, 2))
         console.log('Good parse')
     }
@@ -1093,7 +1093,7 @@ if (parser.results.length === 0) {
 
     // Issue: set the line,col source mapping of closing tags to be something at the end of the source
 } else {
-    if (options['show-parse-tree']) {
+    if (options.showParseTree) {
         console.log(JSON.stringify(parser.results, null, 2))
     }
     console.error('Ambiguous parse')
