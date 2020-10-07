@@ -372,7 +372,7 @@ const jsFor = statement => {
               items,
               '(',
               n,
-              ') {\n',
+              ' = this) {\n',
               oneByOne
                   ? ['   if (', n, '!== ', i, ') { return } else { ++i }\n', itemPrelude(), statements.map(jsStatement)]
                   : memorizeThrough
