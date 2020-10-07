@@ -83,7 +83,7 @@ yarn build && yarn start -f fixtures/definitions.dg && cat dist/fixtures/definit
 * **Composition**: (over inheritance) - the quick wins of inheritance can lead to code structures that are hard to refactor
 * **Inversion of control**: Dependencies inject into modules not the other way round for better modularity
 * **Readability**: (over concision) - the code which we're most proud about tends to be code which reads like prose
-* **Promises**: Asynchronicity using promises and processes like JavaScript, but the `async`/`await` behaviour is inverted - everything is `await`'ed unless the `background` keyword is used
+* **Promises**: Asynchronicity using awaited promises as in JavaScript
 * **Smart tabs**: Indentation-aware syntax like Python - tabs for indentation and spaces for alignment
 * **Named arguments**: methods calls pass arguments by name for readability and ease of code evolution
 * **Extensibility**: most operators expand into method calls so you aren't tied by what comes shipped with the language
