@@ -1038,6 +1038,9 @@ if (parser.results.length === 0) {
         ])
     })
 
+    // Issue: invoking with a Map is generally ~75% performance of plain object,
+    // and ~33% of plain object with a dedicated 'self' argument (eg. function (self=this, $inputs={}) )
+
     // Issue: add the description comment to the top of the generated code,
     // if the intention is for the output to be readable
     const { code, map } = new SourceNode(1, 0, fileName, [`
