@@ -723,7 +723,7 @@ if (parser.results.length === 0) {
 
         // Issue: should all method names in this namespace be added to scope?
         // They are not actually in scope, but would prefer not to allow variables with the same name?
-        scopes = [...(using ? using.definition.map(({ entry: { name, as } }) => (as ? as : name)) : [])]
+        scopes = [...(using ? using.definition.map(({ entry: { name } }) => name) : [])]
 
         const functions = methods.map(
             ({ comments, definition: { name, of, receiver, inputs, statements, sequence } }) => {
