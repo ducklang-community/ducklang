@@ -1137,7 +1137,7 @@ $nullItemization.dataOf = () => $nullData
 
 
 module.exports = new $Data()
-\n\n\n'`,
+\n\n\n`,
         join(compiledModules, '\n')
     ]).toStringWithSourceMap()
 
