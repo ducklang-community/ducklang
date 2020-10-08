@@ -325,7 +325,11 @@ const jsFor = statement => {
     const i = symbol('i')
 
     const codePrelude = [
-        'const ', source, ' = (', jsExpression(expression), ').itemsOf()\n',
+        'const ',
+        source,
+        ' = (',
+        jsExpression(expression),
+        ').itemsOf()\n',
         'const ',
         sourceOffset,
         ' = ',
@@ -1034,7 +1038,7 @@ if (parser.results.length === 0) {
                       '\n\n',
                       '\n\n})'
                   ]
-                : ['new $Data()\n\n', join(functions, '\n'), '\n\n\n\n)'],
+                : ['new $Data()\n\n', join(functions, '\n'), '\n\n\n\n)']
         ])
     })
 
@@ -1043,7 +1047,8 @@ if (parser.results.length === 0) {
 
     // Issue: add the description comment to the top of the generated code,
     // if the intention is for the output to be readable
-    const { code, map } = new SourceNode(1, 0, fileName, [`
+    const { code, map } = new SourceNode(1, 0, fileName, [
+        `
 function $self() { return this }
 function $offset() { return 'offset' }
 function $empty() { return 0 }
@@ -1112,10 +1117,10 @@ function $method(fn) {
     fn.kindOf = $offset
     fn.extentOf = $infinity
     fn.itemsOf = $self`,
-    // Why: dataOf would usually loop up to the extent building a Map of n => value,
-    // but for all methods that would just be an infinite loop.
-    // undefined seems a good alternative
-`
+        // Why: dataOf would usually loop up to the extent building a Map of n => value,
+        // but for all methods that would just be an infinite loop.
+        // undefined seems a good alternative
+        `
     fn.dataOf = undefined
     return fn
 }
@@ -1133,7 +1138,7 @@ $nullItemization.dataOf = () => $nullData
 
 module.exports = new $Data()
 \n\n\n'`,
-        join(compiledModules, '\n'),
+        join(compiledModules, '\n')
     ]).toStringWithSourceMap()
 
     fs.mkdirSync(`dist/${fileName.split('/').slice(0, -1).join('/')}`, { recursive: true })
