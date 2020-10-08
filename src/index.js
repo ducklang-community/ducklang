@@ -1040,96 +1040,96 @@ if (parser.results.length === 0) {
 
     // Issue: add the description comment to the top of the generated code,
     // if the intention is for the output to be readable
-    const { code, map } = new SourceNode(1, 0, fileName, [
-        '\n',
-        'function $self() { return this }\n',
-        "function $offset() { return 'offset' }\n",
-        'function $empty() { return 0 }\n',
-        'function $infinity() { return Infinity }\n',
-        '\n',
-        'class $Data extends Map {\n',
-        '   itemsOf() {\n',
-        '       const saved = []\n',
-        '       const entries = this.entries()\n',
-        '       function items(n) {\n',
-        '           if (saved.length > n) {\n',
-        '               return saved[n]\n',
-        '           }\n',
-        '           for (let i = saved.length; i < n; ++i) { if (items(i) === undefined) { return } }\n',
-        '           const { value, done } = entries.next()\n',
-        '           if (done) {\n',
-        '               return\n',
-        '           }\n',
-        '           return saved[n] = new $Entry().set(value[0], value[1])\n',
-        '       }\n',
-        '       items.offsetOf = items\n',
-        "       items.kindOf = function () { return 'sequence' }\n",
-        '       items.extentOf = () => this.size\n',
-        '       items.itemsOf = $self\n',
-        '       items.dataOf = () => this\n',
-        '       return items\n',
-        '   }\n',
-        '   dataOf() { return this }\n',
-        '   getOf(inputs) {\n',
-        "       const name = inputs.get('name')\n",
-        '       return name !== undefined ? this.get(name) : name\n',
-        '   }\n',
-        '   update(inputs) {\n',
-        '       const entries = inputs.entries()\n',
-        '       while (true) {\n',
-        '       const { value, done } = entries.next()\n',
-        '           if (done) {\n',
-        '               return\n',
-        '           }\n',
-        '           this.set(value[0], value[1])\n',
-        '       }\n',
-        '   }\n',
-        '}\n',
-        '\n',
-        'class $Entry extends $Data {\n',
-        '   valueOf() { return this.values().next().value }\n',
-        '   itemsOf() {\n',
-        '       const items = (n) => {\n',
-        '           if (n === 0) {\n',
-        '               return this\n',
-        '           }\n',
-        '       }\n',
-        '       items.offsetOf = items\n',
-        '       items.kindOf = $offset\n',
-        '       items.extentOf = function () { return 1 }\n',
-        '       items.itemsOf = $self\n',
-        '       items.dataOf = () => this\n',
-        '       return items\n',
-        '   }\n',
-        '}\n',
-        '\n',
-        "function $methodOffsetOf(fn) { return function offsetOf(n) { return fn(new $Data().set('self', n)) } }\n",
-        '\n',
-        'function $method(fn) {\n',
-        '   fn.offsetOf = $methodOffsetOf(fn)\n',
-        '   fn.kindOf = $offset\n',
-        '   fn.extentOf = $infinity\n',
-        '   fn.itemsOf = $self\n',
-        // Why: dataOf would usually loop up to the extent building a Map of n => value,
-        // but for all methods that would just be an infinite loop.
-        // undefined seems a good alternative
-        '   fn.dataOf = undefined\n',
-        '   return fn\n',
-        '}\n',
-        '\n',
-        'const $nullData = new $Data()\n',
-        '\n',
-        'const $nullItemization = function items() {}\n',
-        '$nullItemization.offsetOf = $nullItemization\n',
-        '$nullItemization.kindOf = $offset\n',
-        '$nullItemization.extentOf = $empty\n',
-        '$nullItemization.itemsOf = $self\n',
-        '$nullItemization.dataOf = () => $nullData\n',
-        '\n',
-        '\n',
-        '\n',
-        'module.exports = new $Data()\n',
-        '\n\n\n',
+    const { code, map } = new SourceNode(1, 0, fileName, [`
+function $self() { return this }
+function $offset() { return 'offset' }
+function $empty() { return 0 }
+function $infinity() { return Infinity }
+
+class $Data extends Map {
+    itemsOf() {
+        const saved = []
+        const entries = this.entries()
+        function items(n) {
+            if (saved.length > n) {
+                return saved[n]
+            }
+            for (let i = saved.length; i < n; ++i) { if (items(i) === undefined) { return } }
+            const { value, done } = entries.next()
+            if (done) {
+                return
+            }
+            return saved[n] = new $Entry().set(value[0], value[1])
+        }
+        items.offsetOf = items
+        items.kindOf = function () { return 'sequence' }
+        items.extentOf = () => this.size
+        items.itemsOf = $self
+        items.dataOf = () => this
+        return items
+    }
+    dataOf() { return this }
+    getOf(inputs) {
+        const name = inputs.get('name')
+        return name !== undefined ? this.get(name) : name
+    }
+    update(inputs) {
+        const entries = inputs.entries()
+        while (true) {
+        const { value, done } = entries.next()
+            if (done) {
+                return
+            }
+            this.set(value[0], value[1])
+        }
+    }
+}
+
+class $Entry extends $Data {
+    valueOf() { return this.values().next().value }
+    itemsOf() {
+        const items = (n) => {
+            if (n === 0) {
+                return this
+            }
+        }
+        items.offsetOf = items
+        items.kindOf = $offset
+        items.extentOf = function () { return 1 }
+        items.itemsOf = $self
+        items.dataOf = () => this
+        return items
+    }
+}
+
+function $methodOffsetOf(fn) { return function offsetOf(n) { return fn(new $Data().set('self', n)) } }
+
+function $method(fn) {
+    fn.offsetOf = $methodOffsetOf(fn)
+    fn.kindOf = $offset
+    fn.extentOf = $infinity
+    fn.itemsOf = $self`,
+    // Why: dataOf would usually loop up to the extent building a Map of n => value,
+    // but for all methods that would just be an infinite loop.
+    // undefined seems a good alternative
+`
+    fn.dataOf = undefined
+    return fn
+}
+
+const $nullData = new $Data()
+
+const $nullItemization = function items() {}
+$nullItemization.offsetOf = $nullItemization
+$nullItemization.kindOf = $offset
+$nullItemization.extentOf = $empty
+$nullItemization.itemsOf = $self
+$nullItemization.dataOf = () => $nullData
+
+
+
+module.exports = new $Data()
+\n\n\n'`,
         join(compiledModules, '\n'),
     ]).toStringWithSourceMap()
 
