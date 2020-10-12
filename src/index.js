@@ -5,6 +5,7 @@ const grammar = require('../dist/grammar.js')
 
 let methodName
 let scopes = []
+let assignKeyword = 'const'
 
 const scopesContains = name => scopes.flat(Infinity).find(({ value }) => value === name.value)
 
@@ -466,21 +467,25 @@ const jsFor = statement => {
     return code
 }
 
-const jsCase = ({ comments, definition: { is, has, statements } }, source) => {
+const jsCase = ({ comments, definition: { is, has, as, statements } }, source) => {
     if (has && has.type === 'identifier') {
         pushScope(has)
     }
-    return [
+    assignKeyword = 'var'
+    code = [
         jsComments(comments),
         '   case ',
         has ? [source, '.has(', jsLocator(has), ')'] : ['(', jsExpression(is), ').valueOf()'],
         ':\n',
-        has && has.type === 'identifier'
-            ? ['const ', sourceNode(has), ' = ', source, '.get(', jsLocator(has), ')\n']
+        has && (has.type === 'identifier' || as)
+            ? ['var ', sourceNode(as ? as : has), ' = ', source, '.get(', jsLocator(has), ')\n']
             : '',
+        // Issue: all nested statements should use 'var', not 'const'
         statements.map(jsStatement),
         '       break\n'
     ]
+    assignKeyword = 'const'
+    return code
 }
 
 const jsWhen = statement => {
@@ -521,7 +526,8 @@ const jsAssignLocation = (location, expression) => {
     if (location.locators) {
         if (!scopesContains(location.name)) {
             const code = [
-                'const ',
+                assignKeyword,
+                ' ',
                 sourceNode(location.name),
                 ' = ',
                 location.locators.reduceRight(
@@ -575,7 +581,7 @@ const jsAssignLocation = (location, expression) => {
         ]
     }
 
-    const code = ['const ', sourceNode(location.name), ' = ', jsExpression(expression), '\n']
+    const code = [assignKeyword, ' ', sourceNode(location.name), ' = ', jsExpression(expression), '\n']
     pushScope(location.name)
     return code
 }
@@ -603,13 +609,14 @@ const jsStatement = statement => {
                 : jsAssignLocation(statement.location, statement.expression)
         // Issue: these ones are a little trickier. Can use the parameter input matching code as a starting point
         case 'assignExpandData':
-            return ['const ', symbol('assignExpandData'), ' = null /* Issue: assignExpandData not implemented */\n']
+            return [assignKeyword, ' ', symbol('assignExpandData'), ' = null /* Issue: assignExpandData not implemented */\n']
         case 'assignExpandList':
-            return ['const ', symbol('assignExpandList'), ' = null /* Issue: assignExpandList implemented */\n']
+            return [assignKeyword, ' ', symbol('assignExpandList'), ' = null /* Issue: assignExpandList implemented */\n']
 
         case 'assignMethodResult':
             code = [
-                'const ',
+                assignKeyword,
+                ' ',
                 sourceNode(statement.methodNaming.method),
                 ' = ',
                 jsExpression(statement.methodNaming),

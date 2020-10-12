@@ -274,7 +274,7 @@ for -> For _ each _ identifier _ (in {% take %} | through {% take %} | of {% tak
 when -> When _ expression
 	indented[(
 		standalone[
-			((is _ expression {% ([, , is]) => ({ is }) %} | has _ ( identifier {% take %} | quote {% take %} ) {% ([, , has]) => ({ has }) %}) ":" (_:+ statement	{% ([, statement]) => [statement] %}
+			((is _ expression {% ([, , is]) => ({ is }) %} | has _ ( identifier {% take %} | quote {% take %} ) (_ as _ identifier {% takeFourth %}):? {% ([, , has, as]) => ({ has, ...(as && { as }) }) %}) ":" (_:+ statement	{% ([, statement]) => [statement] %}
 				| blockOf[statement {% take %} ] {% take %} )
 			{% ([test, , statements]) => ({ type: 'case', ...test, statements }) %} ) {% take %} ,
 			____:+ {% ignore %}	]:+
