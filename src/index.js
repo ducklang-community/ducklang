@@ -1074,12 +1074,7 @@ class $Data extends Map {
         return name !== undefined ? this.get(name) : name
     }
     update(inputs) {
-        const entries = inputs.entries()
-        while (true) {
-        const { value, done } = entries.next()
-            if (done) {
-                return
-            }
+        for (const value of inputs.entries()) {
             this.set(value[0], value[1])
         }
     }
