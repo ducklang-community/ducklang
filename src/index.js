@@ -609,9 +609,19 @@ const jsStatement = statement => {
                 : jsAssignLocation(statement.location, statement.expression)
         // Issue: these ones are a little trickier. Can use the parameter input matching code as a starting point
         case 'assignExpandData':
-            return [assignKeyword, ' ', symbol('assignExpandData'), ' = null /* Issue: assignExpandData not implemented */\n']
+            return [
+                assignKeyword,
+                ' ',
+                symbol('assignExpandData'),
+                ' = null /* Issue: assignExpandData not implemented */\n'
+            ]
         case 'assignExpandList':
-            return [assignKeyword, ' ', symbol('assignExpandList'), ' = null /* Issue: assignExpandList implemented */\n']
+            return [
+                assignKeyword,
+                ' ',
+                symbol('assignExpandList'),
+                ' = null /* Issue: assignExpandList implemented */\n'
+            ]
 
         case 'assignMethodResult':
             code = [
