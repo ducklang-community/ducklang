@@ -280,13 +280,8 @@ const jsDoes = statement => {
     return [sourceNode(operator, operators[operator.type]), ' ', jsExpression(expression), '\n']
 }
 
-const containsAwaited = statements => {
-    // Issue: need to implement containsAwaited
-    return false
-}
-
 const jsFor = statement => {
-    const { awaited, name, itemizing, expression, extent, statements } = statement
+    const { name, itemizing, expression, extent, statements } = statement
     const source = symbol('source')
     const sourceExtent = symbol('sourceExtent')
     const sourceOffset = symbol('sourceOffset')
@@ -306,7 +301,6 @@ const jsFor = statement => {
         '   const ',
         sourceNode(name),
         ' = ',
-        awaited ? 'await ' : '',
         sourceOffset,
         '(',
         n,
@@ -360,8 +354,6 @@ const jsFor = statement => {
         '}\n'
     ]
 
-    const isAsync = awaited || containsAwaited(statements)
-
     scopes.push([name])
 
     const code = statement.do
@@ -371,7 +363,6 @@ const jsFor = statement => {
               oneByOne ? ['let ', i, ' = 0\n'] : '',
               codePrelude,
 
-              isAsync ? 'async ' : '',
               'function ',
               items,
               '(',
@@ -395,7 +386,6 @@ const jsFor = statement => {
                         '.length; i < ',
                         n,
                         '; ++i) { if (',
-                        isAsync ? 'await ' : '',
                         items,
                         '(i) === undefined) { return } }\n',
                         '   return ',
@@ -403,9 +393,7 @@ const jsFor = statement => {
                         '[',
                         n,
                         '] = ',
-                        isAsync ? 'await ' : '',
                         '(',
-                        isAsync ? 'async ' : '',
                         'function () {\n',
                         itemPrelude(),
                         statements.map(jsStatement),
@@ -451,8 +439,6 @@ const jsFor = statement => {
               '.itemsOf',
               ' = ',
               '$self\n',
-              // Why: This method intentionally does not await, that's left to be done explicitly later if required,
-              // firstly to maintain consistency with dataOf() elsewhere, and secondly to not do a slower one-by-one awaiting
               items,
               '.dataOf',
               ' = function () {\n',
@@ -1002,7 +988,6 @@ if (parser.results.length === 0) {
                                   sourceNode(name, methodName),
                                   "', ",
                                   '$method(',
-                                  containsAwaited(statements) ? 'async ' : '',
                                   'function ',
                                   sourceNode(name, methodName),
                                   '(',
