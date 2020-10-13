@@ -387,6 +387,9 @@ locatorTest of self with input1:
 	y = input1:abc
 	g = input1:abc:def:ghi
 	h:x:y:z = 30
+	...
+	... add some stuff here
+	...
 
 
 whenHasTest of self with input1:

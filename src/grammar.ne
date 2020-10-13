@@ -20,9 +20,10 @@ const lexer = new IndentationLexer({
         	lineBreaks: true,
         },
 
-    	why:	/Why: .*$/,
-    	see:	/See: .*:\/\/.*$/,
-    	issue:	/Issue: .*$/,
+    	why:		/Why: .*$/,
+    	see:		/See: .*:\/\/.*$/,
+    	issue:		/Issue: .*$/,
+    	ellided:	/\.\.\. .*$/,
 
 		namespaceIdentifier: /^::.*::$/,
 
@@ -373,6 +374,7 @@ statement ->
 	| stop							newline	{% take %}
 	| skip							newline	{% take %}
 	| "..."							newline	{% take %}
+	| ellided						newline	{% take %}
 
 
 # Issue: both (a / b / c) or (a - b - c) are ambiguous for those who don't yet know the associativity of "/" and "-"
@@ -521,6 +523,7 @@ otherwise	-> %otherwise	{% ignore %}
 why			-> %why		{% take %}
 see			-> %see		{% take %}
 issue		-> %issue	{% take %}
+ellided		-> %ellided	{% take %}
 
 literal			-> %literal			{% take %}
 quote			-> %quote			{% take %}
