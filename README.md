@@ -49,14 +49,14 @@ engageBoosters of self with thrust,
     when state
         is 'good':
             add log with info: 'Turbo is go!'
-            result launchBoosters of self with angle, thrust, state
+            return launchBoosters of self with angle, thrust, state
 
         is 'okay':
             add log with warning: 'Turbo is iffy :/'
-            result launchBoosters of self with angle, thrust, state
+            return launchBoosters of self with angle, thrust, state
 
         otherwise:
-            result 'stopped'
+            return 'stopped'
 
 
 
