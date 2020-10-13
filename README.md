@@ -43,8 +43,8 @@ engageBoosters of self with thrust,
 
     add log with info: 'Hi {name}! Your favourite drink is {drink}.'
 
-    state... of turbo with { angle, thrust,
-                             size: usage of self } otherwise default 'poor'
+    "state" of turbo with { angle, thrust,
+                            size: usage of self } otherwise default 'poor'
 
     when state
         is 'good':
