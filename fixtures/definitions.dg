@@ -12,11 +12,11 @@ This file is a collection of various methods to exercise and hash out various id
 
 
 square of self:
-	result self ** 2
+	return self ** 2
 
 
 cube of self:
-	result self ** 3
+	return self ** 3
 
 
 
@@ -25,7 +25,7 @@ cube of self:
 
 
 itself of self:
-	result self
+	return self
 
 
 
@@ -146,8 +146,8 @@ oddNumbersLessThan self:
 
 
 resultFromEach of self with ...input: ["mapping"]:
-	items... of self
-	result resultFromEach of items with mapping
+	"items" of self
+	resultFromEach of items with mapping
 
 
 
@@ -181,12 +181,13 @@ use category,
 
 aliquotSum of self:
 	when self
-		is 1: result 0
+		is 1:
+			return 0
 
 		otherwise:
 			variable:sum = 1
 
-			squareRoot... of self
+			"squareRoot" of self
 
 			for each number in countingFrom 2 with numbersLessThan: squareRoot, do:
 				when remainder of self with divisor: number
@@ -197,19 +198,19 @@ aliquotSum of self:
 				is self:
 					variable:sum =+ squareRoot
 
-			result variable:sum
+			return variable:sum
 
 
 aliquotClassification of self:
 	when compare self with number: 1
 		is 'less':
-			result error 'Input must be a positive integer'
+			error 'Input must be a positive integer'
 		otherwise:
-			aliquotSum... of self
+			"aliquotSum" of self
 			when compare aliquotSum with self
-				is 'less':    result 'deficient'
-				is 'greater': result 'abundant'
-				otherwise:    result 'perfect'
+				is 'less':    return 'deficient'
+				is 'greater': return 'abundant'
+				otherwise:    return 'perfect'
 
 
 
@@ -235,16 +236,16 @@ launchBoosters of self with thrust as level,
 	variable:stage = 0
 	variable:cache = resultFromEach of numbers with square
 
-	variable:resultFromEach... of numbers with square
+	variable:"resultFromEach" of numbers with square
 
-	variable:...{ foo, bar } = variable:cache
+	variable:{foo, bar} = variable:cache
 
 	for each x in turbo, do:
 		variable:stage =+ 1
 		engage turbo with thruster: x
 
-	result boost blaster with { ...{ stage }: variable,
-	                            level, trajectory, offset } otherwise default 'done'
+	boost blaster with {variable:stage, level,
+	                    trajectory, offset} otherwise default 'done'
 
 
 engageBoosters of self with thrust,
@@ -255,20 +256,20 @@ engageBoosters of self with thrust,
 
 	add log with info: 'Hi {name}! Your favourite drink is {drink}.'
 
-	state... of turbo with { angle, thrust,
-	                         size: usage of self } otherwise default 'poor'
+	"state" of turbo with {angle, thrust,
+	                       size: usage of self} otherwise default 'poor'
 
 	when state
 		is 'good':
 			add log with info: 'Turbo is go!'
-			result launchBoosters of self with angle, thrust, state
+			return launchBoosters of self with angle, thrust, state
 
 		is 'okay':
 			add log with warning: 'Turbo is iffy :/'
-			result launchBoosters of self with angle, thrust, state
+			return launchBoosters of self with angle, thrust, state
 
 		otherwise:
-			result 'stopped'
+			return 'stopped'
 
 
 
@@ -280,10 +281,10 @@ use infinity,
     square
 
 
-testStructuring of self with options: { name, color, speed },
+testStructuring of self with options: {name, color, speed},
                              ...input: ["mapping"]:
 
-	...["first", ..."rest"] = input
+	["first", ..."rest"] = input
 
 	l1 = [1, 2, 3]
 	l2 = [1, 2]
@@ -292,34 +293,34 @@ testStructuring of self with options: { name, color, speed },
 	l3 = [1, l4]
 
 	Why: an example to show list matching is possible with different input length
-	...["a", "b"] = l1
+	["a", "b"] = l1
 
-	bob:foo:...["a", "innerList": ["b", "c", ..."rest"]] = l3
+	bob:foo:["a", "innerList": ["b", "c", ..."rest"]] = l3
 
 	numbers = l1
-	variable:resultFromEach... of numbers with square
+	variable:"resultFromEach" of numbers with square
 
-	variable:...{ foo, bar } = variable:cache
+	variable:{foo, bar} = variable:cache
 
 	foo = 1
 	bar = 2
-	variable:...{ foo, bar }
+	variable:{foo, bar}
 
 
-test1 of self with a: { b: { c: ["d" (otherwise default 2), "e": { f (otherwise default 1) }] } }:
-	result a
+test1 of self with a: {b: {c: ["d" (otherwise default 2), "e": {f (otherwise default 1)}]}}:
+	return a
 
 
 test2 of self with a: [..."bob"]:
-	result bob
+	return bob
 
 
 test3 of self with ...inputs:
-	...[entry1, ...entries] = inputs
-	...["value1", ..."values"] = inputs
-	Issue: not implemented yet: result entry1
-	Issue: not implemented yet: result values
-	result inputs
+	[entry1, ...entries] = inputs
+	["value1", ..."values"] = inputs
+	Issue: not implemented yet: return entry1
+	Issue: not implemented yet: return values
+	return inputs
 
 
 firstFive self:
@@ -358,7 +359,7 @@ firstTwoDoubled self:
 
 
 
-use category,
+use list,
     firstTwoDoubled
 
 
@@ -368,25 +369,32 @@ printFirstDoubled self:
 
 
 test4 of self with input1: [abc, "def", ..."rest"],
-                   input2: { xyz },
+                   input2: {xyz},
                    ...values:
-	result values
+	return values
 
 
 test5 of self with input1: [...rest]:
-	result rest
+	return rest
 
 
 stringtest of self with input1:
-	result 'input1 is {input1}'
+	return 'input1 is {input1}'
+
+
+locatorTest of self with input1:
+	z = input1:abc:def
+	y = input1:abc
+	g = input1:abc:def:ghi
+	h:x:y:z = 30
 
 
 whenHasTest of self with input1:
-	data = { year: 50, name: 'Sally' }
+	data = {year: 50, name: 'Sally'}
 	when data
 		has name:
-			result name
+			return name
 		has year:
-			result year
+			return year
 
 

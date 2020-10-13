@@ -30,10 +30,16 @@ const lexer = new IndentationLexer({
         digitNumber: /0|-?[1-9][0-9]*/,
         hexNumber: /0x0|0x[1-9a-f][0-9a-f]*/,
 
+		// Issue: support for positionals >99
+        positional: {
+			match: /[2-9]?1st|[2-9]?2nd|[2-9]?3rd|[2-9]?[4-9]th|1[0-9]th|[2-9]0th/,
+			value: s => parseInt(s, 10) - 1
+		},
+
 		identifier: {
 			match: /_|[a-zA-Z]+[a-zA-Z0-9]*/,
 			type: moo.keywords({
-				result: 'result',
+				Return: 'return',
 				collect: 'collect',
 				of: 'of',
 				With: 'with',
@@ -91,6 +97,27 @@ const take			= takeFirst
 
 # Issue: namespace is a strange name. Use the term 'module' (or 'collection' ?) or another term entirely?
 
+# Issue: making all things synchronous is worst of both worlds
+# The reason being that having line-by-line await does not take advantage of asynchronicity.
+# It would be better to require anything asynchronous to be marked out in the call site, like:
+# 	request = task: get resource with url: 'https://example.org/'
+# 	request = anytime: get resource with url: 'https://example.org/'
+# 	request = start: get resource with url: 'https://example.org/'
+# 	request = start to: get resource with location: 'https://example.org/'
+# 	request = begin: get resource with url: 'https://example.org/'
+# 	request = do: get resource with url: 'https://example.org/'		# Confusing as for-do means 'now'
+# 	request = go: get resource with url: 'https://example.org/'
+# And in this case not perform automatic 'await',
+# But instead have an `await` that is more like Promise.all - expects multiple awaitables.
+#   ...[response, contents] = await: [request, file]
+#   ...await: { response: request, contents: file }
+#   ...{ request as response, file as contents }
+#
+# How does 'start:' work? It's not really needed if the method just returns a promise...
+
+# Issue: the itemization code would still need to be async/await if allowing `await Promise.all` in code.
+# Can we make just those parts be callback based? Promise.all(...).then(continue)
+
 
 @lexer lexer
 
@@ -107,12 +134,12 @@ assignOf[operator, expression	] -> assignWith[$operator							{% take %} , $expr
 assign[  operator				] -> assignWith[(_ $operator _ {% takeSecond %} )	{% take %} , expression  {% take %}	] {% take %}
 
 assignExpand[operator] ->
-	  ( location ":" {% take %} ):? "..." destructuringList $operator expression
-		{% ([location, , destructuring, , expression]) =>
+	  ( location ":" {% take %} ):? destructuringList $operator expression
+		{% ([location, destructuring, , expression]) =>
 			({ type: 'assignExpandList', ...(location && { location }), ...destructuring, expression }) %}
 
-	| ( location ":" {% take %} ):? "..." destructuringData ( $operator expression {% takeSecond %} ):?
-		{% ([location, , destructuring, expression]) =>
+	| ( location ":" {% take %} ):? destructuringData ( $operator expression {% takeSecond %} ):?
+		{% ([location, destructuring, expression]) =>
 			({ type: 'assignExpandData', ...(location && { location }), ...destructuring, ...(expression && { expression }) }) %}
 
 
@@ -164,9 +191,9 @@ listingBlock[definition] ->
 
 allowOtherwise[adjustment] -> ( $adjustment otherwise _ default _ expression {% takeSixth %} ):?	{% take %}
 
-invokeWith[nameModifier] -> identifier $nameModifier (_ of {% takeSecond %} ):? _ expression
-	{% ([method, nameModifier, of, , receiver]) =>
-		({ method, ...(nameModifier && { nameModifier }), ...(of && { of }), receiver }) %}
+invokeWith[method] -> $method (_ of {% takeSecond %} ):? _ expression
+	{% ([method, of, , receiver]) =>
+		({ method, ...(of && { of }), receiver }) %}
 
 
 main ->
@@ -208,11 +235,29 @@ using ->
 
 # Issue: lacks support (method in Z)	- binding a method with receiver Z
 # Issue: lacks support (method using X)	- partially applying input X
-# Issue: lacks support (method from Y)	- applying using inputs data Y
+# Issue: lacks support (method from Y)	- applying using inputs data Y. Don't do this, better to be explicit in the params
 
 # But (method of from Z) is not pretty...
 # 'of' could be completely optional and just for readability?
 # How about: (method-of from Z)
+
+# Syntax unification for non-identifer-of:
+# person:'age'
+# person:age
+#
+# Means 'age' of person   (which is different from the method call "age of person")
+#
+# person:age = 50
+# update ('age' of person) with value: 50
+#
+# ('age' of person) => entry having (reference of person, name: 'age')
+#
+# (0 of person) is not the first entry added, it's still a plain map lookup.
+# (0 of [...person]) is its first entry (also a mutable entry)
+#
+# square:5
+# Means 5 of square
+# Because it's a method this is same as square of 5
 
 # Issue: any part of { self, this, inner } should be optional
 method ->
@@ -262,8 +307,8 @@ input ->
 		...(otherwise && { otherwise })
 	}) %}
 
-destructuringList -> "["   flowing[input {% take %} ]   "]" {% ([, destructuringList])   => ({ destructuringList }) %}
-destructuringData -> "{" _ flowing[input {% take %} ] _ "}" {% ([, , destructuringData]) => ({ destructuringData }) %}
+destructuringList -> "[" flowing[input {% take %} ] "]" {% ([, destructuringList])   => ({ destructuringList }) %}
+destructuringData -> "{" flowing[input {% take %} ] "}" {% ([, destructuringData]) => ({ destructuringData }) %}
 
 for -> For _ each _ identifier _ (in {% take %} | through {% take %} | of {% take %} ) _ expression ","
 		(_ to _ extent _ of _ expression "," {% takeEighth %} ):?
@@ -290,11 +335,28 @@ when -> When _ expression
 	{% ([, , expression, branches]) => ({ type: 'when', expression, ...branches }) %}
 
 
+# Issue: it can be annoying for method arguments to be const,
+#        because it's value is often not quite what you want within the method body yet.
+#        On the other hand, making them mutable like in JS feels a bit wrong.
+#        Either: - make otherwise default more expressive, allow to reference earlier input
+#                - add an := operator for mutable assignment
+#		         - both
+#        The former is more natural, but could end up with verbose code in the parameters.
+#        On the other hand, this is in fact a description of the API, so that could be a good thing.
+#        If a parameter has complex default behaviour, then actually the API is itself complex.
+#
+#		 Probably not allow := operator (except perhaps dedicated syntax for assign on data)
+#        Firstly, parameters can have "as" so the variable name is still free to match the parameter.
+#        Secondly, it's better to require mutability via a Data name, as this "reifies" the state.
+#        Thirdly, it doesn't gel with the modifier operators =+ etc.
+
+# Issue: sometimes ?
+
 statement ->
       for							{% take %}
     | when							{% take %}
     | does[collect	{% take %} ]	{% take %}
-    | does[result	{% take %} ]	{% take %}
+    | does[return	{% take %} ]	{% take %}
     | assignMethodResult																newline	{% take %}
 	| assignExpand[(_ "=" _ {% ignore %} )	{% ignore %} ]								newline	{% take %}
 	| assignOf[(_ "=" _ {% ignore %} )	{% ignore %} , listLiteral	{% take %}	]	newline	{% take %}
@@ -310,6 +372,7 @@ statement ->
 	| methodExecution				newline	{% take %}
 	| stop							newline	{% take %}
 	| skip							newline	{% take %}
+	| "..."							newline	{% take %}
 
 
 # Issue: both (a / b / c) or (a - b - c) are ambiguous for those who don't yet know the associativity of "/" and "-"
@@ -340,29 +403,29 @@ expressionWithoutExponentiation ->
     		({ type: 'locate', location, ...(otherwise && { otherwise }) }) %}
 
 
-methodCall[nameModifier] ->
+methodCall[method] ->
 
-	  invokeWith[$nameModifier {% take %} ] allowOtherwise[_ {% take %} ]
+	  invokeWith[$method {% take %} ] allowOtherwise[_ {% take %} ]
 	  	{% ([invocation, otherwise]) =>
 	  		({ type: 'methodExecution', ...invocation, ...(otherwise && { otherwise }) }) %}
 
-	| invokeWith[$nameModifier {% take %} ] _ with
+	| invokeWith[$method {% take %} ] _ with
 				(  _ flowing[dataDefinition {% take %} ] {% takeSecond %}
 				 | listingBlock[dataDefinition {% take %} ] {% take %} )
 		{% ([invocation, , , arguments]) =>
 			({ type: 'methodExecution', ...invocation, arguments }) %}
 
-	| invokeWith[$nameModifier {% take %} ] _ with _ "{" _ flowing[dataDefinition {% take %} ] _ "}" allowOtherwise[_ {% take %} ]
-		{% ([invocation, , , , , , arguments, , , otherwise]) =>
+	| invokeWith[$method {% take %} ] _ with _ "{" flowing[dataDefinition {% take %} ] "}" allowOtherwise[_ {% take %} ]
+		{% ([invocation, , , , , arguments, , , otherwise]) =>
 			({ type: 'methodExecution', ...invocation, arguments, ...(otherwise && { otherwise }) }) %}
 
-	| invokeWith[$nameModifier {% take %} ] _ with _ enclosedDataBlock allowOtherwise[(newline ____:+) {% take %} ]
+	| invokeWith[$method {% take %} ] _ with _ enclosedDataBlock allowOtherwise[(newline ____:+) {% take %} ]
 		{% ([invocation, , , , arguments, otherwise]) =>
 			({ type: 'methodExecution', ...invocation, arguments, ...(otherwise && { otherwise }) }) %}
 
 
-listLiteral -> "["		flowing[expression		{% take %} ]	"]" {% ([, list]) => ({ type: 'list', list }) %}
-dataLiteral -> "{" _	flowing[dataDefinition	{% take %} ] _	"}" {% ([, data]) => ({ type: 'data', data }) %}
+listLiteral -> "[" flowing[expression		{% take %} ] "]" {% ([, list]) => ({ type: 'list', list }) %}
+dataLiteral -> "{" flowing[dataDefinition	{% take %} ] "}" {% ([, data]) => ({ type: 'data', data }) %}
 
 
 listBlock ->  "["
@@ -380,8 +443,8 @@ enclosedDataBlock ->  "{"
 	{% ([, listingBlock]) => ({ type: 'enclosedDataBlock', listingBlock }) %}
 
 dataDefinition ->
-	  assignMethodResult																{% take %}
-	| assignExpand[(":"	_:+ {% ignore %} ) {% ignore %} ]								{% take %}
+	  assignMethodResult															{% take %}
+	| assignExpand[(":"	_:+ {% ignore %} ) {% ignore %} ]							{% take %}
 	| assignOf[(":" _:+ {% ignore %} ) {% ignore %} , listLiteral	{% take %} ]	{% take %}
 	| assignOf[(":" _:+ {% ignore %} ) {% ignore %} , dataLiteral	{% take %} ]	{% take %}
 	| assignOf[(":" _:+ {% ignore %} ) {% ignore %} , listBlock		{% take %} ]	{% take %}
@@ -394,8 +457,8 @@ dataDefinition ->
 assignMethodResult -> (location ":" {% take %} ):? methodNaming
 	{% ([location, methodNaming]) => ({ type: 'assignMethodResult', ...(location && { location }), methodNaming }) %}
 
-methodExecution -> methodCall[null	{% ignore %}	] {% take %}
-methodNaming    -> methodCall["..."	{% take %}		] {% take %}
+methodExecution -> methodCall[identifier	{% take %}	] {% take %}
+methodNaming    -> methodCall[quote			{% take %}	] {% take %}
 
 
 comment ->
@@ -427,6 +490,7 @@ locator ->
 value ->
 	  digitNumber	{% take %}
 	| decimalNumber	{% take %}
+	| positional	{% take %}
 	| literal		{% take %}
 	| text			{% take %}
 
@@ -448,7 +512,7 @@ in			-> "in"			{% take %}
 through		-> "through"	{% take %}
 
 # I've tried to use as few reserved keywords as possible, while still having an unambiguous parse
-result		-> %result		{% take %}
+return		-> %Return		{% take %}
 collect		-> %collect		{% take %}
 of			-> %of			{% take %}
 with		-> %With		{% ignore %}
@@ -463,6 +527,7 @@ quote			-> %quote			{% take %}
 text			-> %text			{% take %}
 decimalNumber	-> %decimalNumber	{% take %}
 digitNumber		-> %digitNumber		{% take %}
+positional		-> %positional		{% take %}
 identifier		-> %identifier		{% take %}
 
 namespaceIdentifier -> %namespaceIdentifier	{% take %}
