@@ -2,12 +2,13 @@
 
 
 Why:`
+
 This file is a collection of various methods to exercise and hash out various ideas in Ducklang.
 `
 
 
 
-::2020-09::Number::
+::2020::Number::
 
 
 
@@ -20,7 +21,7 @@ cube of self:
 
 
 
-::2020-09::Function::
+::2020::Function::
 
 
 
@@ -29,7 +30,7 @@ itself of self:
 
 
 
-::2020-09::Sequences::
+::2020::Sequences::
 
 
 
@@ -67,7 +68,7 @@ lucas:
 
 
 
-::2020-09::Sequences::Even::
+::2020::Sequences::Even::
 
 
 
@@ -80,7 +81,7 @@ evenNumbers:
 
 
 
-::2020-09::Sequences::Odd::
+::2020::Sequences::Odd::
 
 
 
@@ -93,7 +94,7 @@ oddNumbers:
 
 
 
-::2020-09::Ranges::
+::2020::Ranges::
 
 
 
@@ -122,7 +123,7 @@ countingTo self:
 
 
 
-::2020-09::Numbers::
+::2020::Numbers::
 
 
 
@@ -141,24 +142,24 @@ oddNumbersLessThan self:
 
 
 
-::2020-09::Itemizing::
+::2020::Itemizing::
 
 
 
-resultFromEach of self with ...input: ["mapping"]:
-	"items" of self
+resultFromEach of self with ["mapping"] = ...input:
+	:items of self
 	resultFromEach of items with mapping
 
 
 
-::2020-09::Items::
+::2020::Items::
 
 
 
 use evenNumbers
 
 
-resultFromEach of self with ...input: ["mapping"]:
+resultFromEach of self with ["mapping"] = ...input:
 	for each x in self,
 		collect resultOf (mapping in x)
 
@@ -171,7 +172,7 @@ everyOther of self:
 
 
 
-::2020-09::Aliquot::
+::2020::Aliquot::
 
 
 
@@ -187,7 +188,7 @@ aliquotSum of self:
 		otherwise:
 			variable:sum = 1
 
-			"squareRoot" of self
+			:squareRoot of self
 
 			for each number in countingFrom 2 with numbersLessThan: squareRoot, do:
 				when remainder of self with divisor: number
@@ -206,7 +207,7 @@ aliquotClassification of self:
 		is 'less':
 			error 'Input must be a positive integer'
 		otherwise:
-			"aliquotSum" of self
+			:aliquotSum of self
 			when compare aliquotSum with self
 				is 'less':    return 'deficient'
 				is 'greater': return 'abundant'
@@ -214,7 +215,7 @@ aliquotClassification of self:
 
 
 
-::2020-09::Rocket::
+::2020::Rocket::
 
 
 
@@ -236,16 +237,16 @@ launchBoosters of self with thrust as level,
 	variable:stage = 0
 	variable:cache = resultFromEach of numbers with square
 
-	variable:"resultFromEach" of numbers with square
+	variable:resultFromEach of numbers with square
 
-	variable:{foo, bar} = variable:cache
+	variable:{ foo, bar } = variable:cache
 
 	for each x in turbo, do:
 		variable:stage =+ 1
 		engage turbo with thruster: x
 
-	boost blaster with {variable:stage, level,
-	                    trajectory, offset} otherwise default 'done'
+	boost blaster with { { stage } = variable, level,
+	                     trajectory, offset } otherwise default 'done'
 
 
 engageBoosters of self with thrust,
@@ -256,8 +257,8 @@ engageBoosters of self with thrust,
 
 	add log with info: 'Hi {name}! Your favourite drink is {drink}.'
 
-	"state" of turbo with {angle, thrust,
-	                       size: usage of self} otherwise default 'poor'
+	:state of turbo with { angle, thrust,
+	                       :usage of self } otherwise default 'poor'
 
 	when state
 		is 'good':
@@ -273,7 +274,7 @@ engageBoosters of self with thrust,
 
 
 
-::2020-09::Ideas::
+::2020::Ideas::
 
 
 
@@ -281,8 +282,8 @@ use infinity,
     square
 
 
-testStructuring of self with options: {name, color, speed},
-                             ...input: ["mapping"]:
+testStructuring of self with { name, color, speed } = options,
+                             ["mapping"] = ...input:
 
 	["first", ..."rest"] = input
 
@@ -295,23 +296,23 @@ testStructuring of self with options: {name, color, speed},
 	Why: an example to show list matching is possible with different input length
 	["a", "b"] = l1
 
-	bob:foo:["a", "innerList": ["b", "c", ..."rest"]] = l3
+	bob:foo:["a", ["b", "c", ..."rest"] = "innerList"] = l3
 
 	numbers = l1
-	variable:"resultFromEach" of numbers with square
+	variable:resultFromEach of numbers with square
 
-	variable:{foo, bar} = variable:cache
+	variable:{ foo, bar } = variable:cache
 
 	foo = 1
 	bar = 2
-	variable:{foo, bar}
+	variable:{ foo, bar }
 
 
-test1 of self with a: {b: {c: ["d" (otherwise default 2), "e": {f (otherwise default 1)}]}}:
+test1 of self with { { ["d" (otherwise default 2), { f (otherwise default 1) } = "e"] = c } = b } = a:
 	return a
 
 
-test2 of self with a: [..."bob"]:
+test2 of self with [..."bob"] = a:
 	return bob
 
 
@@ -329,7 +330,7 @@ firstFive self:
 
 
 
-::2020-09::firstFiveDoubled::
+::2020::firstFiveDoubled::
 
 
 
@@ -342,7 +343,7 @@ firstFiveDoubled self:
 
 
 
-::2020-09::firstTwoDoubled::
+::2020::firstTwoDoubled::
 
 
 
@@ -355,7 +356,7 @@ firstTwoDoubled self:
 
 
 
-::2020-09::printFirstDoubled::
+::2020::printFirstDoubled::
 
 
 
@@ -368,13 +369,13 @@ printFirstDoubled self:
 		display number
 
 
-test4 of self with input1: [abc, "def", ..."rest"],
-                   input2: {xyz},
+test4 of self with [abc, "def", ..."rest"] = input1,
+                   { xyz } = input2,
                    ...values:
 	return values
 
 
-test5 of self with input1: [...rest]:
+test5 of self with [...rest] = input1:
 	return rest
 
 
@@ -387,13 +388,14 @@ locatorTest of self with input1:
 	y = input1:abc
 	g = input1:abc:def:ghi
 	h:x:y:z = 30
+
 	...
 	... add some stuff here
 	...
 
 
 whenHasTest of self with input1:
-	data = {year: 50, name: 'Sally'}
+	data = { year: 50, name: 'Sally' }
 	when data
 		has name:
 			return name

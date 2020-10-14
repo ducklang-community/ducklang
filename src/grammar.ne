@@ -93,6 +93,23 @@ const takeEighth	= ([, , , , , , , h]) => h
 const take			= takeFirst
 %}
 
+# Issue: data assign with locators is confusing
+#        	with a:b, c: d
+#        can easily look like 'a: b'
+#        	with {b}: a, c: d
+#        seems better because it keeps the name on LHS
+
+# Issue: Nested RHS matching is hard to understand:
+#        	with a: {b: {c: ["d" (otherwise default 2), "e": {f (otherwise default 1)}]}}:
+#        Allow one level of RHS match:
+#        	with a: {b}}:
+#        Then continue the rest line by line
+#           {c} = b
+#           ["d" (otherwise default 2), "e"] = c
+#           {f (otherwise default 1)} = e
+
+# Issue: {resultFromEach of numbers with square}
+#        should always use method name as the key
 
 # Issue: the term 'match' would be simpler than 'destructure'
 
@@ -192,9 +209,29 @@ listingBlock[definition] ->
 
 allowOtherwise[adjustment] -> ( $adjustment otherwise _ default _ expression {% takeSixth %} ):?	{% take %}
 
-invokeWith[method] -> $method (_ of {% takeSecond %} ):? _ expression
-	{% ([method, of, , receiver]) =>
-		({ method, ...(of && { of }), receiver }) %}
+invokeWith[prefix] -> $prefix identifier (_ of {% takeSecond %} ):? _ expression
+	{% ([prefix, method, of, , receiver]) =>
+		({ ...(prefix && { prefix }), method, ...(of && { of }), receiver }) %}
+
+methodCall[prefix] ->
+
+	  invokeWith[$prefix {% take %} ] allowOtherwise[_ {% take %} ]
+	  	{% ([invocation, otherwise]) =>
+	  		({ type: 'methodExecution', ...invocation, ...(otherwise && { otherwise }) }) %}
+
+	| invokeWith[$prefix {% take %} ] _ with
+				(  _ flowing[dataDefinition {% take %} ] {% takeSecond %}
+				 | listingBlock[dataDefinition {% take %} ] {% take %} )
+		{% ([invocation, , , arguments]) =>
+			({ type: 'methodExecution', ...invocation, arguments }) %}
+
+	| invokeWith[$prefix {% take %} ] _ with _ dataLiteral allowOtherwise[_ {% take %} ]
+		{% ([invocation, , , , { data: arguments }, otherwise]) =>
+			({ type: 'methodExecution', ...invocation, arguments, ...(otherwise && { otherwise }) }) %}
+
+	| invokeWith[$prefix {% take %} ] _ with _ enclosedDataBlock allowOtherwise[(newline ____:+) {% take %} ]
+		{% ([invocation, , , , arguments, otherwise]) =>
+			({ type: 'methodExecution', ...invocation, arguments, ...(otherwise && { otherwise }) }) %}
 
 
 main ->
@@ -294,12 +331,12 @@ sequence ->
 methodInputs -> (_ with _ elongated[(_ _ _ _ _ _ _ _ _:+) {% ignore %} , input {% take %} ] {% takeFourth %} ):? {% take %}
 
 input ->
+	(  destructuringList _:+ "=" _:+ {% take %}
+	 | destructuringData _:+ "=" _:+ {% take %} ):?
 	"...":? ( identifier {% take %} | quote {% take %} ) (_ as _ identifier {% takeFourth %} ):?
-		(  ":" _:+ destructuringList {% takeThird %}
-		 | ":" _:+ destructuringData {% takeThird %} ):?
 		(_:+ "(" otherwise _ default _ expression ")" {% takeSeventh %} ):?
 
-	{% ([grouping, name, as, destructuring, otherwise]) => ({
+	{% ([destructuring, grouping, name, as, otherwise]) => ({
 		type: 'input',
 		...(grouping && { grouping }),
 		name,
@@ -308,8 +345,8 @@ input ->
 		...(otherwise && { otherwise })
 	}) %}
 
-destructuringList -> "[" flowing[input {% take %} ] "]" {% ([, destructuringList])   => ({ destructuringList }) %}
-destructuringData -> "{" flowing[input {% take %} ] "}" {% ([, destructuringData]) => ({ destructuringData }) %}
+destructuringList -> "["   flowing[input {% take %} ]   "]" {% ([, destructuringList])   => ({ destructuringList }) %}
+destructuringData -> "{" _ flowing[input {% take %} ] _ "}" {% ([, , destructuringData]) => ({ destructuringData }) %}
 
 for -> For _ each _ identifier _ (in {% take %} | through {% take %} | of {% take %} ) _ expression ","
 		(_ to _ extent _ of _ expression "," {% takeEighth %} ):?
@@ -405,29 +442,8 @@ expressionWithoutExponentiation ->
     		({ type: 'locate', location, ...(otherwise && { otherwise }) }) %}
 
 
-methodCall[method] ->
-
-	  invokeWith[$method {% take %} ] allowOtherwise[_ {% take %} ]
-	  	{% ([invocation, otherwise]) =>
-	  		({ type: 'methodExecution', ...invocation, ...(otherwise && { otherwise }) }) %}
-
-	| invokeWith[$method {% take %} ] _ with
-				(  _ flowing[dataDefinition {% take %} ] {% takeSecond %}
-				 | listingBlock[dataDefinition {% take %} ] {% take %} )
-		{% ([invocation, , , arguments]) =>
-			({ type: 'methodExecution', ...invocation, arguments }) %}
-
-	| invokeWith[$method {% take %} ] _ with _ "{" flowing[dataDefinition {% take %} ] "}" allowOtherwise[_ {% take %} ]
-		{% ([invocation, , , , , arguments, , , otherwise]) =>
-			({ type: 'methodExecution', ...invocation, arguments, ...(otherwise && { otherwise }) }) %}
-
-	| invokeWith[$method {% take %} ] _ with _ enclosedDataBlock allowOtherwise[(newline ____:+) {% take %} ]
-		{% ([invocation, , , , arguments, otherwise]) =>
-			({ type: 'methodExecution', ...invocation, arguments, ...(otherwise && { otherwise }) }) %}
-
-
-listLiteral -> "[" flowing[expression		{% take %} ] "]" {% ([, list]) => ({ type: 'list', list }) %}
-dataLiteral -> "{" flowing[dataDefinition	{% take %} ] "}" {% ([, data]) => ({ type: 'data', data }) %}
+listLiteral -> "["   flowing[expression		{% take %} ]   "]" {% ([, list]) => ({ type: 'list', list }) %}
+dataLiteral -> "{" _ flowing[dataDefinition	{% take %} ] _ "}" {% ([, , data]) => ({ type: 'data', data }) %}
 
 
 listBlock ->  "["
@@ -446,7 +462,7 @@ enclosedDataBlock ->  "{"
 
 dataDefinition ->
 	  assignMethodResult															{% take %}
-	| assignExpand[(":"	_:+ {% ignore %} ) {% ignore %} ]							{% take %}
+	| assignExpand[(_:+ "="	_:+ {% ignore %} ) {% ignore %} ]							{% take %}
 	| assignOf[(":" _:+ {% ignore %} ) {% ignore %} , listLiteral	{% take %} ]	{% take %}
 	| assignOf[(":" _:+ {% ignore %} ) {% ignore %} , dataLiteral	{% take %} ]	{% take %}
 	| assignOf[(":" _:+ {% ignore %} ) {% ignore %} , listBlock		{% take %} ]	{% take %}
@@ -456,11 +472,11 @@ dataDefinition ->
 	  		({ type: 'dataDefinition', location, ...(expression && { expression }) }) %}
 
 
-assignMethodResult -> (location ":" {% take %} ):? methodNaming
+assignMethodResult -> (location {% take %} ):? methodNaming
 	{% ([location, methodNaming]) => ({ type: 'assignMethodResult', ...(location && { location }), methodNaming }) %}
 
-methodExecution -> methodCall[identifier	{% take %}	] {% take %}
-methodNaming    -> methodCall[quote			{% take %}	] {% take %}
+methodExecution -> methodCall[null	{% ignore %}	] {% take %}
+methodNaming    -> methodCall[":"	{% take %}		] {% take %}
 
 
 comment ->
