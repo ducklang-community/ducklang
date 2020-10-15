@@ -2,6 +2,11 @@
 # yarn lockfile v1
 
 
+base26@^0.1.0:
+  version "0.1.0"
+  resolved "https://registry.yarnpkg.com/base26/-/base26-0.1.0.tgz#38dbe74a46c54eb49b4e962f8446e1fbc2400075"
+  integrity sha512-fu39ovAEARSpkOZJQjbQagPdW4sEz3d1owQx3oZey5b0GaTtsLddOfKYx+LEif9U20Xn9SlJ4zayERt0qXyhDQ==
+
 commander@^2.19.0:
   version "2.20.3"
   resolved "https://registry.yarnpkg.com/commander/-/commander-2.20.3.tgz#fd485e84c03eb4881c20722ba48035e8531aeb33"

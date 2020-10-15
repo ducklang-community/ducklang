@@ -102,7 +102,10 @@ use infinity
 
 
 countingFrom self with numbersLessThan (otherwise default infinity):
+
+	Issue: at the moment this isn't being captured into the itemization correctly
 	length = numbersLessThan - self
+
 	for each number in infinity, to extent of length,
 		collect self + number
 
@@ -203,7 +206,7 @@ aliquotSum of self:
 
 
 aliquotClassification of self:
-	when compare self with number: 1
+	when compare self with 1
 		is 'less':
 			error 'Input must be a positive integer'
 		otherwise:
@@ -257,17 +260,17 @@ engageBoosters of self with thrust,
 
 	add log with info: 'Hi {name}! Your favourite drink is {drink}.'
 
-	:state of turbo with { angle, thrust,
-	                       :usage of self } otherwise default 'poor'
+	:status of turbo with { angle, thrust,
+	                        :usage of self } otherwise default 'poor'
 
-	when state
+	when status
 		is 'good':
 			add log with info: 'Turbo is go!'
-			return launchBoosters of self with angle, thrust, state
+			return launchBoosters of self with angle, thrust, status
 
 		is 'okay':
 			add log with warning: 'Turbo is iffy :/'
-			return launchBoosters of self with angle, thrust, state
+			return launchBoosters of self with angle, thrust, status
 
 		otherwise:
 			return 'stopped'

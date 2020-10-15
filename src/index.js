@@ -2,9 +2,14 @@ const fs = require('fs')
 const nearley = require('nearley')
 const { SourceNode } = require('source-map')
 const grammar = require('../dist/grammar.js')
+const base26 = require('base26')
+
+// Issue: In v8 do methods affect shape?
+// Are squareOf and cubeOf (unexpectedly) a different shape?
 
 let methodName
 let scopes = []
+let renames = new Map()
 let assignKeyword = 'const'
 
 const scopesContains = name => scopes.flat(Infinity).find(({ value }) => value === name.value)
@@ -60,7 +65,7 @@ const join = (array, separator = ', ') =>
 
 const traceLog = message => {
     if (options.showParseTrace) {
-        console.log(message)
+        console.warn(message)
     }
 }
 
@@ -69,8 +74,8 @@ const symbol = (name, slug = true) => {
     if (slug) {
         name = name.replace(/[^a-zA-Z0-9_]/g, '_')
     }
-    symbols[name] = name in symbols ? symbols[name] + 1 : 0
-    return '_$' + name + (symbols[name] || '')
+    symbols[name] = name in symbols ? symbols[name] + 1 : 1
+    return name + symbols[name]
 }
 
 const sourceNode = (ref, code) => new SourceNode(ref.line, ref.col - 1, fileName, code || ref.value)
@@ -84,7 +89,11 @@ const jsComment = ({ line, annotation, literal }) =>
 
 const jsComments = comments => (comments ? comments.map(comment => jsComment(comment)) : [])
 
-const jsInputs = items => join(items.map(({ entry: { name } }) => sourceNode(name, name.value + '$')))
+// Why: generates same-shape context literals for slightly better hidden class reuse within V8
+
+const jsInputs = items =>
+    join(items.map(({ entry: { name } }, i) => [sourceNode(name, base26.to(i + 1) + '$'), ': ', sourceNode(name)]))
+const jsInputsArgs = items => join(items.map(({ entry: { name } }, i) => sourceNode(name)))
 
 const jsLocator = locator => {
     return sourceNode(locator, locator.value + '$')
@@ -92,14 +101,17 @@ const jsLocator = locator => {
 
 const jsLocation = (location, definition = false) => {
     const { name } = location
-    if (!definition && name.value !== 'this' && !scopesContains(name)) {
+    if (!definition && !scopesContains(name)) {
         throw new Error(
             `Attempt to use name "${name.value}" in line ${name.line}, column ${name.col}, but it is undefined`
         )
     }
 
     const contextType = scopesType(name)
-    const nameNode = sourceNode(name, (contextType === 'not recent' ? 'this.' : '') + name.value + '$')
+    const nameNode = sourceNode(
+        name,
+        (contextType === 'not recent' ? 'this.' : '') + (renames.get(name.value) || name.value) + '$'
+    )
 
     if (location.locators && location.locators.length > 1) {
         const allButLast = [
@@ -187,37 +199,71 @@ const simpleTypes = {
 // so there seems little point in copying that behaviour
 
 const jsArgument = (b, i, inputs) => {
-    // Issue: should support assignExpandData too
-    if (b.type === 'dataDefinition') {
-        return b
-    } else {
-        if (b.type === 'locate') {
-            return { type: 'dataDefinition', location: b.location }
-        } else {
-            const type = simpleTypes[b.type] !== undefined ? simpleTypes[b.type] : 'value'
-            const previousOfType = inputs.slice(0, i).filter(x => simpleTypes[x.type] === type).length
-            const name = type + (previousOfType > 0 ? previousOfType : '')
+    traceLog('argument:\t' + JSON.stringify(b))
+    switch (b.type) {
+        case 'dataDefinition':
+            return b
+        case 'expression':
+            if (['locate', 'methodExecution'].includes(b.expression.type)) {
+                return jsArgument(b.expression)
+            }
             return {
                 type: 'dataDefinition',
-                location: { type: 'location', name: { type: 'identifier', line: b.line, col: b.col, value: name } },
+                location: {
+                    type: 'location',
+                    name: { type: 'identifier', line: b.line, col: b.col, value: base26.to(i + 1) }
+                },
                 expression: b
             }
-        }
+        case 'locate':
+            return { type: 'dataDefinition', location: b.location }
+        case 'assignMethodResult':
+            return {
+                type: 'dataDefinition',
+                location: { type: 'location', name: b.methodNaming.method },
+                expression: b.methodNaming
+            }
+        ///{"type":"assignExpandData","destructuringData":
+        //[{"type":"input","name":{"type":"identifier","value":"stage","text":"stage","offset":3857,"lineBreaks":0,"line":251,"col":25}}],
+        //"expression":{"type":"locate","location":{"type":"location","name":{"type":"identifier","value":"variable","text":"variable","offset":3867,"lineBreaks":0,"line":251,"col":35}}}}
+        case 'assignExpandData':
+            console.warn('Unimplemented assignExpandData')
+        // I think because 'expression' can be anything and there can be multiple locators,
+        // will need to wrap the method call in a lambda and destructure into temporary variables first.
+        //return b.destructuringData.map(({ name }) =>
+        //jsArgument({ type: 'dataDefinition', location: { type: 'location', name }, expression: b.expression }))
+        case 'digitNumber':
+        case 'addition':
+        case 'division':
+        case 'digitNumber':
+        case 'methodExecution':
+            // Issue: the dynamic variable names should count from a$ upwards, not use i directly
+            // Issue: the dynamic variable names should increment while they collide with an existing parameter name
+            return {
+                type: 'dataDefinition',
+                location: {
+                    type: 'location',
+                    name: { type: 'identifier', line: b.line, col: b.col, value: base26.to(i + 1) }
+                },
+                expression: b
+            }
+        default:
+            console.error(`Unknown argument type ${b.type}`)
     }
 }
 
 const jsMethodExecution = expression => {
     const { method, of, receiver, arguments, otherwise } = expression
-    const methodSymbol = sourceNode(method, method.value + (of ? 'Of' : ''))
+    const methodSymbol = sourceNode(method, method.value + (of ? 'Of' : '') + '$')
     const receiverValue = sourceNode(receiver, symbol('receiver'))
     // Issue: arguments should be passed via a $Data instance.
     // This may require the method execution be wrapped within an anonymous function evaluation
     const methodCall = receiver => [
         '.',
         methodSymbol,
-        '.$value(',
+        '.apply(',
         receiver,
-        arguments ? [', ', jsData(arguments.map(jsArgument))] : '',
+        arguments ? [', ', jsData(arguments.map(jsArgument).flat(1))] : '',
         ')'
     ]
 
@@ -271,27 +317,30 @@ const expressionOperators = {
     subtraction: 'minus'
 }
 
-const operatorMethod = (operator, a, b) =>
-    jsExpression({
-        type: 'methodExecution',
-        method: {
-            line: operator.line,
-            col: operator.col,
-            value: expressionOperators[operator]
-        },
-        receiver: a,
-        arguments: [b]
-    })
+const operatorMethod = (operator, a, b) => [
+    jsExpression(a),
+    '.',
+    sourceNode({
+        line: operator.line,
+        col: operator.col,
+        value: operator
+    }),
+    '(',
+    jsExpression(b),
+    ')'
+]
 
 const jsExpression = expression => {
-    traceLog(JSON.stringify(expression))
+    traceLog('expression:\t' + JSON.stringify(expression))
     switch (expression.type) {
+        case 'expression':
+            return jsExpression(expression.expression)
         case 'location':
             return jsLocation(expression)
         case 'locate':
             return jsExpression(expression.location)
         case 'digitNumber':
-            return ['$number(', sourceNode(expression), ')']
+            return ['number(', sourceNode(expression), ')']
         case 'decimalNumber':
             return sourceNode(expression)
         case 'text':
@@ -309,7 +358,7 @@ const jsExpression = expression => {
         case 'division':
         case 'addition':
         case 'subtraction':
-            return operatorMethod(expression.type, expression.a, expression.b)
+            return operatorMethod(expressionOperators[expression.type], expression.a, expression.b)
 
         case 'methodExecution':
             return jsMethodExecution(expression)
@@ -334,9 +383,9 @@ const jsDoes = statement => {
 const jsFor = statement => {
     const indent = '                '
     const { name, itemizing, expression, extent, statements } = statement
-    const source = statement.do ? symbol('source') : '$source'
-    const sourceExtent = statement.do ? symbol('sourceExtent') : '$sourceExtent'
-    const sourceOffset = statement.do ? symbol('sourceOffset') : '$sourceOffset'
+    const source = statement.do ? symbol('source') : 'source'
+    const sourceExtent = statement.do ? symbol('sourceExtent') : 'sourceExtent'
+    const sourceOffset = statement.do ? symbol('sourceOffset') : 'sourceOffset'
     const itemsExtent = symbol('extent')
     const n = symbol('n')
     const items = symbol(methodName + 'Items')
@@ -352,7 +401,7 @@ const jsFor = statement => {
                   'Math.min(',
                   jsExpression(extent),
                   ', ',
-                  statement.do ? [source, '.extentOf$()'] : ['this.', sourceExtent, '()'],
+                  statement.do ? [source, '.extentOf()'] : ['this.', sourceExtent, '()'],
                   ')'
               ]
             : ''
@@ -378,8 +427,8 @@ const jsFor = statement => {
         ' }\n'
     ]
 
-    const memory = statement.do ? symbol('memory') : '$memory'
-    const i = statement.do ? symbol('i') : '$i'
+    const memory = statement.do ? symbol('memory') : 'memory'
+    const i = statement.do ? symbol('i') : 'i'
 
     const codePrelude = [
         indent,
@@ -387,7 +436,7 @@ const jsFor = statement => {
         source,
         ' = (',
         jsExpression(expression),
-        ').itemsOf$()\n',
+        ').itemsOf()\n',
         // Issue: I'm not certain which is better, taking reference of source.offsetOf or invoking the method directly.
         //        Would normally assume the former, but maybe V8 can inline method calls more easily?
         //        It would be nice to know from benchmarking of real code
@@ -396,9 +445,9 @@ const jsFor = statement => {
         sourceOffset,
         ' = ',
         source,
-        '.$value',
+        '.value',
         '\n',
-        !statement.do ? [indent, 'const ', sourceExtent, ' = ', source, '.extentOf$', '\n'] : ''
+        !statement.do ? [indent, 'const ', sourceExtent, ' = ', source, '.extentOf', '\n'] : ''
     ]
 
     const loopCode = body => [
@@ -407,8 +456,8 @@ const jsFor = statement => {
         itemsExtent,
         ' = ',
         statement.do
-            ? [extent ? extentCalculation() : [source, '.extentOf$()']]
-            : ['this.', extent ? 'extentOf$' : sourceExtent, '()'],
+            ? [extent ? extentCalculation() : [source, '.extentOf()']]
+            : ['this.', extent ? 'extentOf' : sourceExtent, '()'],
         '\n',
         indent,
         '        for (let ',
@@ -441,36 +490,9 @@ const jsFor = statement => {
               indent,
               'return Object.setPrototypeOf({\n',
               indent,
-              '    itemsOf$: ',
-              'function () { return this },\n',
+              '    itemsOf:  function () { return this },\n',
               indent,
-              '    dataOf$:  function () {\n',
-              indent,
-              '        const data = new $Data()\n',
-              loopCode([
-                  indent,
-                  '            const z = ',
-                  'this.$value(',
-                  n,
-                  ')\n',
-                  indent,
-                  '            if (z === undefined) { break }\n',
-                  indent,
-                  '            data.set(',
-                  n,
-                  ', z)\n'
-              ]),
-              indent,
-              '        return data\n',
-              indent,
-              '    },\n',
-              // Why: having offsetOf be a separate method while leaving the "items" object as
-              // a plain function is intended to allow extensibility for user code to define itemizations
-              // easily in Ducklang code, while also keeping conformity with the automatic "itemizable"
-              // nature of every method defined in Ducklang, which should help the interpreter to compile
-              // monomorphic code in the usual case.
-              indent,
-              '    $value:  function ',
+              '    apply:    function ',
               items,
               '(',
               n,
@@ -505,7 +527,7 @@ const jsFor = statement => {
                         indent,
                         '        for (; i < ',
                         n,
-                        '; ++i) { if (this.$value(i) === undefined) { return } }\n',
+                        '; ++i) { if (this.value(i) === undefined) { return } }\n',
                         indent,
                         '        return this.',
                         memory,
@@ -523,19 +545,19 @@ const jsFor = statement => {
               indent,
               '    },\n',
               indent,
-              '    kindOf$:   ',
+              '    kindOf:   ',
               !oneByOne && !memorizeThrough
-                  ? [source, '.kindOf$']
+                  ? [source, '.kindOf']
                   : [
                         'function () { return ',
                         oneByOne
                             ? "'one-by-one'"
-                            : ['this.', source, ".kindOf$() === 'one-by-one' ? 'one-by-one' : 'sequence'"],
+                            : ['this.', source, ".kindOf() === 'one-by-one' ? 'one-by-one' : 'sequence'"],
                         ' }'
                     ],
               ',\n',
               indent,
-              '    extentOf$: ',
+              '    extentOf: ',
               extent ? ['function () { return ', extentCalculation(), ' }'] : sourceExtent,
 
               '\n',
@@ -685,7 +707,7 @@ const jsAssignLocation = (location, expression) => {
 }
 
 const jsStatement = statement => {
-    traceLog(JSON.stringify(statement))
+    traceLog('statement:\t' + JSON.stringify(statement))
     switch (statement.type) {
         case 'standalone':
             return [jsComments(statement.comments), jsStatement(statement.definition)]
@@ -694,16 +716,7 @@ const jsStatement = statement => {
         case 'assignWith':
             // Issue: only works for location without locators
             return statement.operator && statement.operator.type in operators
-                ? jsStatement({
-                      type: 'methodExecution',
-                      method: {
-                          line: statement.operator.line,
-                          col: statement.operator.col,
-                          value: operators[statement.operator.type]
-                      },
-                      receiver: statement.location,
-                      arguments: [statement.expression]
-                  })
+                ? [operatorMethod(operators[statement.operator.type], statement.location, statement.expression), '\n']
                 : jsAssignLocation(statement.location, statement.expression)
         // Issue: these ones are a little trickier. Can use the parameter input matching code as a starting point
         case 'assignExpandData':
@@ -828,15 +841,20 @@ if (parser.results.length === 0) {
     })
 
     const compiledModules = modules.map(({ namespaceDeclaration, using, methods }) => {
-        const dependencies = (using && jsInputs(using.definition)) || ''
-
         // Issue: should all method names in this namespace be added to scope?
         // They are not actually in scope, but would prefer not to allow variables with the same name?
         scopes = [...(using ? using.definition.map(({ entry: { name } }) => name) : [])]
+        renames = new Map(
+            using
+                ? new Map(
+                      using.definition.map(({ entry: { name: { value } } }, i) => [value, base26.to(i + 1)])
+                  )
+                : []
+        )
 
         const functions = methods.map(
             ({ comments, definition: { name, of, receiver, inputs, statements, sequence } }) => {
-                traceLog('\n' + JSON.stringify(name))
+                traceLog('function:\t' + JSON.stringify(name))
 
                 methodName = name.value + (of ? 'Of' : '') + '$'
                 // Issue: this should use the receiver keyword and its metadata
@@ -847,7 +865,7 @@ if (parser.results.length === 0) {
                 const deconstruct = inputs.length
                     ? [
                           {
-                              name: { line: inputs.line, col: inputs.col, value: '$inputs' },
+                              name: { line: inputs.line, col: inputs.col, value: 'inputs' },
                               inputs: inputs.map(({ entry }) => entry),
                               type: 'data'
                           }
@@ -868,7 +886,7 @@ if (parser.results.length === 0) {
 
                     scopeVariables.push(inputs.map(({ name, as }) => (as ? as : name)))
 
-                    traceLog(JSON.stringify(inputs))
+                    traceLog('inputs:\t' + JSON.stringify(inputs))
 
                     const items = symbol(name.value, false)
                     const itemsOffset = symbol(name.value + 'Offset', false)
@@ -1102,28 +1120,24 @@ if (parser.results.length === 0) {
                                   sourceNode(name),
                                   ' () {\n',
                                   jsStatement(sequence),
-                                  '        }).call($context)'
+                                  '        }).call(context)'
                               ]
                             : [
                                   jsComments(comments),
                                   '        ',
                                   sourceNode(name, methodName),
                                   ': Object.setPrototypeOf({\n',
-                                  '            itemsOf$:  function () { return this },\n',
-                                  // Why: dataOf would usually loop up to the extent building a Map of n => value,
-                                  // but for all methods that would just be an infinite loop.
-                                  // undefined seems a good alternative
-                                  '            dataOf$:   function () { return undefined },\n',
-                                  '            $value:    function ',
+                                  '            itemsOf:  function () { return this },\n',
+                                  '            apply:    function ',
                                   sourceNode(name),
                                   '(self$',
-                                  inputs.length ? ', $inputs' : '',
+                                  inputs.length ? ', inputs' : '',
                                   ') {\n',
                                   deconstructedInputs,
                                   statements.map(jsStatement),
                                   '            },\n',
-                                  "            kindOf$:   function () { return 'offset' },\n",
-                                  '            extentOf$: function () { return Infinity }\n',
+                                  "            kindOf:   function () { return 'offset' },\n",
+                                  '            extentOf: function () { return Infinity }\n',
 
                                   // Issue: it's quite helpful to have chaining like prototypes,
                                   //   so that most objects can have similarity in the top of the shape,
@@ -1142,7 +1156,7 @@ if (parser.results.length === 0) {
                                   // There's a problem with the former, which is that functions from different modules will
                                   // have different hidden classes due to having different constructors.
                                   // So really have to use literals to get the right effect.
-                                  '        }, $context)'
+                                  '        }, context)'
                               ]
                     )
                 ]
@@ -1154,6 +1168,9 @@ if (parser.results.length === 0) {
 
         const namespaceSymbol = symbol(namespaceDeclaration.value)
 
+        const dependencyNames = (using && jsInputsArgs(using.definition)) || ''
+        const dependencies = (using && jsInputs(using.definition)) || ''
+
         return sourceNode(namespaceDeclaration, [
             "    ['",
             sourceNode(namespaceDeclaration),
@@ -1163,11 +1180,11 @@ if (parser.results.length === 0) {
                       'function ',
                       namespaceSymbol,
                       '(',
-                      dependencies,
+                      dependencyNames,
                       ') {\n',
-                      '        const $context = Object.setPrototypeOf({ ',
+                      '        const context = { ',
                       dependencies,
-                      ' }, null)\n',
+                      ' }\n',
                       '        return {\n\n',
                       join(functions, ',\n            '),
                       '\n\n\n\n        }',
@@ -1183,7 +1200,7 @@ if (parser.results.length === 0) {
     // This would ensure exactly sized objects and maximum possible object shape similarity
     //
     // Issue: invoking with a Map is generally ~75% performance of plain object,
-    // and ~33% of plain object with a dedicated 'self' argument (eg. function (self=this, $inputs={}) )
+    // and ~33% of plain object with a dedicated 'self' argument (eg. function (self=this, inputs={}) )
 
     // Issue: add the description comment to the top of the generated code,
     // if the intention is for the output to be readable
@@ -1193,85 +1210,40 @@ if (parser.results.length === 0) {
     // Issue: itemsOf sounds a bit weird for functions. Consider "itemizationOf" instead
     const { code, map } = new SourceNode(1, 0, fileName, [
         `
-$context = null
-function $self() { return this }
-function $offset() { return 'offset' }
-function $empty() { return 0 }
 
-// Why: the basic types of the language are Function, Data and Number.
-// The only way to specify Function type is through
-// - method definition
-// - itemizations and sequences
-// - rest grouping
+function number(n) { return n }
 
-// All other objects are considered to be essentially some extension of Data.
-// Or, Data may be considered an extension of some plain data-less object,
-// and Number likewise.
-// Generalising, these and Function can be considered to have an intrinsic $value, which may be void ('undefined')
 
-class $Data extends Map {
-    itemsOf() {
-        const saved = []
-        const entries = this.entries()
-        function items(n) {
-            if (saved.length > n) {
-                return saved[n]
-            }
-            for (let i = saved.length; i < n; ++i) { if (items(i) === undefined) { return } }
-            const { value, done } = entries.next()
-            if (done) {
-                return
-            }
-            return saved[n] = new $Entry().set(value[0], value[1])
-        }
-        items.offsetOf = items
-        items.kindOf = function () { return 'sequence' }
-        items.extentOf = () => this.size
-        items.itemsOf = $self
-        items.dataOf = () => this
-        return items
+class Entry {
+    constructor(entry) {
+        this[entry[0]] = entry[1]
     }
-    dataOf() { return this }
-    getOf(inputs) {
-        const name = inputs.get('name')
-        return name !== undefined ? this.get(name) : name
-    }
-    update(inputs) {
-        for (const value of inputs.entries()) {
-            this.set(value[0], value[1])
+
+    valueOf() {
+        const values = Object.values(this)
+        if (values.length === 1) {
+            return values[0]
+        } else {
+            return this
         }
     }
 }
 
-`,
-        // Issue: It would be better to roll this into $Data for monomorphism
-        //        Just use a "type" field to indicate how valueOf and kindOf should behave
-        `
-class $Entry extends $Data {
-    valueOf() { return this.values().next().value }
-    itemsOf() {
-        const items = (n) => {
-            if (n === 0) {
-                return this
-            }
-        }
-        items.offsetOf = items
-        items.kindOf = $offset
-        items.extentOf = function () { return 1 }
-        items.itemsOf = $self
-        items.dataOf = () => this
-        return items
-    }
+Object.prototype.itemsOf = function () {
+    const memory = Object.entries(this)
+    return Object.setPrototypeOf({
+        itemsOf:  function ()  { return this },
+        apply:    function (n) { return new Entry(this.memory[n]) },
+        kindOf:   function ()  { return 'offset' },
+        extentOf: function ()  { return this.memory.length }
+    }, {
+        memory
+    })
 }
+Object.defineProperty(Object.prototype, 'itemsOf', { enumerable: false })
 
-const $nullData = new $Data()
 
-const $nullItemization = function items() {}
-$nullItemization.offsetOf = $nullItemization
-$nullItemization.kindOf = $offset
-$nullItemization.extentOf = $empty
-$nullItemization.itemsOf = $self
-$nullItemization.dataOf = () => $nullData
+const context = null
 
 
 

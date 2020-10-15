@@ -43,17 +43,17 @@ engageBoosters of self with thrust,
 
     add log with info: 'Hi {name}! Your favourite drink is {drink}.'
 
-    "state" of turbo with { angle, thrust,
+    :status of turbo with { angle, thrust,
                             size: usage of self } otherwise default 'poor'
 
-    when state
+    when status
         is 'good':
             add log with info: 'Turbo is go!'
-            return launchBoosters of self with angle, thrust, state
+            return launchBoosters of self with angle, thrust, status
 
         is 'okay':
             add log with warning: 'Turbo is iffy :/'
-            return launchBoosters of self with angle, thrust, state
+            return launchBoosters of self with angle, thrust, status
 
         otherwise:
             return 'stopped'

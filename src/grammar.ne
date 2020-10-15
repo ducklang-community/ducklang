@@ -297,6 +297,12 @@ using ->
 # Means 5 of square
 # Because it's a method this is same as square of 5
 
+# EDIT: I don't think this is a good idea. Having reference-ey things is funky
+#		and hurts performance in the normal case.
+#       Plus, it's always possible to do: (update in person using field: 'age'),
+#		That will give a thunk that can be used to set the value at any time
+
+
 # Issue: any part of { self, this, inner } should be optional
 method ->
 	newline
@@ -461,14 +467,15 @@ enclosedDataBlock ->  "{"
 	{% ([, listingBlock]) => ({ type: 'enclosedDataBlock', listingBlock }) %}
 
 dataDefinition ->
-	  assignMethodResult															{% take %}
-	| assignExpand[(_:+ "="	_:+ {% ignore %} ) {% ignore %} ]							{% take %}
+	  expression																	{% ([expression]) => ({ type: 'expression', expression }) %}
+	| assignMethodResult															{% take %}
+	| assignExpand[(_:+ "="	_:+ {% ignore %} ) {% ignore %} ]						{% take %}
 	| assignOf[(":" _:+ {% ignore %} ) {% ignore %} , listLiteral	{% take %} ]	{% take %}
 	| assignOf[(":" _:+ {% ignore %} ) {% ignore %} , dataLiteral	{% take %} ]	{% take %}
 	| assignOf[(":" _:+ {% ignore %} ) {% ignore %} , listBlock		{% take %} ]	{% take %}
 	| assignOf[(":" _:+ {% ignore %} ) {% ignore %} , dataBlock		{% take %} ]	{% take %}
-	| location (":" _:+ expression {% takeThird %} ):?
-	  	{% ([location, expression]) =>
+	| location ":" _:+ expression
+	  	{% ([location, , , expression]) =>
 	  		({ type: 'dataDefinition', location, ...(expression && { expression }) }) %}
 
 

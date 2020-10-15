@@ -12,6 +12,7 @@
         "start": "node src/index.js"
     },
     "dependencies": {
+        "base26": "^0.1.0",
         "moo": "aliclark/moo.git#graphical-errors",
         "moo-indentation-lexer": "^6.0.0",
         "nearley": "^2.19.7",
