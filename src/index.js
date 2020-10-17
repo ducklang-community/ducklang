@@ -445,7 +445,7 @@ const jsFor = statement => {
         sourceOffset,
         ' = ',
         source,
-        '.value',
+        '.apply',
         '\n',
         !statement.do ? [indent, 'const ', sourceExtent, ' = ', source, '.extentOf', '\n'] : ''
     ]
@@ -552,6 +552,7 @@ const jsFor = statement => {
                         'function () { return ',
                         oneByOne
                             ? "'one-by-one'"
+                            // Issue: this should be made to be like this.sourceKind()
                             : ['this.', source, ".kindOf() === 'one-by-one' ? 'one-by-one' : 'sequence'"],
                         ' }'
                     ],
