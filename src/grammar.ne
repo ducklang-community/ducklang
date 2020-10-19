@@ -339,7 +339,7 @@ methodInputs -> (_ with _ elongated[(_ _ _ _ _ _ _ _ _:+) {% ignore %} , input {
 input ->
 	(  destructuringList _:+ "=" _:+ {% take %}
 	 | destructuringData _:+ "=" _:+ {% take %} ):?
-	"...":? ( identifier {% take %} | quote {% take %} ) (_ as _ identifier {% takeFourth %} ):?
+	"...":? ( identifier {% take %} | quote {% take %} ) (_ identifier {% takeSecond %} ):?
 		(_:+ "(" otherwise _ default _ expression ")" {% takeSeventh %} ):?
 
 	{% ([destructuring, grouping, name, as, otherwise]) => ({

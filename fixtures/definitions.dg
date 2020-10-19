@@ -101,10 +101,10 @@ oddNumbers:
 use infinity
 
 
-countingFrom self with numbersLessThan (otherwise default infinity):
+countingFrom self with numbersLessThan limit (otherwise default infinity):
 
 	Issue: at the moment this isn't being captured into the itemization correctly
-	length = numbersLessThan - self
+	length = limit - self
 
 	for each number in infinity, to extent of length,
 		collect self + number
@@ -232,8 +232,8 @@ use category,
     square
 
 
-launchBoosters of self with thrust as level,
-                            angle as trajectory (otherwise default 0.0),
+launchBoosters of self with thrust level,
+                            angle trajectory (otherwise default 0.0),
                             turboState (otherwise default 'unknown'):
 	numbers = [1, 2, 3]
 
