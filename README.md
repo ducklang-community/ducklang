@@ -4,63 +4,9 @@
 
 Ducklang is a duck-typed programming language with an emphasis on readability of the language.
 
-## Examples
+## Sample
 
-```ducklang
-
-
-
-::2020-09::Sequences::
-
-
-
-use infinity
-
-
-fibonacci:
-    for each n through infinity,
-        when n
-            is 0: collect 0
-            is 1: collect 1
-            otherwise: collect (fibonacci (n - 1)) + (fibonacci (n - 2))
-
-
-
-::2020-09::Rocket::
-
-
-
-use log,
-    blaster,
-    turbo
-
-
-engageBoosters of self with thrust,
-                            angle (otherwise default 0.0),
-                            color (otherwise default 'green'):
-
-    checksResult = preCheck blaster with angle, thrust
-
-    add log with info: 'Hi {name}! Your favourite drink is {drink}.'
-
-    :status of turbo with { angle, thrust,
-                            size: usage of self } otherwise default 'poor'
-
-    when status
-        is 'good':
-            add log with info: 'Turbo is go!'
-            return launchBoosters of self with angle, thrust, status
-
-        is 'okay':
-            add log with warning: 'Turbo is iffy :/'
-            return launchBoosters of self with angle, thrust, status
-
-        otherwise:
-            return 'stopped'
-
-
-
-```
+![Sample code](sample.png)
 
 See [fixtures/definitions.dg](fixtures/definitions.dg) for more example code.
 
