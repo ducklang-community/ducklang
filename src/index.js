@@ -3,6 +3,7 @@ const nearley = require('nearley')
 const { SourceNode } = require('source-map')
 const grammar = require('../dist/grammar.js')
 const base26 = require('base26')
+const jsonDiff = require('json-diff')
 
 // Issue: In v8 do methods affect shape?
 // Are squareOf and cubeOf (unexpectedly) a different shape?
@@ -11,7 +12,7 @@ let methodName
 let scopes = []
 let renames = new Map()
 let assignKeyword = 'const'
-let contextPrefix = 'this.context.'
+let contextPrefix = 'this.$context.'
 let statementsPrepend = []
 
 const scopesContains = name => scopes.flat(Infinity).find(({ value }) => value === name.value)
@@ -57,14 +58,6 @@ const withScope = (scope, thunk) => {
     const result = thunk()
     scopes.pop()
     return result
-}
-
-const withContextPrefix = (prefix, thunk) => {
-    const savedPrefix = contextPrefix
-    contextPrefix = prefix
-    const code = thunk()
-    contextPrefix = savedPrefix
-    return code
 }
 
 const captureStatementsPrepend = thunk => {
@@ -268,7 +261,7 @@ const jsMethodExecution = expression => {
     const methodCall = receiver => [
         '.',
         methodSymbol,
-        '.apply(',
+        '.$apply(',
         receiver,
         arguments ? [', ', jsData(arguments.map(jsArgument).flat(1))] : '',
         ')'
@@ -331,10 +324,12 @@ const operatorMethod = (operator, a, b) => [
         col: operator.col,
         value: operator
     }),
-    '(',
+    '.$apply(',
     jsExpression(b),
     ')'
 ]
+
+const addNode = (obj, type, source) => ({ type, ...obj, line: source.line, col: source.line })
 
 const jsExpression = expression => {
     traceLog('expression:\t' + JSON.stringify(expression))
@@ -345,8 +340,38 @@ const jsExpression = expression => {
             return jsLocation(expression)
         case 'locate':
             return jsExpression(expression.location)
+        case 'jsNumber':
+            return sourceNode(expression)
         case 'digitNumber':
-            return [contextPrefix, 'number(', sourceNode(expression), ')']
+            return jsExpression({
+                type: 'methodExecution',
+                method: addNode({ value: 'new' }, 'identifier', expression),
+                receiver: addNode(
+                    {
+                        location: addNode(
+                            { name: addNode({ value: 'Number' }, 'identifier', expression) },
+                            'location',
+                            expression
+                        )
+                    },
+                    'locate',
+                    expression
+                ),
+                arguments: [
+                    addNode(
+                        {
+                            location: addNode(
+                                { name: addNode({ value: 'number' }, 'identifier', expression) },
+                                'location',
+                                expression
+                            ),
+                            expression: addNode({ value: expression.value }, 'jsNumber', expression)
+                        },
+                        'dataDefinition',
+                        expression
+                    )
+                ]
+            })
         case 'decimalNumber':
             return sourceNode(expression)
         case 'text':
@@ -376,7 +401,7 @@ const jsExpression = expression => {
 
 const jsDoes = statement => {
     const operators = {
-        result: 'return',
+        Return: 'return',
         collect: 'return'
     }
     const { operator, expression } = statement
@@ -402,24 +427,24 @@ const jsFor = statement => {
 
     const extentCalculation = (prefix = '') =>
         extent
-            ? ['Math.min(', jsExpression(extent), ', ', prefix, source, '.extentOf()', ')']
-            : [prefix, source, '.extentOf()']
+            ? ['Math.min(', jsExpression(extent), ', ', prefix, source, '.extentOf.$apply()', ')']
+            : [prefix, source, '.extentOf.$apply()']
 
     const itemPrelude = (exit = 'return') => [
         indent,
-        '            const ',
+        '                const ',
         nameSymbol,
         ' = ',
         !statement.do ? contextPrefix : '',
         source,
-        '.apply(',
+        '.offsetOf.$apply(',
         n,
         ')\n',
         // Why: This is only *really* needed for one-by-one itemization.
         // But the other alternative is to duplicate the loop with exactly the same code minus this check
         // to make the usual case not have this line. Nb. one-by-one can also be limited by its source's extent.
         indent,
-        '            if (',
+        '                if (',
         nameSymbol,
         ' === undefined) { ',
         exit,
@@ -429,14 +454,14 @@ const jsFor = statement => {
     const memory = statement.do ? symbol('memory') : 'memory'
     const i = statement.do ? symbol('i') : 'i'
 
-    const codePrelude = [indent, 'const ', source, ' = (', jsExpression(expression), ').itemsOf()\n']
+    const codePrelude = [indent, 'const ', source, ' = (', jsExpression(expression), ').itemsOf.$apply()\n']
 
     const loopCode = body => [
         indent,
         '        const ',
         itemsExtent,
         ' = ',
-        statement.do ? extentCalculation() : [contextPrefix, extent ? '' : ['.', source], '.extentOf()'],
+        statement.do ? extentCalculation() : [contextPrefix, extent ? '' : ['.', source], '.extentOf.$apply()'],
         '\n',
         indent,
         '        for (let ',
@@ -463,39 +488,54 @@ const jsFor = statement => {
         ? [codePrelude, loopCode([itemPrelude('break'), statements.map(jsStatement)])]
         : [
               indent,
-              'return {\n',
+              'const $context = {\n',
               indent,
-              '    context: {\n',
-              indent,
-              '        number: function (value) { return { value } },\n',
-              indent,
-              '        ',
+              '    ',
               source,
-              ': ',
-              '(',
-              withContextPrefix('this.', () => jsExpression(expression)),
-              ').itemsOf()',
-              scopesContains({ value: 'self' }) ? [',\n', indent, '        ', 'self$'] : '',
+              ': (',
+              jsExpression(expression),
+              ').itemsOf.$apply()',
+              scopesContains({ value: 'self' }) ? [',\n', indent, '    ', 'self$'] : '',
               memorizeThrough
                   ? [
                         ',\n',
                         indent,
-                        '        ',
+                        '    ',
                         memory,
                         ': [],\n',
                         indent,
-                        '        value: function () {\n',
-                        withContextPrefix('this.', () => [itemPrelude(), statements.map(jsStatement)]),
+                        '    value: {\n',
                         indent,
-                        '        }'
+                        // Issue: the $context should contain the reference of the source
+                        '        $context: {\n',
+                        indent,
+                        '            ...this.$context,\n',
+                        indent,
+                        '            source\n',
+                        indent,
+                        '        },\n',
+                        indent,
+                        '        $method:  function (',
+                        n,
+                        ') {\n',
+                        itemPrelude(),
+                        statements.map(jsStatement),
+                        indent,
+                        '        }\n',
+                        indent,
+                        '    }'
                     ]
                   : '',
               oneByOne ? [',\n', indent, '    ', i, ': 0'] : '',
               '\n',
               indent,
-              '    },\n',
+              '}\n',
               indent,
-              '    apply:    function ',
+              'return {\n',
+              indent,
+              '    $context,\n',
+              indent,
+              '    $apply: function ',
               items,
               '(',
               n,
@@ -533,15 +573,16 @@ const jsFor = statement => {
                         indent,
                         '        for (; i < ',
                         n,
-                        '; ++i) { if (this.apply(i) === undefined) { return } }\n',
+                        '; ++i) { if (this.$apply(i) === undefined) { return } }\n',
                         indent,
-                        '        return this.',
+                        '        return ',
+                        contextPrefix,
                         memory,
                         '[',
                         n,
                         '] = ',
                         contextPrefix,
-                        'value(',
+                        'value.$apply(',
                         n,
                         ')',
                         '\n'
@@ -550,22 +591,51 @@ const jsFor = statement => {
               indent,
               '    },\n',
               indent,
-              '    itemsOf:  function () { return this },\n',
+              '    itemsOf:  {\n',
               indent,
-              '    extentOf: ',
-              'function () { ',
+              '        $context: null,\n',
+              indent,
+              '        $apply: function (self$) {\n',
+              indent,
+              '            return {\n',
+              indent,
+              '                offsetOf: {\n',
+              indent,
+              '                    $context: self$.$context,\n',
+              indent,
+              '                    $apply:   self$.$apply\n',
+              indent,
+              '                },\n',
+              indent,
+              '                extentOf: {\n',
+              indent,
+              '                    $context: self$.$context,\n',
+              indent,
+              '                    $apply:   function () { ',
               captureStatementsPrepend(() => ['return ', extentCalculation(contextPrefix)]),
               ' }',
               ',\n',
               indent,
-              '    kindOf:   ',
-
-              'function () { return ',
+              '                },\n',
+              indent,
+              '                kindOf:   {\n',
+              indent,
+              '                    $context: self$.$context,\n',
+              indent,
+              '                    $apply:   function () { return ',
               oneByOne
                   ? "'one-by-one'"
-                  : [contextPrefix, source, ".kindOf() === 'one-by-one' ? 'one-by-one' : 'sequence'"],
+                  : [contextPrefix, source, ".kindOf.$apply() === 'one-by-one' ? 'one-by-one' : 'sequence'"],
               ' }',
               '\n',
+              indent,
+              '                }\n',
+              indent,
+              '            }\n',
+              indent,
+              '        }\n',
+              indent,
+              '    },\n',
               indent,
               '}\n'
           ]
@@ -587,7 +657,7 @@ const jsCase = ({ comments, definition: { is, has, as, statements } }, source) =
     code = [
         jsComments(comments),
         '   case ',
-        has ? [source, '.has(', jsLocator(has), ')'] : jsExpression(is),
+        has ? [source, '.has(', jsLocator(has), ')'] : [jsExpression(is), '.valueOf.$apply()'],
         ':\n',
         has && (has.type === 'identifier' || as)
             ? ['var ', sourceNode(as ? as : has), ' = ', source, '.get(', jsLocator(has), ')\n']
@@ -609,7 +679,7 @@ const jsWhen = statement => {
         // For example objects may decide to implement this using JSON.stringify, if field ordering is required
         has ? ['const ', z, ' = ', jsExpression(expression), '\n'] : '',
         'switch (',
-        has ? z : jsExpression(expression),
+        has ? z : [jsExpression(expression), '.valueOf.$apply()'],
         ') {\n',
         cases.map(caseStatement => jsCase(caseStatement, has && z)),
         otherwise ? [jsComments(otherwise.comments), '   default:\n', otherwise.definition.map(jsStatement)] : '',
@@ -717,6 +787,9 @@ const jsStatement = statement => {
                     : jsAssignLocation(statement.location, statement.expression)
             // Issue: these ones are a little trickier. Can use the parameter input matching code as a starting point
             case 'assignExpandData':
+                if (statement.location && !scopesContains(statement.location.name)) {
+                    pushScope(statement.location.name)
+                }
                 return [
                     assignKeyword,
                     ' ',
@@ -724,6 +797,9 @@ const jsStatement = statement => {
                     ' = null /* Issue: assignExpandData not implemented */\n'
                 ]
             case 'assignExpandList':
+                if (statement.location && !scopesContains(statement.location.name)) {
+                    pushScope(statement.location.name)
+                }
                 return [
                     assignKeyword,
                     ' ',
@@ -842,6 +918,8 @@ if (parser.results.length === 0) {
         // Issue: should all method names in this namespace be added to scope?
         // They are not actually in scope, but would prefer not to allow variables with the same name?
         scopes = [...(using ? using.definition.map(({ entry: { name } }) => name) : [])]
+
+        /*
         renames = new Map(
             using
                 ? new Map(
@@ -849,16 +927,30 @@ if (parser.results.length === 0) {
                   )
                 : []
         )
+*/
 
         const functions = methods.map(
-            ({ comments, definition: { name, of, receiver, inputs, statements, sequence } }) => {
-                traceLog('function:\t' + JSON.stringify(name))
-
-                methodName = name.value + (of ? 'Of' : '') + '$'
+            ({
+                comments,
+                definition: { categoryName, name, of, receiver, inputs, statements, expression, sequence }
+            }) => {
                 // Issue: this should use the receiver keyword and its metadata
-                scopes.push(!sequence ? [{ line: name.line, col: name.col, value: 'self' }] : [])
 
                 inputs = inputs || []
+
+                if (categoryName) {
+                    traceLog('category:\t' + JSON.stringify(categoryName))
+                    methodName = categoryName.value + '$'
+                    scopes.push([])
+                } else if (sequence) {
+                    traceLog('sequence:\t' + JSON.stringify(name))
+                    methodName = name.value + '$'
+                    scopes.push([])
+                } else if (name) {
+                    traceLog('method:\t' + JSON.stringify(name))
+                    methodName = name.value + (of ? 'Of' : '') + '$'
+                    scopes.push([{ line: name.line, col: name.col, value: 'self' }])
+                }
 
                 const deconstruct = inputs.length
                     ? [
@@ -1105,38 +1197,76 @@ if (parser.results.length === 0) {
 
                 scopeVariables.forEach(variables => pushScope(variables))
 
+                if (expression) {
+                    statements = [
+                        {
+                            type: 'standalone',
+                            ...(expression.comments && { comments: expression.comments }),
+                            definition: {
+                                type: 'does',
+                                operator: {
+                                    type: 'Return',
+                                    line: expression.definition.line,
+                                    col: expression.definition.col
+                                },
+                                expression: expression.definition
+                            }
+                        }
+                    ]
+                }
+
                 const code = [
                     '\n\n',
                     sourceNode(
-                        name,
-                        sequence
+                        categoryName || name,
+                        categoryName || sequence
                             ? [
                                   jsComments(comments),
                                   '        ',
-                                  sourceNode(name, methodName),
+                                  sourceNode(categoryName || name, methodName),
                                   ': (function ',
-                                  sourceNode(name),
+                                  sourceNode(categoryName || name),
                                   ' () {\n',
-                                  jsStatement(sequence),
-                                  '        }).call(context)'
+                                  sequence
+                                    ? jsStatement(sequence)
+                                    : statements.map(jsStatement),
+                                  '        }).call({ $context, $apply: null })'
                               ]
                             : [
                                   jsComments(comments),
                                   '        ',
                                   sourceNode(name, methodName),
                                   ': {\n',
-                                  '            context,\n',
-                                  '            apply:    function ',
+                                  '            $context,\n',
+                                  '            $apply: function ',
                                   sourceNode(name),
                                   '(self$',
                                   inputs.length ? ', inputs' : '',
                                   ') {\n',
                                   deconstructedInputs,
                                   statements.map(jsStatement),
-                                  '            },\n',
-                                  '            itemsOf:  function () { return this },\n',
-                                  '            extentOf: function () { return Infinity },\n',
-                                  "            kindOf:   function () { return 'offset' }\n",
+                                  '            },',
+                                  `
+            itemsOf: {
+                $context: null,
+                $apply:  function (self$) {
+                    return {
+                        offsetOf: {
+                            $context: self$.$context,
+                            $apply:   self$.$apply
+                        },
+                        extentOf: {
+                            $context: null,
+                            $apply:  function () { return Infinity }
+                        },
+                        kindOf:   {
+                            $context: null,
+                            $apply:  function () { return 'offset' }
+                        }
+                    }
+                }
+            }
+`,
 
                                   // Issue: it's quite helpful to have chaining like prototypes,
                                   //   so that most objects can have similarity in the top of the shape,
@@ -1167,7 +1297,6 @@ if (parser.results.length === 0) {
 
         const namespaceSymbol = symbol(namespaceDeclaration.value)
 
-        const dependencyNames = (using && jsInputsArgs(using.definition)) || ''
         const dependencies = (using && jsInputs(using.definition)) || ''
 
         return sourceNode(namespaceDeclaration, [
@@ -1178,12 +1307,7 @@ if (parser.results.length === 0) {
                 ? [
                       'function ',
                       namespaceSymbol,
-                      '(',
-                      dependencyNames,
-                      ') {\n',
-                      '        const context = { number: function (value) { return { value } }, ',
-                      dependencies,
-                      ' }\n',
+                      '($context) {\n',
                       '        return {\n\n',
                       join(functions, ',\n'),
                       '\n\n\n\n        }',
@@ -1211,34 +1335,119 @@ if (parser.results.length === 0) {
         `'use strict';
 
 
-class Entry {
-    constructor(entry) {
-        this[entry[0]] = entry[1]
-    }
-    valueOf() {
-        const values = Object.values(this)
-        if (values.length === 1) {
-            return values[0]
-        } else {
-            return this
+require('v8-compile-cache')
+
+
+const $context = {
+    Number: {
+        new: {
+            $context: null,
+            $apply:   function (self$, input) {
+                const $context = input
+                return {
+                    itemsOf: {
+                        $context,
+                        $apply: function () {
+                            const $context = this.$context
+                            return {
+                                offsetOf: {
+                                    $context, $apply: function (self$) { return self$ }
+                                },
+                                extentOf: {
+                                    $context, $apply: function ()      { return this.$context.number$ }
+                                },
+                                kindOf:   {
+                                    $context, $apply: function ()      { return 'offset' }
+                                }
+                            }
+                        }
+                    },
+                    valueOf: {
+                        $context,
+                        $apply: function () { return this.$context.number$ }
+                    }
+                }
+            }
+        }
+    },
+    Data: {
+        new: {
+            $context: {
+                Entries: {
+                    $context: null,
+                    $apply:   Object.entries
+                },
+                Entry: {
+                    $context: {
+                        Values: {
+                            $context: null,
+                            $apply:   Object.values
+                        }
+                    },
+                    $apply: function (self$) {
+                        const $context = {
+                            properties: { [self$[0]]: self$[1] },
+                            Values: this.$context.Values
+                        }
+                        return {
+                            valueOf: {
+                                $context,
+                                $apply: function (self$) {
+                                    const values = this.$context.Values.$apply(this.$context.properties)
+                                    if (values.length === 1) {
+                                        return values[0]
+                                    } else {
+                                        return self$
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            $apply: function (self$, input) {
+                const $context = {
+                    properties: input.properties,
+                    Entries:    this.$context.Entries,
+                    Entry:      this.$context.Entry
+                }
+                return {
+                    itemsOf: {
+                        $context,
+                        $apply: function () {
+                            const $context = {
+                                memory: this.$context.Entries.$apply(this.$context.properties),
+                                Entry:  this.$context.Entry
+                            }
+                            return {
+                                offsetOf: {
+                                    $context,
+                                    $apply: function (self$) {
+                                        return this.$context.Entry.$apply(this.$context.memory[self$])
+                                    }
+                                },
+                                extentOf: {
+                                    $context,
+                                    $apply: function () { return this.$context.memory.length }
+                                },
+                                kindOf:   {
+                                    $context: null,
+                                    $apply: function () { return 'offset' }
+                                }
+                            }
+                        }
+                    },
+                    update: {
+                        $context,
+                        $apply: function (self$, input) {
+                            this.$context.properties[input.property$] = input.value$
+                        }
+                    }
+                }
+            }
         }
     }
 }
-
-
-Object.prototype.itemsOf = function () {
-    return {
-        context:  { memory: Object.entries(this) },
-        apply:    function (n) { return new Entry(this.context.memory[n]) },
-        itemsOf:  function ()  { return this },
-        extentOf: function ()  { return this.context.memory.length },
-        kindOf:   function ()  { return 'offset' }
-    }
-}
-Object.defineProperty(Object.prototype, 'itemsOf', { enumerable: false })
-
-
-const context = { number: function (value) { return { value } } }
 
 
 
@@ -1260,6 +1469,7 @@ module.exports = {
     if (options.showParseTree) {
         console.log(JSON.stringify(parser.results, null, 2))
     }
+    console.error(jsonDiff.diffString(parser.results[0], parser.results[1]))
     console.error('Ambiguous parse')
     process.exit(1)
 }

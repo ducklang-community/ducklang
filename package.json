@@ -13,11 +13,13 @@
     },
     "dependencies": {
         "base26": "^0.1.0",
+        "json-diff": "^0.5.4",
         "moo": "aliclark/moo.git#graphical-errors",
         "moo-indentation-lexer": "^6.0.0",
         "nearley": "^2.19.7",
         "optionator": "^0.9.1",
-        "source-map": "^0.7.3"
+        "source-map": "^0.7.3",
+        "v8-compile-cache": "^2.1.1"
     },
     "devDependencies": {
         "prettier": "^2.1.2"

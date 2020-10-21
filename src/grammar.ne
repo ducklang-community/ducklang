@@ -23,6 +23,7 @@ const lexer = new IndentationLexer({
     	why:		/Why: .*$/,
     	see:		/See: .*:\/\/.*$/,
     	issue:		/Issue: .*$/,
+    	question:	/Question: .*$/,
     	ellided:	/\.\.\. .*$/,
 
 		namespaceIdentifier: /^::.*::$/,
@@ -38,7 +39,7 @@ const lexer = new IndentationLexer({
 		},
 
 		identifier: {
-			match: /_|[a-zA-Z]+[a-zA-Z0-9]*/,
+			match: /_|[a-z]+[a-zA-Z0-9]*/,
 			type: moo.keywords({
 				Return: 'return',
 				collect: 'collect',
@@ -47,6 +48,8 @@ const lexer = new IndentationLexer({
 				otherwise: 'otherwise'
 			})
 		},
+
+		categoryName: /[A-Z]+[a-zA-Z0-9]*/,
 
         newline: { match: /\n/, lineBreaks: true },
         _: ' ',
@@ -264,7 +267,7 @@ using ->
 	newline
 	standalone[(
 			Use _
-			elongated[(_ _ _ _) {% ignore %} , identifier {% ([name]) => ({ type: 'input', name }) %} ] newline
+			elongated[(_ _ _ _) {% ignore %} , qualifier {% ([name]) => ({ type: 'input', name }) %} ] newline
 			{%	takeThird	%}
 		) {% take %} ,
 		null {% ignore %} ]
@@ -307,17 +310,29 @@ using ->
 method ->
 	newline
 	newline
-	standalone[(
-			identifier (_ of {% takeSecond %} ):? _ ("self" | "{" _ "self":? ("," _ "this"):? ("," _ "inner"):? _ "}")
-					methodInputs ":"
-				blockOf[statement {% take %} ]
-			{%	([name, of, , receiver, inputs, , statements]) => ({
-				name,
-				...(of && { of }),
-				receiver,
-				...(inputs && { inputs }),
-				statements
-			}) %}
+	standalone[
+		(
+			(
+				  categoryName
+					{% ([categoryName]) => ({ categoryName }) %}
+				| identifier
+					(_ of {% takeSecond %} ):?
+					_ ("self" | "{" _ "self":? ("," _ "this"):? ("," _ "inner"):? _ "}")
+					methodInputs
+					{%
+						([name, of, , receiver, inputs]) =>
+							({ name, ...(of && { of }), receiver, ...(inputs && { inputs }) })
+					%}
+			)
+			(  ":" blockOf[statement {% take %} ]
+				{% ([, statements]) =>
+					({ statements }) %}
+			 | _ "->" block[expression newline {% take %}]
+				{% ([, , expression]) =>
+					({ expression }) %}
+			)
+			{%	([defining, body]) =>
+					({ ...defining, ...body }) %}
 		) {% take %} ,
 		null {% ignore %} ]
 	{%	takeThird	%}
@@ -504,7 +519,7 @@ description ->
 	{% ([, , , , , why, , comments]) => ({ why, ...(comments.length && { comments }) }) %}
 
 
-location -> identifier (":" locator {% takeSecond %} ):*
+location -> qualifier (":" locator {% takeSecond %} ):*
 	{% ([name, locators]) =>
 		({ type: 'location', name, ...(locators.length && { locators }) }) %}
 
@@ -518,6 +533,10 @@ value ->
 	| positional	{% take %}
 	| literal		{% take %}
 	| text			{% take %}
+
+qualifier ->
+	  identifier	{% take %}
+	| categoryName	{% take %}
 
 
 Use			-> "use"		{% ignore %}
@@ -555,6 +574,7 @@ decimalNumber	-> %decimalNumber	{% take %}
 digitNumber		-> %digitNumber		{% take %}
 positional		-> %positional		{% take %}
 identifier		-> %identifier		{% take %}
+categoryName	-> %categoryName	{% take %}
 
 namespaceIdentifier -> %namespaceIdentifier	{% take %}
 

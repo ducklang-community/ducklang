@@ -12,12 +12,15 @@ This file is a collection of various methods to exercise and hash out various id
 
 
 
-square of self:
-	return self ** 2
+use Number
 
 
-cube of self:
-	return self ** 3
+square of self ->
+	self ** 2
+
+
+cube of self ->
+	self ** 3
 
 
 
@@ -25,8 +28,8 @@ cube of self:
 
 
 
-itself of self:
-	return self
+itself of self ->
+	self
 
 
 
@@ -34,7 +37,8 @@ itself of self:
 
 
 
-use infinity
+use Number,
+    infinity
 
 
 power of self:
@@ -43,28 +47,28 @@ power of self:
 
 
 factorial:
-	for each n through infinity,
-		when n
+	for each number through infinity,
+		when number
 			is 0:      collect 1
-			otherwise: collect n * (factorial (n - 1))
+			otherwise: collect number * (factorial (number - 1))
 
 
 fibonacci:
 	Why:`A benefit of using a 'through' sequence versus 'in' itemization is language-provided memory of results
 		 which means it does not take extra time to recurse - f(n-1) and f(n-2) is already memorized.`
-	for each n through infinity,
-		when n
+	for each number through infinity,
+		when number
 			is 0: collect 0
 			is 1: collect 1
-			otherwise: collect (fibonacci (n - 1)) + (fibonacci (n - 2))
+			otherwise: collect (fibonacci (number - 1)) + (fibonacci (number - 2))
 
 
 lucas:
-	for each n through infinity,
-		when n
+	for each number through infinity,
+		when number
 			is 0: collect 2
 			is 1: collect 1
-			otherwise: collect (lucas (n - 1)) + (lucas (n - 2))
+			otherwise: collect (lucas (number - 1)) + (lucas (number - 2))
 
 
 
@@ -72,7 +76,8 @@ lucas:
 
 
 
-use infinity
+use Number,
+    infinity
 
 
 evenNumbers:
@@ -85,7 +90,8 @@ evenNumbers:
 
 
 
-use evenNumbers
+use Number,
+    evenNumbers
 
 
 oddNumbers:
@@ -98,15 +104,12 @@ oddNumbers:
 
 
 
-use infinity
+use Number,
+    infinity
 
 
 countingFrom self with numbersLessThan limit (otherwise default infinity):
-
-	Issue: at the moment this isn't being captured into the itemization correctly
-	length = limit - self
-
-	for each number in infinity, to extent of length,
+	for each number in infinity, to extent of limit - self,
 		collect self + number
 
 
@@ -130,7 +133,8 @@ countingTo self:
 
 
 
-use evenNumbers,
+use Number,
+    evenNumbers,
     oddNumbers
 
 
@@ -179,8 +183,8 @@ everyOther of self:
 
 
 
-use category,
-    error
+use Number,
+    String
 
 
 aliquotSum of self:
@@ -222,10 +226,11 @@ aliquotClassification of self:
 
 
 
-use category,
-    errors,
+use Number,
+    List,
+    String,
+    Fraction,
     log,
-    harness,
     blaster,
     turbo,
     offset,
@@ -233,7 +238,7 @@ use category,
 
 
 launchBoosters of self with thrust level,
-                            angle trajectory (otherwise default 0.0),
+                            trajectory angle (otherwise default 0.0),
                             turboState (otherwise default 'unknown'):
 	numbers = [1, 2, 3]
 
@@ -249,7 +254,7 @@ launchBoosters of self with thrust level,
 		engage turbo with thruster: x
 
 	boost blaster with { { stage } = variable, level,
-	                     trajectory, offset } otherwise default 'done'
+	                     angle, offset } otherwise default 'done'
 
 
 engageBoosters of self with thrust,
@@ -281,7 +286,10 @@ engageBoosters of self with thrust,
 
 
 
-use infinity,
+use Number,
+    List,
+    String,
+    infinity,
     square
 
 
@@ -337,7 +345,8 @@ firstFive self:
 
 
 
-use firstFive
+use Number,
+    firstFive
 
 
 firstFiveDoubled self:
@@ -350,7 +359,8 @@ firstFiveDoubled self:
 
 
 
-use firstFiveDoubled
+use Number,
+    firstFiveDoubled
 
 
 firstTwoDoubled self:
@@ -363,7 +373,8 @@ firstTwoDoubled self:
 
 
 
-use list,
+use Number,
+    String,
     firstTwoDoubled
 
 
@@ -382,7 +393,7 @@ test5 of self with [...rest] = input1:
 	return rest
 
 
-stringtest of self with input1:
+stringTest of self with input1:
 	return 'input1 is {input1}'
 
 
@@ -404,5 +415,40 @@ whenHasTest of self with input1:
 			return name
 		has year:
 			return year
+
+
+
+::2020::Point::new::
+
+
+
+use Data
+
+
+new self with x,
+              y:
+	dimensions:{ x, y }
+	return dimensions
+
+
+distance of self with point:
+	a = point:x - self:x
+	b = point:y - self:y
+	return squareRoot of ((square a) + (square b))
+
+
+
+::2020::Point::Category::
+
+
+
+use Category,
+    new,
+    distance
+
+
+Issue: assignWith is still unimplemented: methods: { new, distance }
+Point ->
+	new Category with method1: new, method2: distance
 
 
