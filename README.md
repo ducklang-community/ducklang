@@ -1,10 +1,11 @@
 # 🐥 Ducklang
 
 [![Join the chat at https://gitter.im/ducklang-community/ducklang](https://badges.gitter.im/ducklang-community/ducklang.svg)](https://gitter.im/ducklang-community/ducklang?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+![stability-unstable](https://img.shields.io/badge/stability-unstable-yellow.svg)
 
 Ducklang is a duck-typed programming language with an emphasis on readability of the language.
 
-## Sample
+## Sample code
 
 ![Sample code](sample.png)
 
