@@ -30,9 +30,8 @@ yarn build && yarn start -f fixtures/definitions.dg && cat dist/fixtures/definit
 * **Composition**: (over inheritance) - the quick wins of inheritance can lead to code structures that are hard to refactor
 * **Inversion of control**: Dependencies inject into modules not the other way round for better modularity
 * **Readability**: (over concision) - the code which we're most proud about tends to be code which reads like prose
-* **Promises**: Asynchronicity using awaited promises as in JavaScript
-* **Smart tabs**: Indentation-aware syntax like Python
-* **Named inputs**: methods calls pass inputs by name for readability and ease of code evolution. Un-named inputs and positional-matching can also be used.
+* **Asynchronous**: Asynchronicity using an explicit but clear fork-join model
+* **Named inputs**: method calls pass inputs by name for readability and ease of code evolution. Un-named inputs and positional-matching can also be used.
 * **Extensibility**: most operators expand into method calls so you aren't tied by what comes shipped with the language
 * **Separation of Concerns**: all code is stand-alone and can be "mixed-in" with existing types, allowing for smaller modules which do one thing and do it well
 * **Uniformity**: emphasis on the object oriented paradigm and uniform whitespace means code is more regular across projects
@@ -44,9 +43,11 @@ yarn build && yarn start -f fixtures/definitions.dg && cat dist/fixtures/definit
 * ~~Define the language grammar~~
 * ~~Clean up the Nearley output using functions~~
 * Compile the program representation into JavaScript (in progress, ~75%)
-* Using the generated JavaScript methods from a JavaScript inversion-control-style program
+* Ability to instantiate Program and run it inside a Tasklet
 * Add validations on the parse-tree prior to generating output
 * NPM-style method and namespace repository, using github sources direct and Certificate Transparency style consistency
+* 'yarn link' style behaviour for local code checkouts of projects
+* VS Code plugin
 
 ## Project organisation
 
