@@ -393,8 +393,8 @@ test5 of self with [...rest] = input1:
 	return rest
 
 
-stringTest of self with input1:
-	return 'input1 is {input1}'
+stringTest of self with input1 ->
+	'input1 is {input1}'
 
 
 locatorTest of self with input1:
@@ -447,8 +447,68 @@ use Category,
     distance
 
 
-Issue: assignWith is still unimplemented: methods: { new, distance }
 Point ->
+	Issue: assignWith is still unimplemented, should be:
+	... methods: { new, distance }
 	new Category with method1: new, method2: distance
+
+
+
+::2020::Program::run::
+
+
+
+use software,
+    Data,
+    String
+
+
+run self:
+	return self
+
+
+
+::2020::Program::program::
+
+
+
+program self:
+	{ software, Data, String } = self
+
+	components = import software with
+		Blaster:        { author: 'terry', version: '2020' },
+		turboConcept:   { author: 'jill',  version: '2019' },
+		rocketConcept:  { author: 'alex',  version: '2020-03' },
+		RocketFix:      { author: 'rick',  version: '2020' },
+		programConcept: { author: 'clive', version: '2018' }
+
+	return components
+
+
+
+::2020::Program::new::
+
+
+
+use base,
+    program
+
+
+new self ->
+	:duck base
+	follow duck with program
+
+
+
+::2020::Program::
+
+
+
+use Category,
+    new
+
+
+Program ->
+	new Category with method: new
 
 

@@ -172,6 +172,7 @@ standalone[definition, adjusted] -> newline:?
 indented[definition]	-> newline indent $definition dedent	{% takeThird %}
 block[definition]		-> indented[standalone[$definition		{% take %} , ____:+ {% ignore %} ]		{% take %}	]	{% take %}
 blockOf[definition]		-> indented[standalone[$definition		{% take %} , ____:+ {% ignore %} ]:+	{% take %}	]	{% take %}
+blockEnded[definition, last]	-> indented[( standalone[$definition		{% take %} , ____:+ {% ignore %} ]:* standalone[$last	{% take %} , ____:+ {% ignore %} ]	{% ([main, last]) => [...main, last] %}	) {% take %} ]	{% take %}
 
 items[definition]   -> delimited[$definition	{% take %} , ("," _:+)		{% ignore %} ]			{% take %}
 listing[definition] -> delimited[$definition	{% take %} , ("," newline)	{% ignore %} ] ",":?	{% take %}
@@ -233,7 +234,7 @@ methodCall[prefix] ->
 			({ type: 'methodExecution', ...invocation, arguments, ...(otherwise && { otherwise }) }) %}
 
 	| invokeWith[$prefix {% take %} ] _ with _ enclosedDataBlock allowOtherwise[(newline ____:+) {% take %} ]
-		{% ([invocation, , , , arguments, otherwise]) =>
+		{% ([invocation, , , , { data: arguments }, otherwise]) =>
 			({ type: 'methodExecution', ...invocation, arguments, ...(otherwise && { otherwise }) }) %}
 
 
@@ -327,9 +328,9 @@ method ->
 			(  ":" blockOf[statement {% take %} ]
 				{% ([, statements]) =>
 					({ statements }) %}
-			 | _ "->" block[expression newline {% take %}]
-				{% ([, , expression]) =>
-					({ expression }) %}
+			 | _ "->" blockEnded[statement {% take %}, expression newline {% take %} ]
+				{% ([, arrow, statements]) =>
+					({ arrow, statements }) %}
 			)
 			{%	([defining, body]) =>
 					({ ...defining, ...body }) %}
@@ -354,7 +355,7 @@ methodInputs -> (_ with _ elongated[(_ _ _ _ _ _ _ _ _:+) {% ignore %} , input {
 input ->
 	(  destructuringList _:+ "=" _:+ {% take %}
 	 | destructuringData _:+ "=" _:+ {% take %} ):?
-	"...":? ( identifier {% take %} | quote {% take %} ) (_ identifier {% takeSecond %} ):?
+	"...":? ( qualifier {% take %} | quote {% take %} ) (_ qualifier {% takeSecond %} ):?
 		(_:+ "(" otherwise _ default _ expression ")" {% takeSeventh %} ):?
 
 	{% ([destructuring, grouping, name, as, otherwise]) => ({
@@ -470,7 +471,7 @@ dataLiteral -> "{" _ flowing[dataDefinition	{% take %} ] _ "}" {% ([, , data]) =
 listBlock ->  "["
 		listingBlock[flowing[expression {% take %} ] {% take %} ]
 	____:+ "]"
-	{% ([, listingBlock]) => ({ type: 'listBlock', listingBlock }) %}
+	{% ([, list]) => ({ type: 'listBlock', list }) %}
 
 dataBlock ->
 	  listingBlock[dataDefinition {% take %} ]	{% take %}
@@ -479,7 +480,7 @@ dataBlock ->
 enclosedDataBlock ->  "{"
 		listingBlock[dataDefinition {% take %} ]
 	____:+ "}"
-	{% ([, listingBlock]) => ({ type: 'enclosedDataBlock', listingBlock }) %}
+	{% ([, data]) => ({ type: 'enclosedDataBlock', data }) %}
 
 dataDefinition ->
 	  expression																	{% ([expression]) => ({ type: 'expression', expression }) %}

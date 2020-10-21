@@ -203,6 +203,8 @@ const jsArgument = (b, i, inputs) => {
     switch (b.type) {
         case 'dataDefinition':
             return b
+        case 'entry':
+            return b.entry
         case 'expression':
             if (['locate', 'methodExecution'].includes(b.expression.type)) {
                 return jsArgument(b.expression)
@@ -789,6 +791,12 @@ const jsStatement = statement => {
             case 'assignExpandData':
                 if (statement.location && !scopesContains(statement.location.name)) {
                     pushScope(statement.location.name)
+                } else if (statement.destructuringData) {
+                    statement.destructuringData.forEach(({ name }) => {
+                        if (!scopesContains(name)) {
+                            pushScope(name)
+                        }
+                    })
                 }
                 return [
                     assignKeyword,
@@ -930,10 +938,7 @@ if (parser.results.length === 0) {
 */
 
         const functions = methods.map(
-            ({
-                comments,
-                definition: { categoryName, name, of, receiver, inputs, statements, expression, sequence }
-            }) => {
+            ({ comments, definition: { categoryName, name, of, receiver, inputs, arrow, statements, sequence } }) => {
                 // Issue: this should use the receiver keyword and its metadata
 
                 inputs = inputs || []
@@ -1197,22 +1202,21 @@ if (parser.results.length === 0) {
 
                 scopeVariables.forEach(variables => pushScope(variables))
 
-                if (expression) {
-                    statements = [
-                        {
-                            type: 'standalone',
-                            ...(expression.comments && { comments: expression.comments }),
-                            definition: {
-                                type: 'does',
-                                operator: {
-                                    type: 'Return',
-                                    line: expression.definition.line,
-                                    col: expression.definition.col
-                                },
-                                expression: expression.definition
-                            }
+                if (arrow) {
+                    const last = statements[statements.length - 1]
+                    statements[statements.length - 1] = {
+                        type: 'standalone',
+                        ...(last.comments && { comments: last.comments }),
+                        definition: {
+                            type: 'does',
+                            operator: {
+                                type: 'Return',
+                                line: last.definition.line,
+                                col: last.definition.col
+                            },
+                            expression: last.definition
                         }
-                    ]
+                    }
                 }
 
                 const code = [
@@ -1225,11 +1229,9 @@ if (parser.results.length === 0) {
                                   '        ',
                                   sourceNode(categoryName || name, methodName),
                                   ': (function ',
-                                  sourceNode(categoryName || name),
+                                  sourceNode(categoryName || name, methodName),
                                   ' () {\n',
-                                  sequence
-                                    ? jsStatement(sequence)
-                                    : statements.map(jsStatement),
+                                  sequence ? jsStatement(sequence) : statements.map(jsStatement),
                                   '        }).call({ $context, $apply: null })'
                               ]
                             : [
@@ -1239,7 +1241,7 @@ if (parser.results.length === 0) {
                                   ': {\n',
                                   '            $context,\n',
                                   '            $apply: function ',
-                                  sourceNode(name),
+                                  sourceNode(name, methodName),
                                   '(self$',
                                   inputs.length ? ', inputs' : '',
                                   ') {\n',
@@ -1469,8 +1471,10 @@ module.exports = {
     if (options.showParseTree) {
         console.log(JSON.stringify(parser.results, null, 2))
     }
-    console.error(jsonDiff.diffString(parser.results[0], parser.results[1]))
-    console.error('Ambiguous parse')
+    for (var i = 0; i < parser.results.length - 1; i += 2) {
+        console.error(jsonDiff.diffString(parser.results[i], parser.results[i + 1]))
+    }
+    console.error(parser.results.length + ' (ambiguous) parses')
     process.exit(1)
 }
 
