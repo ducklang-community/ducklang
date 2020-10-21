@@ -472,6 +472,9 @@ run self:
 
 
 
+use run
+
+
 program self:
 	{ software, Data, String } = self
 
@@ -482,7 +485,7 @@ program self:
 		RocketFix:      { author: 'rick',  version: '2020' },
 		programConcept: { author: 'clive', version: '2018' }
 
-	return components
+	follow components with run
 
 
 
