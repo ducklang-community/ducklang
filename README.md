@@ -43,11 +43,13 @@ yarn build && yarn start -f fixtures/definitions.dg && cat dist/fixtures/definit
 * ~~Define the language grammar~~
 * ~~Clean up the Nearley output using functions~~
 * Compile the program representation into JavaScript (in progress, ~75%)
+* Dependabot-style software lockfile updater for any dependency maps found inside the repo (in progress, ~10%)
+* Source-code fetch into ~/.local cache (Certificate Transparency style checks?)
+* 'yarn link' style behaviour for local code checkouts of projects
 * Ability to instantiate Program and run it inside a Tasklet
 * Add validations on the parse-tree prior to generating output
-* NPM-style method and namespace repository, using github sources direct and Certificate Transparency style consistency
-* 'yarn link' style behaviour for local code checkouts of projects
 * VS Code plugin
+* Open Source code search
 
 ## Project organisation
 
