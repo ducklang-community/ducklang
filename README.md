@@ -55,9 +55,9 @@ yarn build && yarn start -f fixtures/definitions.dg && cat dist/fixtures/definit
 
 Ducklang takes a *keep it as simple as needed* approach to community organisation.
 At the moment that means the language originator acting as a de-facto
-product manager, shepherding the language between differing concepts and goals.
+product manager shepherding the language between differing concepts and goals.
 
-The project code is young, and as such any code is welcome, however scrappy
+The project code is young and as such any code is welcome, however scrappy
 (good quality code is welcome too :)
 
 ## Code of conduct
