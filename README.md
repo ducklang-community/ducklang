@@ -46,7 +46,7 @@ yarn build && yarn start -f fixtures/definitions.dg && cat dist/fixtures/definit
 * Dependabot-style software lockfile updater for any dependency maps found inside the repo (in progress, ~10%)
 * Source-code fetch into ~/.local cache (Certificate Transparency style checks?)
 * 'yarn link' style behaviour for local code checkouts of projects (also expressed as dependency map files?)
-* Ability to instantiate Program and run it inside a Tasklet
+* Ability to instantiate a program and run it inside a tasklet
 * Add validations on the parse-tree prior to generating output
 * VS Code plugin
 * Open Source code search
