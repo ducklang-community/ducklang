@@ -2,6 +2,8 @@
 
 [![Join the chat at https://gitter.im/ducklang-community/ducklang](https://badges.gitter.im/ducklang-community/ducklang.svg)](https://gitter.im/ducklang-community/ducklang?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 ![stability-unstable](https://img.shields.io/badge/stability-unstable-yellow.svg)
+![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)
+
 
 Ducklang is a duck-typed programming language with an emphasis on readability of the language.
 
@@ -43,6 +45,7 @@ yarn build && yarn start -f fixtures/definitions.dg && cat dist/fixtures/definit
 * ~~Define the language grammar~~
 * ~~Clean up the Nearley output using functions~~
 * Compile the program representation into JavaScript (in progress, ~75%)
+* Yarn 2 local dependency management?
 * Dependabot-style software lockfile updater for any dependency maps found inside the repo (in progress, ~10%)
 * Source-code fetch into ~/.local cache (Certificate Transparency style checks?)
 * 'yarn link' style behaviour for local code checkouts of projects (also expressed as dependency map files?)
