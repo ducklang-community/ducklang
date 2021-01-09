@@ -46,6 +46,8 @@ yarn build && yarn start -f fixtures/definitions.dg && cat dist/fixtures/definit
 * ~~Clean up the Nearley output using functions~~
 * Compile the program representation into JavaScript (in progress, ~75%)
 * Yarn 2 local dependency management?
+* Change the target language from JavaScript to TypeScript
+* Add type checking that dependencies contain the required methods, use 'interface' to group methods, and type unions
 * Dependabot-style software lockfile updater for any dependency maps found inside the repo (in progress, ~10%)
 * Source-code fetch into ~/.local cache (Certificate Transparency style checks?)
 * 'yarn link' style behaviour for local code checkouts of projects (also expressed as dependency map files?)
