@@ -11,7 +11,7 @@ Ducklang is a duck-typed programming language with an emphasis on readability of
 
 ![Sample code](sample.png)
 
-See [fixtures/definitions.dg](fixtures/definitions.dg) for more example code.
+See [fixtures/definitions.dg](fixtures/definitions.dklng) for more example code.
 
 ## Usage
 
@@ -22,7 +22,7 @@ yarn
 
 ### Run
 ```shell script
-yarn build && yarn start -f fixtures/definitions.dg && cat dist/fixtures/definitions.js
+yarn build && yarn start -f fixtures/definitions.dklng && cat dist/fixtures/definitions.dklng.js
 ```
 
 ### Principles
