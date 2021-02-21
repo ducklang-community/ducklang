@@ -32,7 +32,7 @@ yarn build && yarn start -f fixtures/definitions.dklng && cat dist/fixtures/defi
 * **Composition**: (over inheritance) - the quick wins of inheritance can lead to code structures that are hard to refactor
 * **Inversion of control**: Dependencies inject into modules not the other way round for better modularity
 * **Readability**: (over concision) - the code which we're most proud about tends to be code which reads like prose
-* **Asynchronous**: Asynchronicity using an explicit but clear fork-join model
+* **Asynchronous**: Asynchronicity using a fork-join model like Trio in Python
 * **Named inputs**: method calls pass inputs by name for readability and ease of code evolution. Un-named inputs and positional-matching can also be used.
 * **Extensibility**: most operators expand into method calls so you aren't tied by what comes shipped with the language
 * **Separation of Concerns**: all code is stand-alone and can be "mixed-in" with existing types, allowing for smaller modules which do one thing and do it well
