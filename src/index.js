@@ -230,7 +230,7 @@ const jsArgument = (b, i, inputs) => {
         //"expression":{"type":"locate","location":{"type":"location","name":{"type":"identifier","value":"variable","text":"variable","offset":3867,"lineBreaks":0,"line":251,"col":35}}}}
         case 'assignExpandData':
             console.warn('Unimplemented assignExpandData')
-        // I think because 'expression' can be anything and there can be multiple locators,
+            // I think because 'expression' can be anything and there can be multiple locators,
         // will need to wrap the method call in a lambda and destructure into temporary variables first.
         //return b.destructuringData.map(({ name }) =>
         //jsArgument({ type: 'dataDefinition', location: { type: 'location', name }, expression: b.expression }))
@@ -248,6 +248,16 @@ const jsArgument = (b, i, inputs) => {
                     name: { type: 'identifier', line: b.line, col: b.col, value: base26.to(i + 1) }
                 },
                 expression: b
+            }
+        case 'input':
+            console.warn('Unimplemented input')
+            return {
+                type: 'dataDefinition',
+                location: {
+                    type: 'location',
+                    name: b.name
+                },
+                expression: b.name
             }
         default:
             console.error(`Unknown argument type ${b.type}`)
@@ -348,10 +358,11 @@ const jsExpression = expression => {
             return jsExpression({
                 type: 'methodExecution',
                 method: addNode({ value: 'new' }, 'identifier', expression),
+                of: true,
                 receiver: addNode(
                     {
                         location: addNode(
-                            { name: addNode({ value: 'Number' }, 'identifier', expression) },
+                            { name: addNode({ value: 'numbers' }, 'identifier', expression) },
                             'location',
                             expression
                         )
@@ -380,6 +391,7 @@ const jsExpression = expression => {
             return sourceNode(expression, expression.value.replace(/'/g, '`').replace(/(?<!(\\\\)*\\){/g, '${'))
         case 'literal':
             return sourceNode(expression, expression.value.replace(/`/g, "'").replace())
+        // TODO: list type should be an object which implements 'itemsOf'
         case 'list':
             return ['[', join(expression.list.map(jsExpression)), ']']
         case 'data':
@@ -652,8 +664,8 @@ const jsFor = statement => {
 }
 
 const jsCase = ({ comments, definition: { is, has, as, statements } }, source) => {
-    if (has && has.type === 'identifier') {
-        pushScope(has)
+    if (has && (has.type === 'identifier' || as)) {
+        pushScope(as ? as : has)
     }
     assignKeyword = 'var'
     code = [
@@ -668,6 +680,9 @@ const jsCase = ({ comments, definition: { is, has, as, statements } }, source) =
         statements.map(jsStatement),
         '       break\n'
     ]
+    if (has && (has.type === 'identifier' || as)) {
+        popScope(as ? as : has)
+    }
     assignKeyword = 'const'
     return code
 }
@@ -919,6 +934,8 @@ if (parser.results.length === 0) {
             //  Not sure about that - I agree for group, but surely an itemization could have an 'otherwise'.
             // Issue: validate that a matching list or data container is not empty, it has at least 1 thing in it
             // Issue: check all inputs, dependencies and assignment statements to prevent name clash
+
+            // Issue: validate to disallow 'return' directly from for-do - should use 'stop' instead.
         })
     })
 
@@ -938,7 +955,8 @@ if (parser.results.length === 0) {
 */
 
         const functions = methods.map(
-            ({ comments, definition: { categoryName, name, of, receiver, inputs, arrow, statements, sequence } }) => {
+            ({ comments, definition }) => {
+                let { categoryName, name, of, receiver, inputs, arrow, statements, sequence } = definition
                 // Issue: this should use the receiver keyword and its metadata
 
                 inputs = inputs || []
@@ -953,6 +971,8 @@ if (parser.results.length === 0) {
                     scopes.push([])
                 } else if (name) {
                     traceLog('method:\t' + JSON.stringify(name))
+                    traceLog('method definition:\t' + JSON.stringify(definition))
+                    traceLog('')
                     methodName = name.value + (of ? 'Of' : '') + '$'
                     scopes.push([{ line: name.line, col: name.col, value: 'self' }])
                 }
@@ -1460,8 +1480,8 @@ module.exports = {
     ]).toStringWithSourceMap()
 
     fs.mkdirSync(`dist/${fileName.split('/').slice(0, -1).join('/')}`, { recursive: true })
-    fs.writeFileSync(`dist/${fileName.replace(/\.dg$/, '.js')}`, code)
-    fs.writeFileSync(`dist/${fileName.replace(/\.dg$/, '.map')}`, JSON.stringify(map))
+    fs.writeFileSync(`dist/${fileName}.js`, code)
+    fs.writeFileSync(`dist/${fileName}.js.map`, JSON.stringify(map))
 
     // Issue: make the output prettier, eg. with right indentation and nice variable names
     // (nb. prettier isn't viable as it doesn't do source mapping. Workarounds exist but are slow)

@@ -1,0 +1,539 @@
+
+
+
+Why:`
+
+This file is a collection of various methods to exercise and hash out various ideas in Ducklang.
+`
+
+
+
+::2020::Numbers::
+
+
+
+use numbers
+
+
+square of self ->
+	self ** 2
+
+
+cube of self ->
+	self ** 3
+
+
+
+::2020::Functions::
+
+
+
+itself of self ->
+	self
+
+
+
+::2020::Sequences::
+
+
+
+use numbers,
+    infinity
+
+
+power of self:
+	for each number in infinity,
+		collect self ** number
+
+
+factorial:
+	for each number through infinity,
+		when number
+			is 0: collect 1
+			otherwise: collect number * (factorial (number - 1))
+
+
+fibonacci:
+	Why:`A benefit of using a 'through' sequence versus 'in' itemization is language-provided memory of results
+		 which means it does not take extra time to recurse - f(n-1) and f(n-2) is already memorized.`
+	for each number through infinity,
+		when number
+			is 0: collect 0
+			is 1: collect 1
+			otherwise: collect (fibonacci (number - 1)) + (fibonacci (number - 2))
+
+
+lucas:
+	for each number through infinity,
+		when number
+			is 0: collect 2
+			is 1: collect 1
+			otherwise: collect (lucas (number - 1)) + (lucas (number - 2))
+
+
+
+::2020::Sequences::Even::
+
+
+
+use numbers,
+    infinity
+
+
+*even numbers*:
+	for each number in infinity,
+		collect number * 2
+
+
+
+::2020::Sequences::Odd::
+
+
+
+use numbers,
+    *even numbers*
+
+
+*odd numbers*:
+	for each number in *even numbers*,
+		collect number + 1
+
+
+
+::2020::Ranges::
+
+
+
+use numbers,
+    infinity
+
+
+*counting from* self with *numbers less than* limit (otherwise default infinity):
+	for each number in infinity, to extent of limit - self,
+		collect self + number
+
+
+*numbers less than* self:
+	for each number in infinity, to extent of self,
+		collect number
+
+
+*numbers greater than* self:
+	for each number in *counting from* self,
+		collect number + 1
+
+
+*counting to* self:
+	for each number in *numbers less than* self,
+		collect number + 1
+
+
+
+::2020::Numbers::
+
+
+
+use numbers,
+    *even numbers*,
+    *odd numbers*
+
+
+*even numbers less than* self:
+	for each number in *even numbers*, to extent of *rounded up* (self / 2),
+		collect number
+
+
+*odd numbers less than* self:
+	for each number in *odd numbers*, to extent of *rounded down* (self / 2),
+		collect number
+
+
+
+::2020::Itemizing::
+
+
+
+*result from each* of self with ["mapping"] = ...input:
+	:items of self
+	*result from each* of items with mapping
+
+
+
+::2020::Items::
+
+
+
+use numbers,
+    *even numbers*
+
+
+*result from each* of self with ["mapping"] = ...input:
+	for each x in self,
+		collect result of mapping with self: x
+
+
+*every other* of self:
+	lookup = offset from self
+	for each index in *even numbers*, to extent of *rounded up* ((extent of self) / 2),
+		collect result of lookup with index
+
+
+
+::2020::Aliquot::
+
+
+
+use data,
+    numbers,
+    texts
+
+
+*aliquot sum* of self:
+	when self
+		is 1:
+			return 0
+
+		otherwise:
+			variable:sum = 1
+
+			:*square root* of self
+
+			for each divisor in *counting from* 2 with *numbers less than*: *square root*, do:
+				when remainder of self with divisor
+					is 0:
+						variable:sum =+ divisor + (self / divisor)
+
+			when square of *rounded down* *square root*
+				is self:
+					variable:sum =+ *square root*
+
+			return variable:sum
+
+
+*aliquot classification* of self:
+	when comparing self with 1
+		is 'less':
+			error 'Input must be a positive integer'
+		otherwise:
+			when comparing (*aliquot sum* of self) with self
+				is 'less':    return 'deficient'
+				is 'greater': return 'abundant'
+				otherwise:    return 'perfect'
+
+
+
+::2020::Rocket::
+
+
+
+use data,
+    numbers,
+    lists,
+    texts,
+    fractions,
+    log,
+    blaster,
+    turbo,
+    offset,
+    square
+
+
+*launch boosters* with thrust level,
+                       trajectory angle (otherwise default 0.0),
+                       *turbo state* (otherwise default 'unknown'):
+	count = [1, 2, 3]
+
+	variable:stage = 0
+	variable:cache = *result from each* of count with square
+
+	variable:*result from each* of count with square
+
+	variable:{ foo, bar } = variable:cache
+
+	for each x in turbo, do:
+		variable:stage =+ 1
+		engage turbo with thruster: x
+
+	boost blaster with { { stage } = variable, level,
+	                     angle, offset }
+
+
+*engage boosters* of self with thrust,
+                               angle (otherwise default 0.0),
+                               color (otherwise default 'green'):
+
+	*checks result* = *pre check* blaster with angle, thrust
+
+	add log with info: 'Hi {name}! Your favourite drink is {drink}.'
+
+	:status of turbo with { angle, thrust,
+	                        :usage of self }
+
+	when status
+		is 'good':
+			add log with info: 'Turbo is go!'
+			return *launch boosters* of self with angle, thrust, status
+
+		is 'okay':
+			add log with warning: 'Turbo is iffy :/'
+			return *launch boosters* of self with angle, thrust, status
+
+		otherwise:
+			return 'stopped'
+
+
+
+::2020::Ideas::
+
+
+
+use data,
+    numbers,
+    lists,
+    texts,
+    infinity,
+    square
+
+
+*test structuring* with { name, color, speed } = options,
+                        ["mapping"] = ...input:
+
+	["first", ..."rest"] = input
+
+	l1 = [1, 2, 3]
+	l2 = [1, 2]
+
+	l4 = [2, 3, 9]
+	l3 = [1, l4]
+
+	Why: an example to show list matching is possible with different input length
+	["a", "b"] = l1
+
+	bob:foo:["a", ["b", "c", ..."rest"] = "innerList"] = l3
+
+	numbersList = l1
+	variable:*result from each* of numbers with square
+
+	variable:{ foo, bar } = variable:cache
+
+	foo = 1
+	bar = 2
+	variable:{ foo, bar }
+
+
+*test 1* with { { ["d" (otherwise default 2), { f (otherwise default 1) } = "e"] = c } = b } = a:
+	return a
+
+
+*test 2* with [..."bob"] = a:
+	return bob
+
+
+*test 3* with ...inputs:
+	[entry1, ...entries] = inputs
+	["value1", ..."values"] = inputs
+	Issue: not implemented yet: return entry1
+	Issue: not implemented yet: return values
+	return inputs
+
+
+*first five*:
+	for each number in infinity, to extent of 5,
+		collect number
+
+
+
+::2020::first five numbers doubled::
+
+
+
+use numbers,
+    *first five numbers*
+
+
+*first five numbers doubled*:
+	for each number in *first five numbers*,
+		collect number * 2
+
+
+
+::2020::first two numbers doubled::
+
+
+
+use numbers,
+    *first five numbers doubled*
+
+
+*first two doubled*:
+	for each number in *first five numbers doubled*, to extent of 2,
+		collect number
+
+
+
+::2020::print first number doubled::
+
+
+
+use numbers,
+    texts,
+    data,
+    *first two numbers doubled*
+
+
+*print first number doubled*:
+	for each number in *first two numbers doubled*, to extent of 1, do:
+		display number
+
+
+*test 4* with [abc, "def", ..."rest"] = *input 1*,
+              { xyz } = *input 2*,
+              ...values:
+	return values
+
+
+*test 5* with [...rest] = *input 1*:
+	return rest
+
+
+*text test* with *input 1* ->
+	'input1 is {*input 1*}'
+
+
+*match test* with *input 1*:
+	input = { age: 50, name: 'Sally' }
+	param = 'age'
+	when input
+		has name:          return capitalize name
+		has {param} value: return 'person {value} in {param}'
+		otherwise:         return 'unknown person'
+
+
+*match-some test* with *input 1*:
+	input = { some: { age: 50, name: 'Sally' } }
+	when input
+		has some person: return person:age
+		otherwise:       return 0
+
+
+*locator test* with *input 1*:
+	z = *input 1*:abc:def
+	y = *input 1*:abc
+	g = *input 1*:abc:def:ghi
+	h:x:y:z = 30
+
+	...
+	... add some stuff here
+	...
+
+
+
+::2020::new point::
+
+
+
+use data
+
+
+new self with x,
+               y:
+	self:{ x, y }
+	return self
+
+
+distance of self with point ->
+	a = point:x - self:x
+	b = point:y - self:y
+	squareRoot of ((square a) + (square b))
+
+
+
+::2020::point category::
+
+
+
+use category
+
+
+point with new,
+           distance ->
+
+	... Issue: assignWith is still unimplemented. It should be:
+	... methods: { distance }
+	new category with constructor: new, method: distance
+
+
+
+::2020::run program::
+
+
+
+use blaster,
+    *turbo concept*,
+    *rocket concept*,
+    *rocket fix*
+
+
+run self:
+	return self
+
+
+
+::2020::load program::
+
+
+
+use numbers
+
+
+load self:
+	{ { software, texts } = input } = result of self
+
+	Issue:`is it really a good idea to load this at runtime?
+		   That rules out full-program compilation techniques
+
+		   This could tie in with the notion of serializing code as { context, function-code },
+		   unlike a closure this can be plausibly written to disk.
+
+		   Which is interesting because we could perhaps do a full program compilation,
+		   *after* dependencies have been applied into modules
+
+		   Then there would be two phases:
+
+		   A.1: From bootstrap, load the program software
+		   A.2: From program software, combine and supply dependency and a run method.
+		   A.3: From combined software, write out JavaScript code.
+
+		   B.1: Run the JavaScript program
+
+		   EDIT: Revert to original plan; bootstrap directly from JavaScript.
+		   This allows full control over the compilation output.
+
+	import = follow on self with fetch in software using {
+		'github::terry::ducklang::definitions::2020::blaster::',
+		'github::jill::ducklang::definitions::2019::turbo concept::',
+		'github::alex::ducklang::definitions::2020-03::rocket concept::',
+		'github::rick::ducklang::definitions::2020::rocket fix::'
+	}
+	follow import with run in software using name: 'github::rick::ducklang::definitions::2020::rocket::'
+	`
+	z = 1
+
+
+
+::2020::new program::
+
+
+
+Issue:`the below is very boilerplate-y.
+       Instead the compiler could include an author-specified pre-compiled bootstrap (using any URL),
+       and the author would specify a "run" method used to launch the program.
+       It may also be necessary to specify a "initialize" method that should load in most of the software,
+       that happens before "run" is invoked.`
+use base
+
+
+new ->
+	duck base
+
+

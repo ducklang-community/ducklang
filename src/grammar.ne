@@ -39,7 +39,8 @@ const lexer = new IndentationLexer({
 		},
 
 		identifier: {
-			match: /_|[a-z]+[a-zA-Z0-9]*/,
+			match: /_|[a-z]+[a-zA-Z0-9]*|\*[a-z]+[ a-zA-Z0-9-]+\*/,
+			value: s => s.startsWith('*') ? s.slice(1, -1) : s,
 			type: moo.keywords({
 				Return: 'return',
 				collect: 'collect',
@@ -49,7 +50,10 @@ const lexer = new IndentationLexer({
 			})
 		},
 
-		categoryName: /[A-Z]+[a-zA-Z0-9]*/,
+		categoryName: {
+			match: /[A-Z]+[a-zA-Z0-9]*|\*[A-Z]+[ a-zA-Z0-9-]+\*/,
+			value: s => s.startsWith('*') ? s.slice(1, -1) : s,
+		},
 
         newline: { match: /\n/, lineBreaks: true },
         _: ' ',
@@ -144,6 +148,8 @@ const take			= takeFirst
 
 @builtin "postprocessors.ne"
 
+
+
 does[operator] -> $operator _ expression newline
 	{%	([operator, , expression]) => ({ type: 'does', operator, expression })	 %}
 
@@ -211,17 +217,15 @@ listingBlock[definition] ->
 	{% take %}
 
 
-allowOtherwise[adjustment] -> ( $adjustment otherwise _ default _ expression {% takeSixth %} ):?	{% take %}
-
 invokeWith[prefix] -> $prefix identifier (_ of {% takeSecond %} ):? _ expression
 	{% ([prefix, method, of, , receiver]) =>
 		({ ...(prefix && { prefix }), method, ...(of && { of }), receiver }) %}
 
 methodCall[prefix] ->
 
-	  invokeWith[$prefix {% take %} ] allowOtherwise[_ {% take %} ]
-	  	{% ([invocation, otherwise]) =>
-	  		({ type: 'methodExecution', ...invocation, ...(otherwise && { otherwise }) }) %}
+	  invokeWith[$prefix {% take %} ]
+	  	{% ([invocation]) =>
+	  		({ type: 'methodExecution', ...invocation }) %}
 
 	| invokeWith[$prefix {% take %} ] _ with
 				(  _ flowing[dataDefinition {% take %} ] {% takeSecond %}
@@ -229,13 +233,13 @@ methodCall[prefix] ->
 		{% ([invocation, , , arguments]) =>
 			({ type: 'methodExecution', ...invocation, arguments }) %}
 
-	| invokeWith[$prefix {% take %} ] _ with _ dataLiteral allowOtherwise[_ {% take %} ]
-		{% ([invocation, , , , { data: arguments }, otherwise]) =>
-			({ type: 'methodExecution', ...invocation, arguments, ...(otherwise && { otherwise }) }) %}
+	| invokeWith[$prefix {% take %} ] _ with _ dataLiteral
+		{% ([invocation, , , , { data: arguments }]) =>
+			({ type: 'methodExecution', ...invocation, arguments }) %}
 
-	| invokeWith[$prefix {% take %} ] _ with _ enclosedDataBlock allowOtherwise[(newline ____:+) {% take %} ]
-		{% ([invocation, , , , { data: arguments }, otherwise]) =>
-			({ type: 'methodExecution', ...invocation, arguments, ...(otherwise && { otherwise }) }) %}
+	| invokeWith[$prefix {% take %} ] _ with _ enclosedDataBlock
+		{% ([invocation, , , , { data: arguments }]) =>
+			({ type: 'methodExecution', ...invocation, arguments }) %}
 
 
 main ->
@@ -243,7 +247,7 @@ main ->
 	(
 		namespaceDeclaration
 		using:?
-		(method {% take %} | sequence {% take %} ):+
+		method:+
 
 		{% ([namespaceDeclaration, using, methods]) => ({
 			namespaceDeclaration,
@@ -305,6 +309,9 @@ using ->
 #		and hurts performance in the normal case.
 #       Plus, it's always possible to do: (update in person using field: 'age'),
 #		That will give a thunk that can be used to set the value at any time
+#
+# OTOH, as these are direct synonyms for method calls, I think it's ok..
+# I *can* always give methods a free "get" method: (get square with 5)
 
 
 # Issue: any part of { self, this, inner } should be optional
@@ -317,12 +324,13 @@ method ->
 				  categoryName
 					{% ([categoryName]) => ({ categoryName }) %}
 				| identifier
-					(_ of {% takeSecond %} ):?
+					((_ of {% takeSecond %} ):?
 					_ ("self" | "{" _ "self":? ("," _ "this"):? ("," _ "inner"):? _ "}")
+					{% ([of, , receiver]) => ({ ...(of && { of }), receiver }) %}):?
 					methodInputs
 					{%
-						([name, of, , receiver, inputs]) =>
-							({ name, ...(of && { of }), receiver, ...(inputs && { inputs }) })
+						([name, receiver, inputs]) =>
+							({ name, ...(receiver && receiver.of && { of: receiver.of }), ...(receiver && { receiver: receiver.receiver }), ...(inputs && { inputs }) })
 					%}
 			)
 			(  ":" blockOf[statement {% take %} ]
@@ -334,17 +342,6 @@ method ->
 			)
 			{%	([defining, body]) =>
 					({ ...defining, ...body }) %}
-		) {% take %} ,
-		null {% ignore %} ]
-	{%	takeThird	%}
-
-sequence ->
-	newline
-	newline
-	standalone[(
-			identifier ":"
-				block[for {% take %} ]
-			{%	([name, , sequence]) => ({ name, sequence }) %}
 		) {% take %} ,
 		null {% ignore %} ]
 	{%	takeThird	%}
@@ -367,8 +364,10 @@ input ->
 		...(otherwise && { otherwise })
 	}) %}
 
+
 destructuringList -> "["   flowing[input {% take %} ]   "]" {% ([, destructuringList])   => ({ destructuringList }) %}
 destructuringData -> "{" _ flowing[input {% take %} ] _ "}" {% ([, , destructuringData]) => ({ destructuringData }) %}
+
 
 for -> For _ each _ identifier _ (in {% take %} | through {% take %} | of {% take %} ) _ expression ","
 		(_ to _ extent _ of _ expression "," {% takeEighth %} ):?
@@ -379,8 +378,11 @@ for -> For _ each _ identifier _ (in {% take %} | through {% take %} | of {% tak
 when -> When _ expression
 	indented[(
 		standalone[
-			((is _ expression {% ([, , is]) => ({ is }) %} | has _ ( identifier {% take %} | quote {% take %} ) (_ as _ identifier {% takeFourth %}):? {% ([, , has, as]) => ({ has, ...(as && { as }) }) %}) ":" (_:+ statement	{% ([, statement]) => [statement] %}
-				| blockOf[statement {% take %} ] {% take %} )
+			((is _ expression {% ([, , is]) => ({ is }) %}
+			 | has _ (qualifier {% take %} | quote {% take %} | "{" expression "}" {% takeSecond %}) (_ qualifier {% takeSecond %} ):?
+				{% ([, , has, as]) => ({ has, ...(as && { as }) }) %}) ":"
+					(_:+ statement	{% ([, statement]) => [statement] %}
+					 | blockOf[statement {% take %} ] {% take %} )
 			{% ([test, , statements]) => ({ type: 'case', ...test, statements }) %} ) {% take %} ,
 			____:+ {% ignore %}	]:+
 
@@ -406,9 +408,9 @@ when -> When _ expression
 #        If a parameter has complex default behaviour, then actually the API is itself complex.
 #
 #		 Probably not allow := operator (except perhaps dedicated syntax for assign on data)
-#        Firstly, parameters can have "as" so the variable name is still free to match the parameter.
+#        Firstly, parameters can be aliased to another name so the variable name is still free to match the parameter.
 #        Secondly, it's better to require mutability via a Data name, as this "reifies" the state.
-#        Thirdly, it doesn't gel with the modifier operators =+ etc.
+#        Thirdly, it doesn't gel with the modifier operators =+ etc. (but =: might)
 
 # Issue: sometimes ?
 
@@ -482,10 +484,13 @@ enclosedDataBlock ->  "{"
 	____:+ "}"
 	{% ([, data]) => ({ type: 'enclosedDataBlock', data }) %}
 
+
 dataDefinition ->
-	  expression																	{% ([expression]) => ({ type: 'expression', expression }) %}
+	#expression																	{% ([expression]) => ({ type: 'expression', expression }) %}
+	value {% take %}
 	| assignMethodResult															{% take %}
-	| assignExpand[(_:+ "="	_:+ {% ignore %} ) {% ignore %} ]						{% take %}
+	#| assignExpand[(_:+ "="	_:+ {% ignore %} ) {% ignore %} ]						{% take %}
+	| input {% take %}
 	| assignOf[(":" _:+ {% ignore %} ) {% ignore %} , listLiteral	{% take %} ]	{% take %}
 	| assignOf[(":" _:+ {% ignore %} ) {% ignore %} , dataLiteral	{% take %} ]	{% take %}
 	| assignOf[(":" _:+ {% ignore %} ) {% ignore %} , listBlock		{% take %} ]	{% take %}
