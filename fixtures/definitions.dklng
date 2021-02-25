@@ -455,12 +455,12 @@ distance of self with point ->
 use category
 
 
-point with new,
+point with new1,
            distance ->
 
 	... Issue: assignWith is still unimplemented. It should be:
 	... methods: { distance }
-	new category with constructor: new, method: distance
+	new1 category with constructor: new1, method: distance
 
 
 

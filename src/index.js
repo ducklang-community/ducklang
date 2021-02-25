@@ -80,6 +80,7 @@ const traceLog = message => {
 
 const symbols = {}
 const symbol = (name, slug = true) => {
+    name = toCamelCase(name)
     if (slug) {
         name = name.replace(/[^a-zA-Z0-9_]/g, '_')
     }
@@ -105,11 +106,30 @@ const jsInputs = items =>
 const jsInputsArgs = items => join(items.map(({ entry: { name } }, i) => sourceNode(name)))
 
 const jsLocator = locator => {
-    return sourceNode(locator, locator.value + '$')
+    return sourceNode(locator, toCamelCase(locator.value || '') + '$')
 }
 
+const toCamelCase = (x) => {
+    while (true) {
+        const spaceAt = x.indexOf(' ')
+        const dashAt = x.indexOf('-')
+        const splitsAt = spaceAt < 0 ? dashAt : (dashAt < 0 ? spaceAt : Math.min(spaceAt, dashAt))
+        if (splitsAt < 0) {
+            break
+        }
+        if (splitsAt >= x.length - 1) {
+            break
+        }
+        x = x.substr(0, splitsAt) + x[splitsAt+1].toUpperCase() + x.substr(splitsAt + 2)
+    }
+    return x;
+}
+
+const asCamelCase = (node) => ({ ...node, ...{ value: toCamelCase(node.value) } })
+
 const jsLocation = (location, definition = false) => {
-    const { name } = location
+    const name = asCamelCase(location.name)
+
     if (!definition && !scopesContains(name)) {
         throw new Error(
             `Attempt to use name "${name.value}" in line ${name.line}, column ${name.col}, but it is undefined`
@@ -119,7 +139,7 @@ const jsLocation = (location, definition = false) => {
     const contextType = scopesType(name)
     const nameNode = sourceNode(
         name,
-        (contextType === 'not recent' ? contextPrefix : '') + (renames.get(name.value) || name.value) + '$'
+        (contextType === 'not recent' ? contextPrefix : '') + toCamelCase(renames.get(name.value) || name.value) + '$'
     )
 
     if (location.locators && location.locators.length > 1) {
@@ -222,7 +242,7 @@ const jsArgument = (b, i, inputs) => {
         case 'assignMethodResult':
             return {
                 type: 'dataDefinition',
-                location: { type: 'location', name: b.methodNaming.method },
+                location: { type: 'location', name: asCamelCase(b.methodNaming.method) },
                 expression: b.methodNaming
             }
         ///{"type":"assignExpandData","destructuringData":
@@ -265,7 +285,8 @@ const jsArgument = (b, i, inputs) => {
 }
 
 const jsMethodExecution = expression => {
-    const { method, of, receiver, arguments, otherwise } = expression
+    const { method: fullMethod, of, receiver, arguments, otherwise } = expression
+    const method = asCamelCase(fullMethod)
     const methodSymbol = sourceNode(method, method.value + (of ? 'Of' : '') + '$')
     const receiverValue = sourceNode(receiver, symbol('receiver'))
     // Issue: arguments should be passed via a $Data instance.
@@ -388,7 +409,8 @@ const jsExpression = expression => {
         case 'decimalNumber':
             return sourceNode(expression)
         case 'text':
-            return sourceNode(expression, expression.value.replace(/'/g, '`').replace(/(?<!(\\\\)*\\){/g, '${'))
+            // TODO: re-parse. naive version: expression.value.replace(/'/g, '`').replace(/(?<!(\\\\)*\\){/g, '${')
+            return sourceNode(expression, "'TODO: text'")
         case 'literal':
             return sourceNode(expression, expression.value.replace(/`/g, "'").replace())
         // TODO: list type should be an object which implements 'itemsOf'
@@ -427,7 +449,8 @@ const jsDoes = statement => {
 
 const jsFor = statement => {
     const indent = '                '
-    const { name, itemizing, expression, extent, statements } = statement
+    const { name: fullName, itemizing, expression, extent, statements } = statement
+    const name = asCamelCase(fullName)
     const source = statement.do ? symbol('source') : 'source'
 
     const itemsExtent = symbol('extent')
@@ -726,10 +749,10 @@ const jsAssignLocation = (location, expression) => {
         const code = [
             assignKeyword,
             ' ',
-            sourceNode(location.name),
+            sourceNode(location.name, toCamelCase(location.name.value)),
             ' = ',
             (location.locators || []).reduceRight(
-                (acc, cur) => ['new $Data().set(', jsLocator(cur), ', ', acc, ')'],
+                (acc, cur) => ['this.$context.$Data.new.$apply({ properties: { ', jsLocator(cur), ': ', acc, ' } })'],
                 jsExpression(expression)
             ),
             '\n'
@@ -764,18 +787,18 @@ const jsAssignLocation = (location, expression) => {
                     z,
                     ' === undefined || ',
                     z,
-                    '.set === undefined ? ',
+                    '.update === undefined ? ',
                     allButLast[i].symbol,
-                    '.set(',
+                    '.update(',
                     jsLocator(locator),
-                    ', new $Data()) : ',
+                    ', this.$context.$Data.new.$apply({ properties: {} })) : ',
                     z,
                     ';\n'
                 ]
             }),
 
             allButLast.slice(-1)[0].symbol,
-            '.set(',
+            '.update(',
             jsLocator(location.locators.slice(-1)[0]),
             ', ',
             jsExpression(expression),
@@ -834,12 +857,12 @@ const jsStatement = statement => {
                 code = [
                     assignKeyword,
                     ' ',
-                    sourceNode(statement.methodNaming.method, statement.methodNaming.method.value + '$'),
+                    sourceNode(statement.methodNaming.method, toCamelCase(statement.methodNaming.method.value) + '$'),
                     ' = ',
                     jsExpression(statement.methodNaming),
                     '\n'
                 ]
-                pushScope(statement.methodNaming.method)
+                pushScope(asCamelCase(statement.methodNaming.method))
                 return code
             case 'methodExecution':
                 return [jsMethodExecution(statement), '\n']
@@ -942,7 +965,7 @@ if (parser.results.length === 0) {
     const compiledModules = modules.map(({ namespaceDeclaration, using, methods }) => {
         // Issue: should all method names in this namespace be added to scope?
         // They are not actually in scope, but would prefer not to allow variables with the same name?
-        scopes = [...(using ? using.definition.map(({ entry: { name } }) => name) : [])]
+        scopes = [...(using ? using.definition.map(({ entry: { name } }) => asCamelCase(name)) : [])]
 
         /*
         renames = new Map(
@@ -967,13 +990,13 @@ if (parser.results.length === 0) {
                     scopes.push([])
                 } else if (sequence) {
                     traceLog('sequence:\t' + JSON.stringify(name))
-                    methodName = name.value + '$'
+                    methodName = toCamelCase(name.value) + '$'
                     scopes.push([])
                 } else if (name) {
                     traceLog('method:\t' + JSON.stringify(name))
                     traceLog('method definition:\t' + JSON.stringify(definition))
                     traceLog('')
-                    methodName = name.value + (of ? 'Of' : '') + '$'
+                    methodName = toCamelCase(name.value + (of ? 'Of' : '') + '$')
                     scopes.push([{ line: name.line, col: name.col, value: 'self' }])
                 }
 
@@ -997,9 +1020,10 @@ if (parser.results.length === 0) {
                 // The downside is that it could lead to more variable name repetition
 
                 while (deconstruct.length) {
-                    const { name, inputs, type } = deconstruct.shift()
+                    const { name: fullName, inputs, type } = deconstruct.shift()
+                    name = asCamelCase(fullName)
 
-                    scopeVariables.push(inputs.map(({ name, as }) => (as ? as : name)))
+                    scopeVariables.push(inputs.map(({ name, as }) => asCamelCase(as ? as : name)))
 
                     traceLog('inputs:\t' + JSON.stringify(inputs))
 
@@ -1043,6 +1067,7 @@ if (parser.results.length === 0) {
                                       : '',
 
                                   inputs.map(({ grouping, name, otherwise }, i) => {
+                                      name = asCamelCase(name)
                                       const z = symbol(name.value, false)
                                       return [
                                           grouping
@@ -1095,7 +1120,7 @@ if (parser.results.length === 0) {
                                                               sourceNode(name),
                                                               '.dataOf',
                                                               ' =  function () {\n',
-                                                              '   const data = new $Data()\n',
+                                                              '   const data = this.$context.$Data.new.apply({ properties: {} })\n',
                                                               '   const extent = this.extentOf()\n',
                                                               '   for (let n = 0; n < extent; ++n) {\n',
                                                               '       const z = ',
@@ -1155,6 +1180,8 @@ if (parser.results.length === 0) {
                                   '.dataOf() : $nullData\n',
 
                                   inputs.map(({ grouping, name, as, otherwise }, i) => {
+                                      name = asCamelCase(name)
+                                      as = as && asCamelCase(as)
                                       const z = symbol(name.value, false)
                                       return [
                                           grouping
@@ -1162,9 +1189,9 @@ if (parser.results.length === 0) {
                                                     indent,
                                                     'const ',
                                                     sourceNode(name),
-                                                    ' = new $Data(',
+                                                    ' = this.$context.$Data.new.$apply({ properties: ',
                                                     items,
-                                                    ')\n',
+                                                    ' })\n',
                                                     inputs
                                                         .slice(0, i)
                                                         .map(({ name: arg }) => [
@@ -1187,7 +1214,7 @@ if (parser.results.length === 0) {
                                                               "')\n",
                                                               indent,
                                                               'const ',
-                                                              sourceNode(as ? as : name),
+                                                              sourceNode(asCamelCase(as ? as : name)),
                                                               ' = ',
                                                               z,
                                                               ' !== undefined ? ',
@@ -1200,7 +1227,7 @@ if (parser.results.length === 0) {
                                                         : [
                                                               indent,
                                                               'const ',
-                                                              sourceNode(as ? as : name),
+                                                              sourceNode(asCamelCase(as ? as : name)),
                                                               ' = ',
                                                               items,
                                                               ".get('",
