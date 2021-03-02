@@ -227,7 +227,7 @@ const jsArgument = (b, i, inputs) => {
             return b.entry
         case 'expression':
             if (['locate', 'methodExecution'].includes(b.expression.type)) {
-                return jsArgument(b.expression)
+                return jsArgument(b.expression, i, inputs)
             }
             return {
                 type: 'dataDefinition',
@@ -271,7 +271,7 @@ const jsArgument = (b, i, inputs) => {
             }
         case 'literal':
             // TODO: allow conversions
-            return jsArgument(b.value)
+            return jsArgument(b.value, i, inputs)
         case 'input':
             console.warn('Unimplemented input')
             return {
