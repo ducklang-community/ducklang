@@ -269,6 +269,9 @@ const jsArgument = (b, i, inputs) => {
                 },
                 expression: b
             }
+        case 'literal':
+            // TODO: allow conversions
+            return jsArgument(b.value)
         case 'input':
             console.warn('Unimplemented input')
             return {
@@ -369,6 +372,9 @@ const jsExpression = expression => {
     switch (expression.type) {
         case 'expression':
             return jsExpression(expression.expression)
+        case 'literal':
+            // TODO: allow conversions
+            return jsExpression(expression.value)
         case 'location':
             return jsLocation(expression)
         case 'locate':
@@ -1000,7 +1006,7 @@ if (parser.results.length === 0) {
                     scopes.push([{ line: name.line, col: name.col, value: 'self' }])
                 }
 
-                const deconstruct = inputs.length
+                const deform = inputs.length
                     ? [
                           {
                               name: { line: inputs.line, col: inputs.col, value: 'inputs' },
@@ -1012,15 +1018,15 @@ if (parser.results.length === 0) {
 
                 const indent = '                '
                 const scopeVariables = []
-                const deconstructedInputs = []
+                const deformedInputs = []
 
                 // Issue: RHS destructuring expressions can actually be quite convoluted and weird,
                 // eg. z: { y: { x, w } } against z:y:x and z:y:w
                 // May be better to disable them (for now) and let the programmer do that on the next line
                 // The downside is that it could lead to more variable name repetition
 
-                while (deconstruct.length) {
-                    const { name: fullName, inputs, type } = deconstruct.shift()
+                while (deform.length) {
+                    const { name: fullName, inputs, type } = deform.shift()
                     name = asCamelCase(fullName)
 
                     scopeVariables.push(inputs.map(({ name, as }) => asCamelCase(as ? as : name)))
@@ -1033,7 +1039,7 @@ if (parser.results.length === 0) {
                     const itemsExtent = symbol(name.value + 'Extent', false)
 
                     // Issue: if making this code reusable, switch out const for assignKeyword where needed
-                    deconstructedInputs.push([
+                    deformedInputs.push([
                         type === 'list'
                             ? [
                                   indent,
@@ -1242,8 +1248,8 @@ if (parser.results.length === 0) {
                     ])
 
                     inputs.forEach(({ name, destructuringList, destructuringData }) => {
-                        destructuringList && deconstruct.push({ name, inputs: destructuringList, type: 'list' })
-                        destructuringData && deconstruct.push({ name, inputs: destructuringData, type: 'data' })
+                        destructuringList && deform.push({ name, inputs: destructuringList, type: 'list' })
+                        destructuringData && deform.push({ name, inputs: destructuringData, type: 'data' })
                     })
                 }
 
@@ -1292,7 +1298,7 @@ if (parser.results.length === 0) {
                                   '(self$',
                                   inputs.length ? ', inputs' : '',
                                   ') {\n',
-                                  deconstructedInputs,
+                                  deformedInputs,
                                   statements.map(jsStatement),
                                   '            },',
                                   `
@@ -1332,7 +1338,7 @@ if (parser.results.length === 0) {
                                   // rangesCountingFrom = {...}; Object.setPrototypeOf(rangesCountingFrom, rangesContext)
                                   //
                                   // There's a problem with the former, which is that functions from different modules will
-                                  // have different hidden classes due to having different constructors.
+                                  // have different hidden classes due to having different formors.
                                   // So really have to use literals to get the right effect.
                                   '        }'
                               ]

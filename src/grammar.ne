@@ -2,6 +2,26 @@
 const moo = require('moo');
 const IndentationLexer = require('moo-indentation-lexer');
 
+// TODO: use lexer states to parse 'the {format} text'
+/*
+let lexer1 = moo.states({
+	main: {
+		strstart: {match: "'", push: 'lit'},
+		ident:    /\w+/,
+		lbrace:   {match: '{', push: 'main'},
+		rbrace:   {match: '}', pop: 1},
+		colon:    ':',
+		space:    {match: /\s+/, lineBreaks: true},
+	},
+	lit: {
+		interp:   {match: '{', push: 'main'},
+		escape:   /\\./,
+		strend:   {match: "'", pop: 1},
+		const:    {match: /(?:[^{']|(?!\{))+/, lineBreaks: true},
+	},
+})
+*/
+
 const lexer = new IndentationLexer({
     lexer: moo.compile({
 
@@ -20,11 +40,17 @@ const lexer = new IndentationLexer({
         	lineBreaks: true,
         },
 
-    	why:		/Why: .*$/,
-    	see:		/See: .*:\/\/.*$/,
-    	issue:		/Issue: .*$/,
-    	question:	/Question: .*$/,
-    	ellided:	/\.\.\. .*$/,
+		/* FIXME: write a first-stage transform pass to convert:
+
+				--- this
+					is a multiline comment
+			into:
+				--- this
+				--- is a multiline comment
+
+			as an intermediate step.
+		*/
+    	ellided: /\-\-\- .*$/,
 
 		namespaceIdentifier: /^::.*::$/,
 
@@ -42,7 +68,6 @@ const lexer = new IndentationLexer({
 			match: /_|[a-z]+[a-zA-Z0-9]*|\*[a-z]+[ a-zA-Z0-9-]+\*/,
 			value: s => s.startsWith('*') ? s.slice(1, -1) : s,
 			type: moo.keywords({
-				Return: 'return',
 				collect: 'collect',
 				of: 'of',
 				With: 'with',
@@ -59,7 +84,7 @@ const lexer = new IndentationLexer({
         _: ' ',
         ____: '\t',
 
-		point: '->',
+		leadsTo: '=>',
 
         leftParen: '(',
         rightParen: ')',
@@ -76,6 +101,7 @@ const lexer = new IndentationLexer({
         set: '=',
 
 		expand: '...',
+		denote: '..',
 		namespaceSpecifier: '::',
         define: ':',
         separator: ',',
@@ -84,7 +110,7 @@ const lexer = new IndentationLexer({
         times: '*',
         dividedBy: '/',
         plus: '+',
-        minus: '-',
+        minus: '-'
     })
 });
 
@@ -99,6 +125,14 @@ const takeSeventh	= ([, , , , , , g]) => g
 const takeEighth	= ([, , , , , , , h]) => h
 const take			= takeFirst
 %}
+
+#
+# If a method definition doesn't use 'for' or 'when'
+# then it doesn't need a colon to begin indentation.
+#
+# 'when' cases don't need colon before indentation.
+
+
 
 # Issue: data assign with locators is confusing
 #        	with a:b, c: d
@@ -171,14 +205,14 @@ assignExpand[operator] ->
 
 
 standalone[definition, adjusted] -> newline:?
-	($adjusted comment		{% takeSecond %} ):*
+	#($adjusted comment		{% takeSecond %} ):*
 	 $adjusted $definition
-	{%	([, comments, , definition]) => ({ type: 'standalone', ...(comments.length && { comments }), definition })	%}
+	{%	([, /*comments,*/ , definition]) => ({ type: 'standalone', /*, ...(comments.length && { comments })*/ definition })	%}
 
 indented[definition]	-> newline indent $definition dedent	{% takeThird %}
 block[definition]		-> indented[standalone[$definition		{% take %} , ____:+ {% ignore %} ]		{% take %}	]	{% take %}
-blockOf[definition]		-> indented[standalone[$definition		{% take %} , ____:+ {% ignore %} ]:+	{% take %}	]	{% take %}
-blockEnded[definition, last]	-> indented[( standalone[$definition		{% take %} , ____:+ {% ignore %} ]:* standalone[$last	{% take %} , ____:+ {% ignore %} ]	{% ([main, last]) => [...main, last] %}	) {% take %} ]	{% take %}
+blockOf[definition]		-> indented[standalone[( comment {% take %} | $definition {% take %} ) {% take %}, ____:+ {% ignore %} ]:+	{% take %}	]	{% take %}
+blockEnded[definition, last]	-> indented[( standalone[( comment {% take %} | $definition {% take %} ) {% take %} , ____:+ {% ignore %} ]:* standalone[$last	{% take %} , ____:+ {% ignore %} ]	{% ([main, last]) => [...main, last] %}	) {% take %} ]	{% take %}
 
 items[definition]   -> delimited[$definition	{% take %} , ("," _:+)		{% ignore %} ]			{% take %}
 listing[definition] -> delimited[$definition	{% take %} , ("," newline)	{% ignore %} ] ",":?	{% take %}
@@ -190,10 +224,13 @@ flowing[definition] -> items[$definition	{% take %} ] ("," newline
 
 # Issue: there is some duplication between listed/elongated which would be nice to extract and simplify
 
+#		#($adjusted comment		{% takeSecond %} ):*
+#/*comments,*/
+#/*...(comments.length && { comments }) */
+
 listed[adjusted, entry] -> listing[(
-		($adjusted comment		{% takeSecond %} ):*
 		 $adjusted $entry
-		{%	([comments, , entry]) => ({ type: 'entry', ...(comments.length && { comments }), entry })	%} )
+		{%	([ , entry]) => ({ type: 'entry', entry })	%} )
 	{% take %} ]
 	{% take %}
 
@@ -217,9 +254,13 @@ listingBlock[definition] ->
 	{% take %}
 
 
-invokeWith[prefix] -> $prefix identifier (_ of {% takeSecond %} ):? _ expression
-	{% ([prefix, method, of, , receiver]) =>
-		({ ...(prefix && { prefix }), method, ...(of && { of }), receiver }) %}
+invokeWith[prefix] ->
+	  $prefix identifier (_ of {% takeSecond %} ):? _ expression
+		{% ([prefix, method, of, , receiver]) =>
+			({ ...(prefix && { prefix }), method, ...(of && { of }), receiver }) %}
+	| expression ".." identifier
+		{% ([receiver, , method]) =>
+			({ method, receiver }) %}
 
 methodCall[prefix] ->
 
@@ -243,40 +284,40 @@ methodCall[prefix] ->
 
 
 main ->
-	description
+	newline
+	newline
 	(
 		namespaceDeclaration
+		newline
+		newline
+		comment:*
 		using:?
 		method:+
 
-		{% ([namespaceDeclaration, using, methods]) => ({
+		{% ([namespaceDeclaration, , , , using, methods]) => ({
 			namespaceDeclaration,
 			...(using && { using }),
 			methods
 		}) %}
 	):+
-	newline
-	newline
-	{%	([description, modules]) => ({ description, modules })	%}
+	{%	([, , modules]) => ({ modules })	%}
 
 namespaceDeclaration ->
 	newline
-	newline
-	newline
 	namespaceIdentifier newline
 	newline
-	{%	takeFourth	%}
+	{%	takeSecond	%}
 
 using ->
-	newline
-	newline
 	standalone[(
 			Use _
-			elongated[(_ _ _ _) {% ignore %} , qualifier {% ([name]) => ({ type: 'input', name }) %} ] newline
+			elongated[(_ _ _ _) {% ignore %} , qualifier (_ qualifier):? {% ([name]) => ({ type: 'input', name }) %} ] newline
 			{%	takeThird	%}
 		) {% take %} ,
 		null {% ignore %} ]
-	{%	takeThird	%}
+	newline
+	newline
+	{%	take	%}
 
 
 # Issue: lacks support (method in Z)	- binding a method with receiver Z
@@ -316,8 +357,6 @@ using ->
 
 # Issue: any part of { self, this, inner } should be optional
 method ->
-	newline
-	newline
 	standalone[
 		(
 			(
@@ -344,7 +383,9 @@ method ->
 					({ ...defining, ...body }) %}
 		) {% take %} ,
 		null {% ignore %} ]
-	{%	takeThird	%}
+	newline
+	newline
+	{%	take	%}
 
 
 methodInputs -> (_ with _ elongated[(_ _ _ _ _ _ _ _ _:+) {% ignore %} , input {% take %} ] {% takeFourth %} ):? {% take %}
@@ -375,21 +416,21 @@ for -> For _ each _ identifier _ (in {% take %} | through {% take %} | of {% tak
 	blockOf[statement {% take %} ]
 	{% ([, , , , name, , itemizing, , expression, , extent, Do, statements]) => ({ type: 'for', name, itemizing, expression, ...(extent && { extent }), ...(Do && { do: Do }), statements }) %}
 
-when -> When _ expression
+when -> When _ (expression {% take %} | walrusStatement {% take %})
 	indented[(
 		standalone[
 			((is _ expression {% ([, , is]) => ({ is }) %}
 			 | has _ (qualifier {% take %} | quote {% take %} | "{" expression "}" {% takeSecond %}) (_ qualifier {% takeSecond %} ):?
-				{% ([, , has, as]) => ({ has, ...(as && { as }) }) %}) ":"
-					(_:+ statement	{% ([, statement]) => [statement] %}
+				{% ([, , has, as]) => ({ has, ...(as && { as }) }) %})
+					(":" _:+ statement	{% ([, , statement]) => [statement] %}
 					 | blockOf[statement {% take %} ] {% take %} )
-			{% ([test, , statements]) => ({ type: 'case', ...test, statements }) %} ) {% take %} ,
+			{% ([test, statements]) => ({ type: 'case', ...test, statements }) %} ) {% take %} ,
 			____:+ {% ignore %}	]:+
 
     	standalone[
-    		(otherwise ":" (_:+ statement	{% ([, statement]) => [statement] %}
+    		(otherwise (":" _:+ statement	{% ([, , statement]) => [statement] %}
 				| blockOf[statement {% take %} ] {% take %} )
-			{% ([, , statements]) => statements %} ) {% take %} ,
+			{% ([, statements]) => statements %} ) {% take %} ,
 			____:+ {% ignore %}	]:?
 
 		{% ([cases, otherwise]) => ({ cases, ...(otherwise && { otherwise }) }) %}
@@ -418,24 +459,25 @@ statement ->
       for							{% take %}
     | when							{% take %}
     | does[collect	{% take %} ]	{% take %}
-    | does[return	{% take %} ]	{% take %}
-    | assignMethodResult																newline	{% take %}
+    | does["=>"	{% take %} ]		{% take %}
+	| walrusStatement		newline {% take %}
 	| assignExpand[(_ "=" _ {% ignore %} )	{% ignore %} ]								newline	{% take %}
 	| assignOf[(_ "=" _ {% ignore %} )	{% ignore %} , listLiteral	{% take %}	]	newline	{% take %}
 	| assignOf[(_ "=" _ {% ignore %} )	{% ignore %} , dataLiteral	{% take %}	]	newline	{% take %}
 	| assignOf[(_ "=" _ {% ignore %} )	{% ignore %} , listBlock	{% take %}	]	newline	{% take %}
 	| assignOf[(_ "=" _ {% ignore %} )	{% ignore %} , dataBlock	{% take %}	]	newline	{% take %}
-    | assign["="	{% take %} ]	newline	{% take %}
-    | assign["=**"	{% take %} ]	newline	{% take %}
-    | assign["=*"	{% take %} ]	newline	{% take %}
-    | assign["=/"	{% take %} ]	newline	{% take %}
-    | assign["=+"	{% take %} ]	newline	{% take %}
-    | assign["=-"	{% take %} ]	newline	{% take %}
 	| methodExecution				newline	{% take %}
 	| stop							newline	{% take %}
 	| skip							newline	{% take %}
-	| "..."							newline	{% take %}
-	| ellided						newline	{% take %}
+
+walrusStatement ->
+      assignMethodResult			{% take %}
+    | assign["="	{% take %} ]	{% take %}
+    | assign["=**"	{% take %} ]	{% take %}
+    | assign["=*"	{% take %} ]	{% take %}
+    | assign["=/"	{% take %} ]	{% take %}
+    | assign["=+"	{% take %} ]	{% take %}
+    | assign["=-"	{% take %} ]	{% take %}
 
 
 # Issue: both (a / b / c) or (a - b - c) are ambiguous for those who don't yet know the associativity of "/" and "-"
@@ -508,22 +550,10 @@ methodNaming    -> methodCall[":"	{% take %}		] {% take %}
 
 
 comment ->
-	(  why		{% ([line]) => ({ line }) %}
-	 | see		{% ([line]) => ({ line }) %}
-	 | issue	{% ([line]) => ({ line }) %}
-	 | ("Why" {% take %} | "See" {% take %} | "Issue" {% take %} ) ":" literal
-	 	{% ([annotation, , literal]) => ({ annotation, literal }) %} )
+	newline:?
+	ellided
 	newline
-	{% ([comment]) => ({ type: 'comment', ...comment }) %}
-
-description ->
-	newline
-	newline
-	newline
-	"Why" ":" literal newline
-	comment:*
-	{% ([, , , , , why, , comments]) => ({ why, ...(comments.length && { comments }) }) %}
-
+	{% ([, comment]) => ({ type: 'comment', ...comment }) %}
 
 location -> qualifier (":" locator {% takeSecond %} ):*
 	{% ([name, locators]) =>
@@ -534,11 +564,15 @@ locator ->
 	| value			{% take %}
 
 value ->
-	  digitNumber	{% take %}
-	| decimalNumber	{% take %}
-	| positional	{% take %}
-	| literal		{% take %}
-	| text			{% take %}
+	(  digitNumber	{% take %}
+	 | decimalNumber{% take %}
+	 | positional	{% take %}
+	 | literal		{% take %}
+	 | text			{% take %} )
+	(
+		"(" qualifier ")" {% takeSecond %}
+	):?
+	{% ([value, qualifier]) => ({ type: 'literal', value, ...(qualifier && { qualifier }) }) %}
 
 qualifier ->
 	  identifier	{% take %}
@@ -562,15 +596,11 @@ in			-> "in"			{% take %}
 through		-> "through"	{% take %}
 
 # I've tried to use as few reserved keywords as possible, while still having an unambiguous parse
-return		-> %Return		{% take %}
 collect		-> %collect		{% take %}
 of			-> %of			{% take %}
 with		-> %With		{% ignore %}
 otherwise	-> %otherwise	{% ignore %}
 
-why			-> %why		{% take %}
-see			-> %see		{% take %}
-issue		-> %issue	{% take %}
 ellided		-> %ellided	{% take %}
 
 literal			-> %literal			{% take %}
@@ -584,7 +614,7 @@ categoryName	-> %categoryName	{% take %}
 
 namespaceIdentifier -> %namespaceIdentifier	{% take %}
 
-point	-> %point	{% ignore %}
+leadsTo	-> %leadsTo	{% ignore %}
 newline -> %newline	{% ignore %}
 indent	-> %indent	{% ignore %}
 dedent	-> %dedent	{% ignore %}

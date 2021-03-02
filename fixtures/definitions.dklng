@@ -1,39 +1,24 @@
 
 
 
-Why:`
-
-This file is a collection of various methods to exercise and hash out various ideas in Ducklang.
-`
+:: 2020 :: Functions ::
 
 
 
-::2020::Numbers::
+itself of self:
+	=> self
+
+
+square of self:
+	=> self * self
+
+
+cube of self:
+	=> self * square of self
 
 
 
-use numbers
-
-
-square of self ->
-	self ** 2
-
-
-cube of self ->
-	self ** 3
-
-
-
-::2020::Functions::
-
-
-
-itself of self ->
-	self
-
-
-
-::2020::Sequences::
+:: 2020 :: Sequences ::
 
 
 
@@ -54,8 +39,9 @@ factorial:
 
 
 fibonacci:
-	Why:`A benefit of using a 'through' sequence versus 'in' itemization is language-provided memory of results
-		 which means it does not take extra time to recurse - f(n-1) and f(n-2) is already memorized.`
+	--- A benefit of using a 'through' sequence versus 'in' itemization is language-provided memory of results
+	--- which means it does not take extra time to recurse - f(n-1) and f(n-2) is already memorized.
+
 	for each number through infinity,
 		when number
 			is 0: collect 0
@@ -72,7 +58,7 @@ lucas:
 
 
 
-::2020::Sequences::Even::
+:: 2020 :: Sequences :: Even ::
 
 
 
@@ -86,7 +72,7 @@ use numbers,
 
 
 
-::2020::Sequences::Odd::
+:: 2020 :: Sequences :: Odd ::
 
 
 
@@ -100,7 +86,7 @@ use numbers,
 
 
 
-::2020::Ranges::
+:: 2020 :: Ranges ::
 
 
 
@@ -129,7 +115,7 @@ use numbers,
 
 
 
-::2020::Numbers::
+:: 2020 :: Numbers ::
 
 
 
@@ -149,17 +135,21 @@ use numbers,
 
 
 
-::2020::Itemizing::
+:: 2020 :: Itemizing ::
 
 
 
 *result from each* of self with ["mapping"] = ...input:
 	:items of self
-	*result from each* of items with mapping
+	=> *result from each* of items with mapping
+
+
+*result from each 2* of self with ["mapping"] = ...input:
+	=> (self..items)..*result from each* with mapping
 
 
 
-::2020::Items::
+:: 2020 :: Items ::
 
 
 
@@ -179,7 +169,7 @@ use numbers,
 
 
 
-::2020::Aliquot::
+:: 2020 :: Aliquot ::
 
 
 
@@ -189,40 +179,43 @@ use data,
 
 
 *aliquot sum* of self:
-	when self
-		is 1:
-			return 0
 
-		otherwise:
+	when self
+
+		is 1
+			=> 0
+
+		otherwise
+
 			variable:sum = 1
 
 			:*square root* of self
 
 			for each divisor in *counting from* 2 with *numbers less than*: *square root*, do:
 				when remainder of self with divisor
-					is 0:
+					is 0
 						variable:sum =+ divisor + (self / divisor)
 
 			when square of *rounded down* *square root*
-				is self:
+				is self
 					variable:sum =+ *square root*
 
-			return variable:sum
+			=> variable:sum
 
 
 *aliquot classification* of self:
 	when comparing self with 1
-		is 'less':
-			error 'Input must be a positive integer'
-		otherwise:
+		is 'less'
+			=> error 'Input must be a positive integer'
+		otherwise
 			when comparing (*aliquot sum* of self) with self
-				is 'less':    return 'deficient'
-				is 'greater': return 'abundant'
-				otherwise:    return 'perfect'
+				is 'less':    => 'deficient'
+				is 'greater': => 'abundant'
+				otherwise:    => 'perfect'
 
 
 
-::2020::Rocket::
+:: 2020 :: Rocket ::
 
 
 
@@ -248,14 +241,16 @@ use data,
 
 	variable:*result from each* of count with square
 
+	--- count..*result from each* with square
+
 	variable:{ foo, bar } = variable:cache
 
 	for each x in turbo, do:
 		variable:stage =+ 1
 		engage turbo with thruster: x
 
-	boost blaster with { { stage } = variable, level,
-	                     angle, offset }
+	=> boost blaster with { { stage } = variable, level,
+	                        angle, offset }
 
 
 *engage boosters* of self with thrust,
@@ -264,26 +259,24 @@ use data,
 
 	*checks result* = *pre check* blaster with angle, thrust
 
-	add log with info: 'Hi {name}! Your favourite drink is {drink}.'
+	add log with info: 'Checking status with {angle=} and {thrust=}.'
 
-	:status of turbo with { angle, thrust,
-	                        :usage of self }
+	when :status of turbo with angle, thrust, :usage of self
 
-	when status
-		is 'good':
+		is 'good'
 			add log with info: 'Turbo is go!'
-			return *launch boosters* of self with angle, thrust, status
+			=> *launch boosters* of self with angle, thrust, status
 
-		is 'okay':
+		is 'okay'
 			add log with warning: 'Turbo is iffy :/'
-			return *launch boosters* of self with angle, thrust, status
+			=> *launch boosters* of self with angle, thrust, status
 
-		otherwise:
-			return 'stopped'
+		otherwise
+			=> 'stopped'
 
 
 
-::2020::Ideas::
+:: 2020 :: Ideas ::
 
 
 
@@ -306,7 +299,8 @@ use data,
 	l4 = [2, 3, 9]
 	l3 = [1, l4]
 
-	Why: an example to show list matching is possible with different input length
+	--- an example to show list matching is possible with different input length
+
 	["a", "b"] = l1
 
 	bob:foo:["a", ["b", "c", ..."rest"] = "innerList"] = l3
@@ -322,19 +316,23 @@ use data,
 
 
 *test 1* with { { ["d" (otherwise default 2), { f (otherwise default 1) } = "e"] = c } = b } = a:
-	return a
+	=> a
 
 
 *test 2* with [..."bob"] = a:
-	return bob
+	=> bob
 
 
 *test 3* with ...inputs:
+
 	[entry1, ...entries] = inputs
 	["value1", ..."values"] = inputs
-	Issue: not implemented yet: return entry1
-	Issue: not implemented yet: return values
-	return inputs
+
+	--- not implemented yet: return entry1
+
+	--- not implemented yet: return values
+
+	=> inputs
 
 
 *first five*:
@@ -343,7 +341,7 @@ use data,
 
 
 
-::2020::first five numbers doubled::
+:: 2020 :: first five numbers doubled ::
 
 
 
@@ -357,7 +355,7 @@ use numbers,
 
 
 
-::2020::first two numbers doubled::
+:: 2020 :: first two numbers doubled ::
 
 
 
@@ -371,7 +369,7 @@ use numbers,
 
 
 
-::2020::print first number doubled::
+:: 2020 :: print first number doubled ::
 
 
 
@@ -383,37 +381,46 @@ use numbers,
 
 *print first number doubled*:
 	for each number in *first two numbers doubled*, to extent of 1, do:
-		display number
+		output number
 
 
 *test 4* with [abc, "def", ..."rest"] = *input 1*,
               { xyz } = *input 2*,
               ...values:
-	return values
+	=> values
 
 
 *test 5* with [...rest] = *input 1*:
-	return rest
+	=> rest
 
 
-*text test* with *input 1* ->
-	'input1 is {*input 1*}'
+*text test* with *input 1*:
+	=> '{*input 1*=}'
 
 
 *match test* with *input 1*:
 	input = { age: 50, name: 'Sally' }
 	param = 'age'
+
 	when input
-		has name:          return capitalize name
-		has {param} value: return 'person {value} in {param}'
-		otherwise:         return 'unknown person'
+
+		has name
+			=> capitalize name
+
+		has {param} value
+			=> 'person {value} in {param}'
+
+		otherwise
+			=> 'unknown person'
 
 
 *match-some test* with *input 1*:
 	input = { some: { age: 50, name: 'Sally' } }
 	when input
-		has some person: return person:age
-		otherwise:       return 0
+		has some person
+			=> person:age
+		otherwise
+			=> 0
 
 
 *locator test* with *input 1*:
@@ -422,13 +429,23 @@ use numbers,
 	g = *input 1*:abc:def:ghi
 	h:x:y:z = 30
 
-	...
-	... add some stuff here
-	...
+	--- add some stuff here
 
 
 
-::2020::new point::
+:: 2020 :: print first number doubled ::
+
+
+
+use *floating point* float
+
+
+floating self:
+	=> 3.14(float)
+
+
+
+:: 2020 :: new point ::
 
 
 
@@ -436,19 +453,20 @@ use data
 
 
 new self with x,
-               y:
+              y:
+
 	self:{ x, y }
-	return self
+	=> self
 
 
-distance of self with point ->
+distance of self with point:
 	a = point:x - self:x
 	b = point:y - self:y
-	squareRoot of ((square a) + (square b))
+	=> squareRoot of ((square a) + (square b))
 
 
 
-::2020::point category::
+:: 2020 :: point category ::
 
 
 
@@ -456,15 +474,16 @@ use category
 
 
 point with new1,
-           distance ->
+           distance:
 
-	... Issue: assignWith is still unimplemented. It should be:
-	... methods: { distance }
-	new1 category with constructor: new1, method: distance
+	--- assignWith is still unimplemented. It should be:
+	--- methods: { distance }
+
+	=> new1 category with formor: new1, method: distance
 
 
 
-::2020::run program::
+:: 2020 :: run program ::
 
 
 
@@ -475,11 +494,11 @@ use blaster,
 
 
 run self:
-	return self
+	=> self
 
 
 
-::2020::load program::
+:: 2020 :: load program ::
 
 
 
@@ -489,51 +508,52 @@ use numbers
 load self:
 	{ { software, texts } = input } = result of self
 
-	Issue:`is it really a good idea to load this at runtime?
-		   That rules out full-program compilation techniques
+	--- Is it really a good idea to load this at runtime?
+	--- That rules out full-program compilation techniques
+	--- 
+	--- This could tie in with the notion of serializing code as { context, function-code },
+	--- unlike a closure this can be plausibly written to disk.
+	--- 
+	--- Which is interesting because we could perhaps do a full program compilation,
+	--- *after* dependencies have been applied into modules
 
-		   This could tie in with the notion of serializing code as { context, function-code },
-		   unlike a closure this can be plausibly written to disk.
+	--- Then there would be two phases:
+	--- 
+	--- A.1: From bootstrap, load the program software
+	--- A.2: From program software, combine and supply dependency and a run method.
+	--- A.3: From combined software, write out JavaScript code.
+	--- 
+	--- B.1: Run the JavaScript program
+	--- 
+	--- EDIT: Revert to original plan; bootstrap directly from JavaScript.
+	--- This allows full control over the compilation output.
 
-		   Which is interesting because we could perhaps do a full program compilation,
-		   *after* dependencies have been applied into modules
+	--- import = follow on self with fetch in software using {
+	---     'github::terry::ducklang::definitions::2020::blaster::',
+	---     'github::jill::ducklang::definitions::2019::turbo concept::',
+	---     'github::alex::ducklang::definitions::2020-03::rocket concept::',
+	---     'github::rick::ducklang::definitions::2020::rocket fix::'
+	--- }
+	--- follow import with run in software using name: 'github::rick::ducklang::definitions::2020::rocket::'
 
-		   Then there would be two phases:
-
-		   A.1: From bootstrap, load the program software
-		   A.2: From program software, combine and supply dependency and a run method.
-		   A.3: From combined software, write out JavaScript code.
-
-		   B.1: Run the JavaScript program
-
-		   EDIT: Revert to original plan; bootstrap directly from JavaScript.
-		   This allows full control over the compilation output.
-
-	import = follow on self with fetch in software using {
-		'github::terry::ducklang::definitions::2020::blaster::',
-		'github::jill::ducklang::definitions::2019::turbo concept::',
-		'github::alex::ducklang::definitions::2020-03::rocket concept::',
-		'github::rick::ducklang::definitions::2020::rocket fix::'
-	}
-	follow import with run in software using name: 'github::rick::ducklang::definitions::2020::rocket::'
-	`
 	z = 1
 
 
 
-::2020::new program::
+:: 2020 :: new program ::
 
 
 
-Issue:`the below is very boilerplate-y.
-       Instead the compiler could include an author-specified pre-compiled bootstrap (using any URL),
-       and the author would specify a "run" method used to launch the program.
-       It may also be necessary to specify a "initialize" method that should load in most of the software,
-       that happens before "run" is invoked.`
+--- The below is very boilerplate-y.
+--- Instead the compiler could include an author-specified pre-compiled bootstrap (using any URL),
+--- and the author would specify a "run" method used to launch the program.
+--- It may also be necessary to specify a "initialize" method that should load in most of the software,
+--- that happens before "run" is invoked.
+
 use base
 
 
-new ->
-	duck base
+new:
+	=> duck base
 
 
