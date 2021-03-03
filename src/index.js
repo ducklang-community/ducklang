@@ -24,6 +24,7 @@ const pushScope = name => {
     if (typeof name === 'array') {
         name.forEach(identifier => pushScope(identifier))
     } else {
+        name = { ...name, value: toCamelCase(name.value) }
         const predefined = scopesContains(name)
         if (predefined) {
             throw new Error(`
@@ -110,6 +111,7 @@ const jsLocator = locator => {
 }
 
 const toCamelCase = (x) => {
+    x = x.value || x
     while (true) {
         const spaceAt = x.indexOf(' ')
         const dashAt = x.indexOf('-')
