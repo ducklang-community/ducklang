@@ -14,18 +14,18 @@
 git clone git@github.com:ducklang-community/ducklang.git
 cd ducklang
 
-npm install && \
-    npm run build && \
-    npm run deploy
+npm install
+npm run build
+npm run deploy
 
-echo 'export PATH="$HOME/.ducklang/v0.1/dist:$PATH"' >>$HOME/.bashrc
-source $HOME/.bashrc
+echo 'export PATH="$HOME/.ducklang/v0.1/dist:$PATH"' >>~/.bashrc
+source ~/.bashrc
 ```
 
 ## Use
 ```shell script
-dklng -f fixtures/definitions.dklng \
-    cat dist/fixtures/definitions.dklng.js
+dklng -f fixtures/definitions.dklng
+cat dist/fixtures/definitions.dklng.js
 ```
 
 ## Help us grow 🐥
