@@ -6,7 +6,7 @@
 
 ## Program beautifully.
 
-![Sample](sample.png =768x768)
+![Sample](sample.png)
 
 ## Install
 
@@ -25,7 +25,7 @@ yarn build && \
 
 ## Help us grow 🐥
 
-* [⭐ Star](#top)
+* [⭐ Star](?)
 * [💌 Give feedback](https://y62h76939d2.typeform.com/to/s2kKBjpC)
 * [💸 Sponsor](https://opencollective.com/ducklang)
 
