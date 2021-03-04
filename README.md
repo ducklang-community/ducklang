@@ -4,69 +4,68 @@
 ![stability-unstable](https://img.shields.io/badge/stability-unstable-yellow.svg)
 ![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)
 
+## Program beautifully.
 
-Ducklang is a duck-typed programming language with an emphasis on readability of the language.
+![Sample](sample.png =768x768)
 
-## Sample code
+## Install
 
-![Sample code](sample.png)
-
-See [fixtures/definitions.dklng](fixtures/definitions.dklng) for more example code.
-
-## Usage
-
-### Install
-```shell script
-yarn
+```sh
+git clone git@github.com:ducklang-community/ducklang.git
+cd ducklang
+npm install
 ```
 
-### Run
+## Use
 ```shell script
-yarn build && yarn start -f fixtures/definitions.dklng && cat dist/fixtures/definitions.dklng.js
+yarn build && \
+    yarn start -f fixtures/definitions.dklng && \
+    cat dist/fixtures/definitions.dklng.js
 ```
 
-### Principles
+## Help us grow 🐥
 
-* **Duck typing**: Testing over typing - a good type system can get complex while a good integration suite can give peace of mind
-* **Encapsulation**: The language is completely object oriented with all state held in objects
-* **Composition**: (over inheritance) - the quick wins of inheritance can lead to code structures that are hard to refactor
-* **Inversion of control**: Dependencies inject into modules not the other way round for better modularity
-* **Readability**: (over concision) - the code which we're most proud about tends to be code which reads like prose
-* **Asynchronous**: Asynchronicity using a fork-join model like Trio in Python
-* **Named inputs**: method calls pass inputs by name for readability and ease of code evolution. Un-named inputs and positional-matching can also be used.
-* **Extensibility**: most operators expand into method calls so you aren't tied by what comes shipped with the language
-* **Separation of Concerns**: all code is stand-alone and can be "mixed-in" with existing types, allowing for smaller modules which do one thing and do it well
-* **Uniformity**: emphasis on the object oriented paradigm and uniform whitespace means code is more regular across projects
-* **Error propagation**: Errors are signalled using Result objects as in Rust, but the behaviour is inverted - every error is returned immediately to the caller unless the `?=` operator is used. The code expresses optimism, tests express skepticism.
-* **Itemization**: Powerful iterable sequences (like Java Streams but with offset-ability) are truly first-class in the language
+* [⭐ Star](#top)
+* [💌 Give feedback](https://y62h76939d2.typeform.com/to/s2kKBjpC)
+* [💸 Sponsor](https://opencollective.com/ducklang)
+
+## Principles
+
+* Duck typing
+* Testing not typing
+* Encapsulation
+* Composition not inheritance
+* Inversion of control
+* Readability not brevity
+* Promises not channels
+* Additional inputs are named not positional
+* Extensibility of operators
+* Separation of concerns
+* Uniformity
+* Error propagation
+* Streams not lists
 
 ## Roadmap
 
-* ~~Define the language grammar~~
-* ~~Clean up the Nearley output using functions~~
-* Compile the program representation into JavaScript (in progress, ~75%)
-* Yarn 2 local dependency management?
-* Change the target language from JavaScript to TypeScript
-* Add type checking that dependencies contain the required methods, use 'interface' to group methods, and type unions
-* Dependabot-style software lockfile updater for any dependency maps found inside the repo (in progress, ~10%)
-* Source-code fetch into ~/.local cache (Certificate Transparency style checks?)
-* 'yarn link' style behaviour for local code checkouts of projects (also expressed as dependency map files?)
-* Ability to instantiate a program and run it inside a tasklet
-* Add validations on the parse-tree prior to generating output
-* VS Code plugin
+* ~~Define a grammar~~
+* ~~Add grammar post-processing~~
+* Compile to JavaScript (~50% done)
+* Hello, World!
+* Visual Studio Code highlighting
+* Trio-like Promises
+* Hello GET
+* C as a target language
+* Use spaces not tabs
+* ~/.local code cache
+* Dependabot
+* Validate the parse-tree
 * Open Source code search
+* Inferrence structural type-checking from whole-program analysis
+* C 32-bit support
+* A compiler switch for reduced memory footprint
 
-## Project organisation
+## Our behaviours
 
-Ducklang takes a *keep it as simple as needed* approach to community organisation.
-At the moment that means the language originator acting as a de-facto
-product manager shepherding the language between differing concepts and goals.
-
-The project code is young and as such any code is welcome, however scrappy
-(good quality code is welcome too :)
-
-## Code of conduct
-
-* Be vocal
-* Be pleasant
-* Be succinct
+* Friendly
+* Vocal
+* Listening well
