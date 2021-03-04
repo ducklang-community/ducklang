@@ -13,13 +13,18 @@
 ```sh
 git clone git@github.com:ducklang-community/ducklang.git
 cd ducklang
-npm install
+
+npm install && \
+    npm run build && \
+    npm run deploy
+
+echo 'export PATH="$HOME/.ducklang/v0.1/dist:$PATH"' >>$HOME/.bashrc
+source $HOME/.bashrc
 ```
 
 ## Use
 ```shell script
-yarn build && \
-    yarn start -f fixtures/definitions.dklng && \
+dklng -f fixtures/definitions.dklng \
     cat dist/fixtures/definitions.dklng.js
 ```
 
@@ -68,4 +73,4 @@ yarn build && \
 
 * Friendly
 * Vocal
-* Listening well
+* Listening

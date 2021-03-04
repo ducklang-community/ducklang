@@ -7,9 +7,9 @@
     "author": "Ali Clark",
     "license": "MIT",
     "scripts": {
-        "build": "mkdir -p dist && yarn run nearleyc src/grammar.ne -o dist/grammar.js",
-        "prettier": "prettier -w package.json src/**.js",
-        "start": "node src/index.js"
+        "build": "mkdir -p dist && yarn run nearleyc src/grammar.ne -o dist/grammar.js && cp src/index.js dist/dklng && chmod +x dist/dklng",
+        "deploy": "mkdir -p $HOME/.ducklang/v0.1/dist && cp -R node_modules $HOME/.ducklang/v0.1/ && cp dist/grammar.js dist/dklng $HOME/.ducklang/v0.1/dist/",
+        "prettier": "prettier -w package.json src/**.js"
     },
     "dependencies": {
         "base26": "^0.1.0",

@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 const fs = require('fs')
 const nearley = require('nearley')
 const { SourceNode } = require('source-map')
