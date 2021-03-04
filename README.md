@@ -6,7 +6,7 @@
 
 ## Program beautifully.
 
-<img src="https://github.com/ducklang-community/ducklang/raw/main/sample.png" width="512" height="512" >
+<img src="https://github.com/ducklang-community/ducklang/raw/main/sample.png" width="768" height="768" >
 
 ## Install
 
