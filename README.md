@@ -30,7 +30,7 @@ cat dist/fixtures/definitions.dklng.js
 
 ## Use (TODO)
 ```sh
-dklng github:ducklang-community/hello/hello.program.dklng
+dklng github:ducklang-community/hello
 ```
 
 ## Help us grow 🐥
