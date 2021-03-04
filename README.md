@@ -6,7 +6,7 @@
 
 ## Program beautifully.
 
-<img src="https://github.com/ducklang-community/ducklang/raw/main/sample.png" width="768" height="768" >
+<img src="https://github.com/ducklang-community/ducklang/raw/main/sample.png" width="512" height="512" >
 
 ## Install
 
@@ -25,7 +25,7 @@ yarn build && \
 
 ## Help us grow 🐥
 
-* [⭐ Star](?)
+* ⭐ Star this page
 * [💌 Give feedback](https://y62h76939d2.typeform.com/to/s2kKBjpC)
 * [💸 Sponsor](https://opencollective.com/ducklang)
 
