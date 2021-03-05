@@ -22,15 +22,9 @@ echo 'export PATH="$HOME/.ducklang/2021/compiler:$PATH"' >>~/.bashrc
 source ~/.bashrc
 ```
 
-## Use
+## Use (WIP)
 ```sh
-dklng -f fixtures/definitions.dklng
-cat dist/fixtures/definitions.dklng.js
-```
-
-## Use (TODO)
-```sh
-dklng github:ducklang-community/hello
+dklng run github:ducklang-community/hello
 ```
 
 ## Help us grow 🐥

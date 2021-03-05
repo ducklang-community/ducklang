@@ -12,6 +12,7 @@
         "prettier": "prettier -w package.json src/**.js"
     },
     "dependencies": {
+        "axios": "^0.21.1",
         "base26": "^0.1.0",
         "json-diff": "^0.5.4",
         "moo": "aliclark/moo.git#graphical-errors",
