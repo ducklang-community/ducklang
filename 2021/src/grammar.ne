@@ -474,7 +474,7 @@ expressionWithoutExponentiation ->
     | "(" expression ")" {% takeSecond %}
     | location (_ otherwise _ default _ expression {% takeSixth %} ):?
     	{% ([location, otherwise]) =>
-    		({ type: 'locate', location, ...(otherwise && { otherwise }) }) %}
+    		({ type: 'locate', location, otherwise }) %}
 
 
 listLiteral -> "["   flowing[expression		{% take %} ]   "]" {% ([, list]) => ({ type: 'list', list }) %}
@@ -512,7 +512,7 @@ dataDefinition ->
 
 
 assignMethodResult -> (location {% take %} ):? methodNaming
-	{% ([location, methodNaming]) => ({ type: 'assignMethodResult', ...(location && { location }), methodNaming }) %}
+	{% ([location, methodNaming]) => ({ type: 'assignMethodResult', location, methodNaming }) %}
 
 methodExecution -> methodCall[null	{% ignore %}	] {% take %}
 methodNaming    -> methodCall[":"	{% take %}		] {% take %}
@@ -525,7 +525,7 @@ comment ->
 
 location -> identifier (":" locator {% takeSecond %} ):*
 	{% ([name, locators]) =>
-		({ type: 'location', name, ...(locators.length && { locators }) }) %}
+		({ type: 'location', name, locators }) %}
 
 locator ->
 	  identifier	{% take %}

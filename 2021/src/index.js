@@ -118,7 +118,14 @@ const jsInputs = items =>
 const jsInputsArgs = items => join(items.map(({ entry: { name } }, i) => sourceNode(name)))
 
 const jsLocator = locator => {
-    return sourceNode(locator, toCamelCase(locator.value || '') + '$')
+    if (['identifier', 'quote'].includes(locator.type)) {
+        return sourceNode(locator, toCamelCase(locator.value || '') + '$')
+    } else if (locator.type === 'locate') {
+        return sourceNode(locator.location, toCamelCase(locator.location.value || '') + '$')
+    } else if (locator.type === 'literal') {
+        return sourceNode(locator.value)
+    }
+    throw new Error(`Unrecognized locator type: ${locator.type}`)
 }
 
 const toCamelCase = (x) => {
@@ -155,7 +162,7 @@ const jsLocation = (location, definition = false) => {
         (contextType === 'not recent' ? contextPrefix : '') + toCamelCase(renames.get(name.value) || name.value) + '$'
     )
 
-    if (location.locators && location.locators.length > 1) {
+    if (location.locators.length > 1) {
         const allButLast = [
             { symbol: nameNode },
             ...location.locators.slice(0, -1).map(locator => ({ locator, symbol: symbol(locator.value) }))
@@ -183,7 +190,7 @@ const jsLocation = (location, definition = false) => {
             ') })()'
         ]
     }
-    return [nameNode, location.locators ? ['.get(', jsLocator(location.locators[0]), ')'] : '']
+    return [nameNode, location.locators.length > 0 ? ['.get(', jsLocator(location.locators[0]), ')'] : '']
 }
 
 const dataDefinition = definition => {
@@ -246,7 +253,8 @@ const jsArgument = (b, i, inputs) => {
                 type: 'dataDefinition',
                 location: {
                     type: 'location',
-                    name: { type: 'identifier', line: b.line, col: b.col, value: base26.to(i + 1) }
+                    name: { type: 'identifier', line: b.line, col: b.col, value: base26.to(i + 1) },
+                    locators: []
                 },
                 expression: b
             }
@@ -255,7 +263,7 @@ const jsArgument = (b, i, inputs) => {
         case 'assignMethodResult':
             return {
                 type: 'dataDefinition',
-                location: { type: 'location', name: asCamelCase(b.methodNaming.method) },
+                location: { type: 'location', name: asCamelCase(b.methodNaming.method), locators: [] },
                 expression: b.methodNaming
             }
         ///{"type":"assignExpandData","destructuringData":
@@ -278,7 +286,8 @@ const jsArgument = (b, i, inputs) => {
                 type: 'dataDefinition',
                 location: {
                     type: 'location',
-                    name: { type: 'identifier', line: b.line, col: b.col, value: base26.to(i + 1) }
+                    name: { type: 'identifier', line: b.line, col: b.col, value: base26.to(i + 1) },
+                    locators: []
                 },
                 expression: b
             }
@@ -286,16 +295,17 @@ const jsArgument = (b, i, inputs) => {
             // TODO: allow conversions
             return jsArgument(b.value, i, inputs)
         case 'input':
-            console.warn(`Unimplemented input ${b.line}:${b.col}`)
             return {
                 type: 'dataDefinition',
                 location: {
                     type: 'location',
-                    name: b.name
+                    name: b.name,
+                    locators: []
                 },
                 expression: {
                     type: 'location',
-                    name: b.name
+                    name: b.name,
+                    locators: []
                 }
             }
         default:
@@ -386,6 +396,8 @@ const addNode = (obj, type, source) => ({ type, ...obj, line: source.line, col: 
 const jsExpression = expression => {
     traceLog('expression:\t' + JSON.stringify(expression))
     switch (expression.type) {
+        case 'identifier':
+            return jsExpression({ type: 'location', name: expression, locators: [] })
         case 'expression':
             return jsExpression(expression.expression)
         case 'literal':
@@ -405,7 +417,7 @@ const jsExpression = expression => {
                 receiver: addNode(
                     {
                         location: addNode(
-                            { name: addNode({ value: 'numbers' }, 'identifier', expression) },
+                            { name: addNode({ value: 'numbers' }, 'identifier', expression), locators: [] },
                             'location',
                             expression
                         )
@@ -417,7 +429,7 @@ const jsExpression = expression => {
                     addNode(
                         {
                             location: addNode(
-                                { name: addNode({ value: 'number' }, 'identifier', expression) },
+                                { name: addNode({ value: 'number' }, 'identifier', expression), locators: [] },
                                 'location',
                                 expression
                             ),
@@ -458,7 +470,6 @@ const jsExpression = expression => {
 }
 
 const jsDoes = statement => {
-    console.log(statement)
     const operators = {
         leadsTo: 'return',
         collect: 'return'
@@ -777,7 +788,7 @@ const jsAssignLocation = (location, expression) => {
             ' ',
             sourceNode(location.name, toCamelCase(location.name.value)),
             ' = ',
-            (location.locators || []).reduceRight(
+            location.locators.reduceRight(
                 (acc, cur) => ['this.$context.$Data.new.$apply({ properties: { ', jsLocator(cur), ': ', acc, ' } })'],
                 jsExpression(expression)
             ),
@@ -790,7 +801,7 @@ const jsAssignLocation = (location, expression) => {
     const contextType = scopesType(location.name)
     const nameNode = sourceNode(location.name, (contextType === 'not recent' ? 'this.' : '') + location.name.value)
 
-    if (location.locators) {
+    if (location.locators.length > 0) {
         const allButLast = [
             { symbol: nameNode },
             ...location.locators.slice(0, -1).map(locator => ({ locator, symbol: symbol(locator.value) }))
@@ -943,7 +954,7 @@ const jsSections = (sections) => sections.map(({ name: sectionName, context, met
     // Issue: should all method names in this namespace be added to scope?
     // They are not actually in scope, but would prefer not to allow variables with the same name?
 
-    scopes = context.definition.map(({ entry: { name, as } }) => asCamelCase(as ?? name))
+    scopes = [context.definition.map(({ entry: { name, as } }) => asCamelCase(as ?? name))]
 
     /*
     renames = new Map(
@@ -957,26 +968,16 @@ const jsSections = (sections) => sections.map(({ name: sectionName, context, met
 
     const functions = methods.map(
         ({ comments, definition }) => {
-            let { categoryName, name, of, receiver, inputs, arrow, statements, sequence } = definition
+            let { name, of, receiver, inputs, statements } = definition
             // Issue: this should use the receiver keyword and its metadata
 
             inputs = inputs || []
 
-            if (categoryName) {
-                traceLog('category:\t' + JSON.stringify(categoryName))
-                methodName = categoryName.value + '$'
-                scopes.push([])
-            } else if (sequence) {
-                traceLog('sequence:\t' + JSON.stringify(name))
-                methodName = toCamelCase(name.value) + '$'
-                scopes.push([])
-            } else if (name) {
-                traceLog('method:\t' + JSON.stringify(name))
-                traceLog('method definition:\t' + JSON.stringify(definition))
-                traceLog('')
-                methodName = toCamelCase(name.value + (of ? 'Of' : '') + '$')
-                scopes.push([{ line: name.line, col: name.col, value: 'self' }])
-            }
+            traceLog('method:\t' + JSON.stringify(name))
+            traceLog('method definition:\t' + JSON.stringify(definition))
+            traceLog('')
+            methodName = toCamelCase(name.value + (of ? 'Of' : '') + '$')
+            scopes.push([{ line: name.line, col: name.col, value: 'self' }])
 
             const deform = inputs.length
                 ? [
@@ -1229,19 +1230,8 @@ const jsSections = (sections) => sections.map(({ name: sectionName, context, met
             const code = [
                 '\n\n',
                 sourceNode(
-                    categoryName || name,
-                    categoryName || sequence
-                        ? [
-                            jsComments(comments),
-                            '        ',
-                            sourceNode(categoryName || name, methodName),
-                            ': (function ',
-                            sourceNode(categoryName || name, methodName),
-                            ' () {\n',
-                            sequence ? jsStatement(sequence) : statements.map(jsStatement),
-                            '        }).call({ $context, $apply: null })'
-                        ]
-                        : [
+                    name,
+                    [
                             jsComments(comments),
                             '        ',
                             sourceNode(name, methodName),
@@ -1250,7 +1240,7 @@ const jsSections = (sections) => sections.map(({ name: sectionName, context, met
                             '            $apply: function ',
                             sourceNode(name, methodName),
                             '(self$',
-                            inputs.length ? ', inputs' : '',
+                            inputs.length ? ', inputs$' : '',
                             ') {\n',
                             deformedInputs,
                             statements.map(jsStatement),
@@ -1361,7 +1351,7 @@ const jsProgram = (sections, fileName) => {
     `'use strict';
 
 
-require('v8-compile-cache')
+//require('v8-compile-cache')
 
 
 const $context = {
@@ -1493,7 +1483,7 @@ const builder = (fileName, options) => {
     const build = sections => {
         return sections.map(({ context, methods }) => {
             return methods.map(({ definition }) => {
-                let { categoryName, name, of, receiver, inputs, arrow, statements, sequence } = definition
+                let { name, of, receiver, inputs, statements } = definition
             })
         })
     }
@@ -1664,10 +1654,6 @@ async function main() {
             }
             for (var i = 0; i < parser.results.length - 1; i += 2) {
                 console.error(jsonDiff.diffString(parser.results[i], parser.results[i + 1]))
-            }
-
-            for (var i = 0; i < parser.results.length; i += 1) {
-                console.error(JSON.stringify(parser.results[i]))
             }
 
             console.error(parser.results.length + ' (ambiguous) parses')
