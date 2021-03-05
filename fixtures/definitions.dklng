@@ -317,6 +317,7 @@ use data,
 
 	foo = 1
 	bar = 2
+	cache:{ foo, bar }
 
 
 *test 1* with { { ["d" (otherwise default 2), { f (otherwise default 1) } = "e"] = c } = b } = a:
@@ -458,8 +459,7 @@ use data
 
 new self with x,
               y:
-	self:x = x
-	self:y = y
+	self:{ x, y }
 	=> self
 
 

@@ -191,8 +191,8 @@ assignExpand[operator] ->
 		{% ([location, destructuring, , expression]) =>
 			({ type: 'assignExpandList', location, destructuring, expression }) %}
 
-	| ( location ":" {% take %} ):? destructuringData $operator expression
-		{% ([location, destructuring, , expression]) =>
+	| ( location ":" {% take %} ):? destructuringData ( $operator expression {% takeSecond %} ):?
+		{% ([location, destructuring, expression]) =>
 			({ type: 'assignExpandData', location, destructuring, expression }) %}
 
 
