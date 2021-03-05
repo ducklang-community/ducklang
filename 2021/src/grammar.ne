@@ -50,9 +50,9 @@ const lexer = new IndentationLexer({
 
 			as an intermediate step.
 		*/
-    	ellided: /\-\-\- .*$/,
+    	commenting: /\-\-\- .*$/,
 
-		namespaceIdentifier: /^::.*::$/,
+		sectionIdentifier: /^::.*::$/,
 
         decimalNumber: /-?[0-9]+\.[0-9]+/,
         digitNumber: /0|-?[1-9][0-9]*/,
@@ -73,11 +73,6 @@ const lexer = new IndentationLexer({
 				With: 'with',
 				otherwise: 'otherwise'
 			})
-		},
-
-		categoryName: {
-			match: /[A-Z]+[a-zA-Z0-9]*|\*[A-Z]+[ a-zA-Z0-9-]+\*/,
-			value: s => s.startsWith('*') ? s.slice(1, -1) : s,
 		},
 
         newline: { match: /\n/, lineBreaks: true },
@@ -102,7 +97,6 @@ const lexer = new IndentationLexer({
 
 		expand: '...',
 		denote: '..',
-		namespaceSpecifier: '::',
         define: ':',
         separator: ',',
 
@@ -154,8 +148,6 @@ const take			= takeFirst
 
 # Issue: the term 'match' would be simpler than 'destructure'
 
-# Issue: namespace is a strange name. Use the term 'module' (or 'collection' ?) or another term entirely?
-
 # Issue: making all things synchronous is worst of both worlds
 # The reason being that having line-by-line await does not take advantage of asynchronicity.
 # It would be better to require anything asynchronous to be marked out in the call site, like:
@@ -189,30 +181,29 @@ does[operator] -> $operator _ expression newline
 
 
 assignWith[operator, expression] -> location $operator $expression
-	{%	([location, operator, expression]) => ({ type: 'assignWith', location, ...(operator && ({ operator })), expression })	%}
+	{%	([location, operator, expression]) => ({ location, operator, expression })	%}
 
-assignOf[operator, expression	] -> assignWith[$operator							{% take %} , $expression {% take %}	] {% take %}
-assign[  operator				] -> assignWith[(_ $operator _ {% takeSecond %} )	{% take %} , expression  {% take %}	] {% take %}
+assignOf[operator, expression	] -> assignWith[$operator							{% take %} , $expression {% take %}	] {% ([assignment]) => ({ type: 'assignOf', ...assignment }) %}
+assign[  operator				] -> assignWith[(_ $operator _ {% takeSecond %} )	{% take %} , expression  {% take %}	] {% ([assignment]) => ({ type: 'assign', ...assignment }) %}
 
 assignExpand[operator] ->
 	  ( location ":" {% take %} ):? destructuringList $operator expression
 		{% ([location, destructuring, , expression]) =>
-			({ type: 'assignExpandList', ...(location && { location }), ...destructuring, expression }) %}
+			({ type: 'assignExpandList', location, destructuring, expression }) %}
 
-	| ( location ":" {% take %} ):? destructuringData ( $operator expression {% takeSecond %} ):?
-		{% ([location, destructuring, expression]) =>
-			({ type: 'assignExpandData', ...(location && { location }), ...destructuring, ...(expression && { expression }) }) %}
+	| ( location ":" {% take %} ):? destructuringData $operator expression
+		{% ([location, destructuring, , expression]) =>
+			({ type: 'assignExpandData', location, destructuring, expression }) %}
 
 
-standalone[definition, adjusted] -> newline:?
-	#($adjusted comment		{% takeSecond %} ):*
+standalone[definition, adjusted] ->
+	(newline:? $adjusted comment		{% takeThird %} ):*
+	newline:?
 	 $adjusted $definition
-	{%	([, /*comments,*/ , definition]) => ({ type: 'standalone', /*, ...(comments.length && { comments })*/ definition })	%}
+	{%	([comments, , , definition]) => ({ type: 'standalone', comments, definition })	%}
 
 indented[definition]	-> newline indent $definition dedent	{% takeThird %}
-block[definition]		-> indented[standalone[$definition		{% take %} , ____:+ {% ignore %} ]		{% take %}	]	{% take %}
-blockOf[definition]		-> indented[standalone[( comment {% take %} | $definition {% take %} ) {% take %}, ____:+ {% ignore %} ]:+	{% take %}	]	{% take %}
-blockEnded[definition, last]	-> indented[( standalone[( comment {% take %} | $definition {% take %} ) {% take %} , ____:+ {% ignore %} ]:* standalone[$last	{% take %} , ____:+ {% ignore %} ]	{% ([main, last]) => [...main, last] %}	) {% take %} ]	{% take %}
+blockOf[definition]		-> indented[standalone[$definition {% take %}, ____:+ {% ignore %} ]:+ ( newline ____:+ comment {% ignore %} ):?	{% take %}	]	{% take %}
 
 items[definition]   -> delimited[$definition	{% take %} , ("," _:+)		{% ignore %} ]			{% take %}
 listing[definition] -> delimited[$definition	{% take %} , ("," newline)	{% ignore %} ] ",":?	{% take %}
@@ -224,21 +215,18 @@ flowing[definition] -> items[$definition	{% take %} ] ("," newline
 
 # Issue: there is some duplication between listed/elongated which would be nice to extract and simplify
 
-#		#($adjusted comment		{% takeSecond %} ):*
-#/*comments,*/
-#/*...(comments.length && { comments }) */
-
 listed[adjusted, entry] -> listing[(
+		($adjusted comment		{% takeSecond %} ):*
 		 $adjusted $entry
-		{%	([ , entry]) => ({ type: 'entry', entry })	%} )
+		{%	([comments, , entry]) => ({ type: 'entry', comments, entry })	%} )
 	{% take %} ]
 	{% take %}
 
 elongated[adjusted, entry] ->
 	(
-		  $entry {% ([entry]) => ({ type: 'entry', entry }) %}
+		  $entry {% ([entry]) => ({ type: 'entry', comments: [], entry }) %}
 		| ( delimited[comment {% take %}, $adjusted {% ignore %} ] {% take %} ):+ $adjusted $entry
-			{%	([comments, , entry]) => ({ type: 'entry', ...(comments.length && { comments }), entry })	%}
+			{%	([comments, , entry]) => ({ type: 'entry', comments, entry })	%}
 	)
 	("," newline
 		listed[$adjusted	{% take %} , $entry	{% take %} ]
@@ -287,31 +275,30 @@ main ->
 	newline
 	newline
 	(
-		namespaceDeclaration
+		sectionName
 		newline
 		newline
-		comment:*
-		using:?
+		context:?
 		method:+
 
-		{% ([namespaceDeclaration, , , , using, methods]) => ({
-			namespaceDeclaration,
-			...(using && { using }),
+		{% ([name, , , context, methods]) => ({
+			name,
+			context: context ?? { type: 'standalone', comments: [], definition: [] },
 			methods
 		}) %}
 	):+
-	{%	([, , modules]) => ({ modules })	%}
+	{%	([, , sections]) => ({ sections })	%}
 
-namespaceDeclaration ->
+sectionName ->
 	newline
-	namespaceIdentifier newline
+	sectionIdentifier newline
 	newline
 	{%	takeSecond	%}
 
-using ->
+context ->
 	standalone[(
 			Use _
-			elongated[(_ _ _ _) {% ignore %} , qualifier (_ qualifier):? {% ([name]) => ({ type: 'input', name }) %} ] newline
+			elongated[(_ _ _ _) {% ignore %} , identifier (_ identifier {% takeSecond %}):? {% ([name, as]) => ({ type: 'input', name, as }) %} ] newline
 			{%	takeThird	%}
 		) {% take %} ,
 		null {% ignore %} ]
@@ -359,28 +346,12 @@ using ->
 method ->
 	standalone[
 		(
-			(
-				  categoryName
-					{% ([categoryName]) => ({ categoryName }) %}
-				| identifier
-					((_ of {% takeSecond %} ):?
-					_ ("self" | "{" _ "self":? ("," _ "this"):? ("," _ "inner"):? _ "}")
-					{% ([of, , receiver]) => ({ ...(of && { of }), receiver }) %}):?
-					methodInputs
-					{%
-						([name, receiver, inputs]) =>
-							({ name, ...(receiver && receiver.of && { of: receiver.of }), ...(receiver && { receiver: receiver.receiver }), ...(inputs && { inputs }) })
-					%}
-			)
-			(  ":" blockOf[statement {% take %} ]
-				{% ([, statements]) =>
-					({ statements }) %}
-			 | _ "->" blockEnded[statement {% take %}, expression newline {% take %} ]
-				{% ([, arrow, statements]) =>
-					({ arrow, statements }) %}
-			)
-			{%	([defining, body]) =>
-					({ ...defining, ...body }) %}
+			identifier
+			( (_ of {% takeSecond %} ):? _ "self"		{% ([of, , receiver]) => ({ of, receiver }) %} ):?
+			(_ with _ elongated[(_ _ _ _ _ _ _ _ _:+) {% ignore %} , input {% take %} ] {% takeFourth %} ):? ":"
+			blockOf[statement {% take %}]
+				{%	([name, receiver, inputs, , statements]) =>
+						({ name, ...receiver, inputs: inputs ?? [], statements }) %}
 		) {% take %} ,
 		null {% ignore %} ]
 	newline
@@ -388,26 +359,24 @@ method ->
 	{%	take	%}
 
 
-methodInputs -> (_ with _ elongated[(_ _ _ _ _ _ _ _ _:+) {% ignore %} , input {% take %} ] {% takeFourth %} ):? {% take %}
-
 input ->
 	(  destructuringList _:+ "=" _:+ {% take %}
 	 | destructuringData _:+ "=" _:+ {% take %} ):?
-	"...":? ( qualifier {% take %} | quote {% take %} ) (_ qualifier {% takeSecond %} ):?
+	"...":? ( identifier {% take %} | quote {% take %} ) (_ identifier {% takeSecond %} ):?
 		(_:+ "(" otherwise _ default _ expression ")" {% takeSeventh %} ):?
 
 	{% ([destructuring, grouping, name, as, otherwise]) => ({
 		type: 'input',
-		...(grouping && { grouping }),
+		grouping,
 		name,
-		...(as && { as }),
-		...(destructuring && { ...destructuring }),
-		...(otherwise && { otherwise })
+		as,
+		destructuring,
+		otherwise
 	}) %}
 
 
-destructuringList -> "["   flowing[input {% take %} ]   "]" {% ([, destructuringList])   => ({ destructuringList }) %}
-destructuringData -> "{" _ flowing[input {% take %} ] _ "}" {% ([, , destructuringData]) => ({ destructuringData }) %}
+destructuringList -> "["   flowing[input {% take %} ]   "]" {% ([, inputs])   => ({ type: 'destructuringList', inputs }) %}
+destructuringData -> "{" _ flowing[input {% take %} ] _ "}" {% ([, , inputs]) => ({ type: 'destructuringData', inputs }) %}
 
 
 for -> For _ each _ identifier _ (in {% take %} | through {% take %} | of {% take %} ) _ expression ","
@@ -420,7 +389,7 @@ when -> When _ (expression {% take %} | walrusStatement {% take %})
 	indented[(
 		standalone[
 			((is _ expression {% ([, , is]) => ({ is }) %}
-			 | has _ (qualifier {% take %} | quote {% take %} | "{" expression "}" {% takeSecond %}) (_ qualifier {% takeSecond %} ):?
+			 | has _ (identifier {% take %} | quote {% take %} | "{" expression "}" {% takeSecond %}) (_ identifier {% takeSecond %} ):?
 				{% ([, , has, as]) => ({ has, ...(as && { as }) }) %})
 					(":" _:+ statement	{% ([, , statement]) => [statement] %}
 					 | blockOf[statement {% take %} ] {% take %} )
@@ -456,10 +425,10 @@ when -> When _ (expression {% take %} | walrusStatement {% take %})
 # Issue: sometimes ?
 
 statement ->
-      for							{% take %}
-    | when							{% take %}
-    | does[collect	{% take %} ]	{% take %}
-    | does["=>"	{% take %} ]		{% take %}
+	for							{% take %}
+	| when							{% take %}
+	| does[collect	{% take %} ]	{% take %}
+	| does[leadsTo	{% take %} ]	{% take %}
 	| walrusStatement		newline {% take %}
 	| assignExpand[(_ "=" _ {% ignore %} )	{% ignore %} ]								newline	{% take %}
 	| assignOf[(_ "=" _ {% ignore %} )	{% ignore %} , listLiteral	{% take %}	]	newline	{% take %}
@@ -550,12 +519,11 @@ methodNaming    -> methodCall[":"	{% take %}		] {% take %}
 
 
 comment ->
-	newline:?
-	ellided
+	commenting
 	newline
-	{% ([, comment]) => ({ type: 'comment', ...comment }) %}
+	{% take %}
 
-location -> qualifier (":" locator {% takeSecond %} ):*
+location -> identifier (":" locator {% takeSecond %} ):*
 	{% ([name, locators]) =>
 		({ type: 'location', name, ...(locators.length && { locators }) }) %}
 
@@ -570,13 +538,9 @@ value ->
 	 | literal		{% take %}
 	 | text			{% take %} )
 	(
-		"(" qualifier ")" {% takeSecond %}
+		"(" identifier ")" {% takeSecond %}
 	):?
 	{% ([value, qualifier]) => ({ type: 'literal', value, ...(qualifier && { qualifier }) }) %}
-
-qualifier ->
-	  identifier	{% take %}
-	| categoryName	{% take %}
 
 
 Use			-> "use"		{% ignore %}
@@ -596,12 +560,13 @@ in			-> "in"			{% take %}
 through		-> "through"	{% take %}
 
 # I've tried to use as few reserved keywords as possible, while still having an unambiguous parse
+leadsTo		-> %leadsTo		{% take %}
 collect		-> %collect		{% take %}
 of			-> %of			{% take %}
 with		-> %With		{% ignore %}
 otherwise	-> %otherwise	{% ignore %}
 
-ellided		-> %ellided	{% take %}
+commenting	-> %commenting	{% take %}
 
 literal			-> %literal			{% take %}
 quote			-> %quote			{% take %}
@@ -610,11 +575,9 @@ decimalNumber	-> %decimalNumber	{% take %}
 digitNumber		-> %digitNumber		{% take %}
 positional		-> %positional		{% take %}
 identifier		-> %identifier		{% take %}
-categoryName	-> %categoryName	{% take %}
 
-namespaceIdentifier -> %namespaceIdentifier	{% take %}
+sectionIdentifier -> %sectionIdentifier	{% take %}
 
-leadsTo	-> %leadsTo	{% ignore %}
 newline -> %newline	{% ignore %}
 indent	-> %indent	{% ignore %}
 dedent	-> %dedent	{% ignore %}

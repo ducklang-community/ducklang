@@ -5,6 +5,11 @@
 
 
 
+*result from each* of self with ["mapping"] = ...input:
+	:items of self
+	=> *result from each* of items with mapping
+
+
 itself of self:
 	=> self
 
@@ -312,7 +317,6 @@ use data,
 
 	foo = 1
 	bar = 2
-	variable:{ foo, bar }
 
 
 *test 1* with { { ["d" (otherwise default 2), { f (otherwise default 1) } = "e"] = c } = b } = a:
@@ -454,8 +458,8 @@ use data
 
 new self with x,
               y:
-
-	self:{ x, y }
+	self:x = x
+	self:y = y
 	=> self
 
 
