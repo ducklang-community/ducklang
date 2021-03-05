@@ -3,7 +3,7 @@
 const fs = require('fs')
 const nearley = require('nearley')
 const { SourceNode } = require('source-map')
-const grammar = require('../dist/grammar.js')
+const grammar = require('../compiler/grammar.js')
 const base26 = require('base26')
 const jsonDiff = require('json-diff')
 
