@@ -1,8 +1,11 @@
 #!/usr/bin/env node
 
+const util = require('util')
 const { constants } = require('fs')
-const { mkdir, writeFile, readFile, access } = require('fs/promises')
+const { flock } = require('fs-ext')
+const { open, mkdir, writeFile, readFile, access, chmod } = require('fs/promises')
 const { spawn } = require('child_process')
+const execFile = util.promisify(require('child_process').execFile);
 const axios = require('axios')
 const { Grammar, Parser } = require('nearley')
 const { SourceNode } = require('source-map')
@@ -1351,7 +1354,8 @@ const jsProgram = (sections, fileName) => {
     })
 
     return new SourceNode(1, 0, fileName, [
-    `'use strict';
+    `#!/usr/bin/env node
+'use strict';
 
 
 //require('v8-compile-cache')
@@ -1494,9 +1498,11 @@ const builder = (fileName, options) => {
     return build
 }
 
-
-const fetch = async(programPath) => {
+const parsePath = (programPath) => {
     const [provider, userRepo] = programPath.split(':')
+    if (provider === 'file') {
+        return { provider, userRepo }
+    }
     const [user, repo] = userRepo.split('/')
     // FIXME: validate user or repo aren't ".."
     const fileName = `${repo}.program.dklg`
@@ -1504,10 +1510,15 @@ const fetch = async(programPath) => {
     const fileDir = `${__dirname}/../../sources/${filePathPart}`
     const filePath = `${fileDir}/${fileName}`
 
+    return { provider, userRepo, user, repo, fileName, filePathPart, fileDir, filePath }
+}
+
+const fetch = async(programPath) => {
+    const { provider, user, repo, fileName, fileDir, filePath } = parsePath(programPath)
+
     // TODO: Redis cache?
     try {
-        const data = await readFile(filePath, 'utf8')
-        return { fileName, filePathPart, data }
+        return readFile(filePath, 'utf8')
     } catch (err) {
 
     }
@@ -1530,14 +1541,190 @@ const fetch = async(programPath) => {
     // FIXME: ensure data is saved in utf8 form regardless of server response
     // Nb. this could change its hash checksum from the original...
     await writeFile(filePath, response.data)
-    return { fileName, filePathPart, data: response.data }
+    return response.data
 }
 
-function run(path) {
-    return spawn(process.argv[0], [`${__dirname}/../outputs/${path}`], {
+function runOutput(path) {
+    return spawn(`${__dirname}/../outputs/${path}`, [], {
         detached: true,
         stdio: 'inherit'
-    });
+    })
+}
+
+const commandRun = async(options) => {
+
+    if (options._.length < 1) {
+        throw new Error("Please supply a program path, eg. github:your_username/hello")
+    }
+
+    let sourceName = options._[0]
+
+    let { repo, fileName, filePathPart } = parsePath(sourceName)
+
+    if (!options.rebuild) {
+        try {
+            await access(`${__dirname}/../outputs/${filePathPart}/${repo}`, constants.R_OK | constants.X_OK)
+            return runOutput(`${filePathPart}/${repo}`)
+        } catch (err) {
+
+        }
+    }
+
+    const parser = new Parser(Grammar.fromCompiled(grammar))
+
+    const mappings = new Map(await loadMappings())
+    while (true) {
+        const redir = mappings.get(sourceName)
+        if (redir == null) {
+            break
+        }
+        sourceName = redir
+    }
+
+    let { provider, userRepo } = parsePath(sourceName)
+
+    if (provider === 'file') {
+        const data = await readFile(`${userRepo}/${fileName}`, 'utf-8')
+        parser.feed(data)
+    } else {
+        const data = await fetch(sourceName)
+        parser.feed(data)
+    }
+
+    if (parser.results.length === 0) {
+        console.error('Expected more input')
+        process.exit(1)
+    } else if (parser.results.length === 1) {
+        const { sections } = parser.results[0]
+
+        if (options.showParseTree) {
+            console.log(JSON.stringify(sections, null, 2))
+            console.log('Good parse')
+        }
+
+        const build = builder(fileName, options)
+        const metaProgram = build(sections)
+
+        const jsProgram = compiler(fileName, options)
+
+        // Issue: I'm keen to get the best IC performance from V8. Does it make sense to express all objects as:
+        // A = (a) => ({ a: ... }); B = (a, b) => ({ a: ..., b: ... }); C = (a, b, c) => ({ a: ..., b: ..., c: ... })
+        //
+        // This would ensure exactly sized objects and maximum possible object shape similarity
+        //
+        // Issue: invoking with a Map is generally ~75% performance of plain object,
+        // and ~33% of plain object with a dedicated 'self' argument (eg. function (self=this, inputs={}) )
+
+        // Issue: add the description comment to the top of the generated code,
+        // if the intention is for the output to be readable
+
+        // Issue: better to use the term "function" instead of "method",
+        //        everything be a $Function, with itemsOf parameterised
+        // Issue: itemsOf sounds a bit weird for functions. Consider "itemizationOf" instead
+        const { code, map } = jsProgram(sections).toStringWithSourceMap()
+
+        await mkdir(`${__dirname}/../outputs/${filePathPart}`, { recursive: true })
+        await writeFile(`${__dirname}/../outputs/${filePathPart}/${repo}`, code)
+        await chmod(`${__dirname}/../outputs/${filePathPart}/${repo}`, 0o775)
+        await writeFile(`${__dirname}/../outputs/${filePathPart}/${repo}.map`, JSON.stringify(map))
+
+        // Issue: make the output prettier, eg. with right indentation and nice variable names
+        // (nb. prettier isn't viable as it doesn't do source mapping. Workarounds exist but are slow)
+
+        // Issue: set the line,col source mapping of closing tags to be something at the end of the source
+
+        return runOutput(`${filePathPart}/${repo}`)
+
+    } else {
+        if (options.showParseTree) {
+            console.log(JSON.stringify(parser.results, null, 2))
+        }
+        for (var i = 0; i < parser.results.length - 1; i += 2) {
+            console.error(jsonDiff.diffString(parser.results[i], parser.results[i + 1]))
+        }
+
+        console.error(parser.results.length + ' (ambiguous) parses')
+        process.exit(1)
+    }
+}
+
+const loadMappings = async() => {
+    const mappingsText = await readFile(`${__dirname}/../../mappings`, { encoding: 'utf8', flag: 'a+' })
+
+    return mappingsText
+        .split('\n')
+        .filter(line => line.trim())
+        .map(line => line.split('\t->\t'))
+}
+
+const writeMapping = async(sourceName, sourceLocal) => {
+
+    const mappingsLock = await open(`${__dirname}/../../.mappings.lockfile`, 'a')
+
+    return new Promise((resolve, reject) => {
+        flock(mappingsLock.fd, 'ex', async(err) => {
+            if (err) { return reject(err) }
+            const mappings = await loadMappings()
+            const existingIndex = mappings.findIndex(([source]) => source === sourceName)
+
+            if (existingIndex < 0 || mappings[existingIndex][1] !== sourceLocal) {
+                if (existingIndex < 0) {
+                    mappings.push([sourceName, sourceLocal])
+                } else {
+                    mappings.splice(existingIndex, 1, [sourceName, sourceLocal])
+                }
+                await writeFile(`${__dirname}/../../mappings`,
+                    mappings.map(([source, local]) => `${source}\t->\t${local}\n`).join(''))
+            }
+
+            resolve()
+        })
+    })
+}
+
+const commandOpen = async(options) => {
+
+    if (options._.length < 1) {
+        throw new Error("Please supply a program path, eg. github:your_username/hello")
+    }
+
+    const sourceName = options._[0]
+    const { provider, user, repo } = parsePath(sourceName)
+    const sourceLocal = `file:${process.cwd()}/${repo}`
+
+    await execFile('git', ['clone', `git@${provider}.com:${user}/${repo}.git`], {
+        detached: true,
+        stdio: 'inherit'
+    })
+
+    await writeMapping(sourceName, sourceLocal)
+}
+
+const commandLink = async(options) => {
+
+    let upstream = false
+    let sourceName
+
+    if (options._.length === 1) {
+        sourceName = options._[0]
+    } else if (options._.length === 2 && options._[0] === 'upstream') {
+        upstream = true
+        sourceName = options._[1]
+    } else {
+        throw new Error("Please supply a program path, eg. github:your_username/hello")
+    }
+
+    const sourceLocal = `file:${process.cwd()}`
+
+    if (upstream) {
+        const { provider, user, repo } = parsePath(sourceName)
+        await execFile('git', ['remote', 'add', 'upstream', `git@${provider}.com:${user}/${repo}.git`], {
+            detached: true,
+            stdio: 'inherit'
+        })
+    }
+
+    await writeMapping(sourceName, sourceLocal)
 }
 
 async function main() {
@@ -1580,88 +1767,39 @@ async function main() {
             throw new Error("Please specify a command, eg. run")
         }
 
-        switch (options._[0]) {
+        const command = options._.shift()
+
+        switch (command) {
             case 'run':
-                //
-                break
+                return commandRun(options)
+            case 'open':
+                return commandOpen(options)
+            case 'link':
+                return commandLink(options)
+            case 'sync':
+                // TODO:
+                // - update sources/
+                // - update checkouts:
+                //      - stash
+                //      - fetch upstream
+                //      - checkout master/main
+                //      - fetch origin
+                //      - rebase master/main with origin
+                //      - rebase master/main with upstream
+                //      - go back to original branch
+                //      - rebase branch onto master/main
+                //      - stash pop
+                // - fetch latest compiler and install
+            case 'hack':
+                // TODO: like 'open' but for the compiler itself
+            case 'fork':
+                // Can we automate the 'fork' before an 'open'?
+                // This can be helpful in allowing source references to
+                // the original repo to automatically use our local fork instead
             default:
                 throw new Error(`Unrecognised command ${options._[0]}`)
         }
 
-        if (options._.length < 2) {
-            throw new Error("Please supply a program path, eg. github:ducklang-community/hello")
-        }
-
-        const sourceName = options._[1]
-        const { fileName, filePathPart, data } = await fetch(sourceName)
-
-        if (!options.rebuild) {
-            try {
-                await access(`${__dirname}/../outputs/${filePathPart}/${fileName}.js`, constants.R_OK)
-                return run(`${filePathPart}/${fileName}.js`)
-            } catch (err) {
-
-            }
-        }
-
-        const parser = new Parser(Grammar.fromCompiled(grammar))
-
-        parser.feed(data)
-
-        if (parser.results.length === 0) {
-            console.error('Expected more input')
-            process.exit(1)
-        } else if (parser.results.length === 1) {
-            const { sections } = parser.results[0]
-
-            if (options.showParseTree) {
-                console.log(JSON.stringify(sections, null, 2))
-                console.log('Good parse')
-            }
-
-            const build = builder(fileName, options)
-            const metaProgram = build(sections)
-
-            const jsProgram = compiler(fileName, options)
-
-            // Issue: I'm keen to get the best IC performance from V8. Does it make sense to express all objects as:
-            // A = (a) => ({ a: ... }); B = (a, b) => ({ a: ..., b: ... }); C = (a, b, c) => ({ a: ..., b: ..., c: ... })
-            //
-            // This would ensure exactly sized objects and maximum possible object shape similarity
-            //
-            // Issue: invoking with a Map is generally ~75% performance of plain object,
-            // and ~33% of plain object with a dedicated 'self' argument (eg. function (self=this, inputs={}) )
-
-            // Issue: add the description comment to the top of the generated code,
-            // if the intention is for the output to be readable
-
-            // Issue: better to use the term "function" instead of "method",
-            //        everything be a $Function, with itemsOf parameterised
-            // Issue: itemsOf sounds a bit weird for functions. Consider "itemizationOf" instead
-            const { code, map } = jsProgram(sections).toStringWithSourceMap()
-
-            await mkdir(`${__dirname}/../outputs/${filePathPart}`, { recursive: true })
-            await writeFile(`${__dirname}/../outputs/${filePathPart}/${fileName}.js`, code)
-            await writeFile(`${__dirname}/../outputs/${filePathPart}/${fileName}.js.map`, JSON.stringify(map))
-
-            // Issue: make the output prettier, eg. with right indentation and nice variable names
-            // (nb. prettier isn't viable as it doesn't do source mapping. Workarounds exist but are slow)
-
-            // Issue: set the line,col source mapping of closing tags to be something at the end of the source
-
-            return run(`${filePathPart}/${fileName}.js`)
-
-        } else {
-            if (options.showParseTree) {
-                console.log(JSON.stringify(parser.results, null, 2))
-            }
-            for (var i = 0; i < parser.results.length - 1; i += 2) {
-                console.error(jsonDiff.diffString(parser.results[i], parser.results[i + 1]))
-            }
-
-            console.error(parser.results.length + ' (ambiguous) parses')
-            process.exit(1)
-        }
     } catch (err) {
         console.error(err)
         process.exit(1)

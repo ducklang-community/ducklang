@@ -23,7 +23,12 @@ dklg run github:your_username/hello
 ```
 Hello, World!
 ```
-* Continue hacking :)
+* Continue hacking:
+```sh
+dklg open github:your_username/hello
+cd hello
+dklg link upstream github:ducklang-community/hello
+```
 
 ## Help us grow 🐥
 
