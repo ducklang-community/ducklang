@@ -478,23 +478,23 @@ expressionWithoutExponentiation ->
     		({ type: 'locate', location, otherwise }) %}
 
 
-listLiteral -> "["   flowing[expression		{% take %} ]   "]" {% ([, list]) => ({ type: 'list', list }) %}
+listLiteral -> "["   flowing[expression		{% take %} ]   "]" {% ([,   list]) => ({ type: 'list', list }) %}
 dataLiteral -> "{" _ flowing[dataDefinition	{% take %} ] _ "}" {% ([, , data]) => ({ type: 'data', data }) %}
 
 
 listBlock ->  "["
 		listingBlock[flowing[expression {% take %} ] {% take %} ]
 	____:+ "]"
-	{% ([, list]) => ({ type: 'listBlock', list }) %}
+	{% ([, list]) => ({ type: 'list', list }) %}
 
 dataBlock ->
-	  listingBlock[dataDefinition {% take %} ]	{% take %}
+	  listingBlock[dataDefinition {% take %} ]	{% ([data]) => ({ type: 'data', data }) %}
 	| enclosedDataBlock	{% take %}
 
 enclosedDataBlock ->  "{"
 		listingBlock[dataDefinition {% take %} ]
 	____:+ "}"
-	{% ([, data]) => ({ type: 'enclosedDataBlock', data }) %}
+	{% ([, data]) => ({ type: 'data', data }) %}
 
 
 dataDefinition ->
