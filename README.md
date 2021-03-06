@@ -29,7 +29,7 @@ dklng run github:ducklang-community/hello
 
 ## Help us grow 🐥
 
-* [⭐ Star the repo](https://github.com/ducklang-community/ducklang#top)
+* [🖖 Fork the "Hello, World!" repo](https://github.com/ducklang-community/hello)
 * [💌 Give feedback](https://y62h76939d2.typeform.com/to/s2kKBjpC)
 * [💸 Sponsor](https://opencollective.com/ducklang)
 
