@@ -7,8 +7,8 @@
     "author": "Ali Clark",
     "license": "MIT",
     "scripts": {
-        "build": "mkdir -p 2021/compiler && $(npm bin)/nearleyc 2021/src/grammar.ne -o 2021/compiler/grammar.js && cp 2021/src/index.js 2021/compiler/dklng && chmod +x 2021/compiler/dklng",
-        "deploy": "mkdir -p $HOME/.ducklang/2021/compiler && cp -R node_modules $HOME/.ducklang/2021/compiler/ && cp 2021/compiler/grammar.js 2021/compiler/dklng $HOME/.ducklang/2021/compiler/",
+        "build": "mkdir -p alpha/compiler && $(npm bin)/nearleyc alpha/src/grammar.ne -o alpha/compiler/grammar.js && cp alpha/src/index.js alpha/compiler/dklng && chmod +x alpha/compiler/dklng",
+        "deploy": "mkdir -p $HOME/.ducklang/alpha/compiler && cp -R node_modules $HOME/.ducklang/alpha/compiler/ && cp alpha/compiler/grammar.js alpha/compiler/dklng $HOME/.ducklang/alpha/compiler/",
         "prettier": "prettier -w package.json src/**.js"
     },
     "dependencies": {

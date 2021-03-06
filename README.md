@@ -18,7 +18,7 @@ npm install
 npm run build
 npm run deploy
 
-echo 'export PATH="$HOME/.ducklang/2021/compiler:$PATH"' >>~/.bashrc
+printf '\n%s\n\n' 'export PATH="$HOME/.ducklang/alpha/compiler:$PATH"' >>~/.bashrc
 source ~/.bashrc
 ```
 
