@@ -10,7 +10,7 @@
 
 ## Install
 
-* Install a recent stable version of Node.js and NPM
+* Install a recent stable Node.js and NPM
 * Review the [install script](https://raw.githubusercontent.com/ducklang-community/ducklang/main/install.sh)
 * Run the install script:
 
