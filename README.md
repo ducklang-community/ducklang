@@ -20,9 +20,11 @@ sh -c "$(curl -fsSL https://raw.githubusercontent.com/ducklang-community/ducklan
 ## Use
 
 * [🖖 Fork the "Hello, World!" repo](https://github.com/ducklang-community/hello)
+* Run:
 
 ```sh
-dklg run github:<your-username>/hello
+user=YOUR_USERNAME
+dklg run github:$user/hello
 ```
 
 * Continue hacking on your new repo :)
