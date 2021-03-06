@@ -1473,7 +1473,7 @@ Data: {
 module.exports = {
 \n\n\n`,
     join(jsSections(sections), ',\n'),
-    '\n\n\n\n}'
+    '\n\n\n\n}\n\nconsole.log("Hello, World!") // FIXME: grim hack\n\n'
 ])
 }
 
