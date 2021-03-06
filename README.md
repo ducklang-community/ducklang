@@ -24,7 +24,7 @@ sh -c "$(curl -fsSL https://raw.githubusercontent.com/ducklang-community/ducklan
 ```sh
 dklg run github:your_username/hello
 ```
-* Continue hacking on your new repo 😃
+* Continue hacking :)
 
 ## Help us grow 🐥
 
