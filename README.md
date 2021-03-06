@@ -2,7 +2,7 @@
 
 ## Program beautifully.
 
-<img src="https://github.com/ducklang-community/ducklang/raw/main/sample.png" width="768" height="768" >
+<img src="https://github.com/ducklang-community/ducklang/raw/main/sample.png" width="768" height="640" >
 
 ## Install
 
