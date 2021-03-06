@@ -22,7 +22,7 @@ printf '\n%s\n\n' 'export PATH="$HOME/.ducklang/alpha/compiler:$PATH"' >>~/.bash
 source ~/.bashrc
 ```
 
-## Use (WIP)
+## Use
 
 * [🖖 Fork the "Hello, World!" repo](https://github.com/ducklang-community/hello)
 
@@ -30,7 +30,7 @@ source ~/.bashrc
 dklng run github:<your-username>/hello
 ```
 
-* Continue hacking on your repo :)
+* Continue hacking on your new repo :)
 
 ## Help us grow 🐥
 
