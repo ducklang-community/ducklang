@@ -19,15 +19,12 @@ sh -c "$(curl -fsSL https://raw.githubusercontent.com/ducklang-community/ducklan
 
 ## Use
 
-* [🖖 Fork the "Hello, World!" repo](https://github.com/ducklang-community/hello)
+* [🖖 Fork the "Hello, World!" repo](https://github.com/ducklang-community/hello#top)
 * Run:
-
 ```sh
-user=YOUR_USERNAME
-dklg run github:$user/hello
+dklg run github:your_username/hello
 ```
-
-* Continue hacking on your new repo :)
+* Continue hacking on your new repo 😃
 
 ## Help us grow 🐥
 
