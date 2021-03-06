@@ -10,16 +10,12 @@
 
 ## Install
 
+* Install a recent stable version of Node.js and NPM
+* Review the Ducklang [install.sh](install.sh) script
+* Run the install script:
+
 ```sh
-git clone git@github.com:ducklang-community/ducklang.git
-cd ducklang
-
-npm install
-npm run build
-npm run deploy
-
-printf '\n%s\n\n' 'export PATH="$HOME/.ducklang/alpha/compiler:$PATH"' >>~/.bashrc
-source ~/.bashrc
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/ducklang-community/ducklang/main/install.sh)"
 ```
 
 ## Use
