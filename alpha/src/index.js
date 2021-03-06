@@ -6,9 +6,10 @@ const { spawn } = require('child_process')
 const axios = require('axios')
 const { Grammar, Parser } = require('nearley')
 const { SourceNode } = require('source-map')
-const grammar = require('../compiler/grammar.js')
 const base26 = require('base26')
 const jsonDiff = require('json-diff')
+
+const grammar = require('../compiler/grammar.js')
 
 // Issue: In v8 do methods affect shape?
 // Are squareOf and cubeOf (unexpectedly) a different shape?
@@ -113,9 +114,9 @@ const jsComments = comments => (comments ? comments.map(comment => jsComment(com
 // Why: generates same-shape context literals for slightly better hidden class reuse within V8
 
 const jsInputs = items =>
-    join(items.map(({ entry: { name } }, i) => [sourceNode(name, base26.to(i + 1) + '$'), ': ', sourceNode(name)]))
+    join(items.map(({ definition: { name } }, i) => [sourceNode(name, base26.to(i + 1) + '$'), ': ', sourceNode(name)]))
 
-const jsInputsArgs = items => join(items.map(({ entry: { name } }, i) => sourceNode(name)))
+const jsInputsArgs = items => join(items.map(({ definition: { name } }, i) => sourceNode(name)))
 
 const jsLocator = locator => {
     if (['identifier', 'quote'].includes(locator.type)) {
@@ -244,7 +245,7 @@ const jsArgument = (b, i, inputs) => {
         case 'dataDefinition':
             return b
         case 'entry':
-            return b.entry
+            return b.definition
         case 'expression':
             if (['locate', 'methodExecution'].includes(b.expression.type)) {
                 return jsArgument(b.expression, i, inputs)
@@ -253,13 +254,13 @@ const jsArgument = (b, i, inputs) => {
                 type: 'dataDefinition',
                 location: {
                     type: 'location',
-                    name: { type: 'identifier', line: b.line, col: b.col, value: base26.to(i + 1) },
+                    name: { type: 'identifier', value: base26.to(i + 1), line: b.line, col: b.col },
                     locators: []
                 },
                 expression: b
             }
         case 'locate':
-            return { type: 'dataDefinition', location: b.location }
+            return { type: 'dataDefinition', location: b.location, expression: null }
         case 'assignMethodResult':
             return {
                 type: 'dataDefinition',
@@ -286,7 +287,7 @@ const jsArgument = (b, i, inputs) => {
                 type: 'dataDefinition',
                 location: {
                     type: 'location',
-                    name: { type: 'identifier', line: b.line, col: b.col, value: base26.to(i + 1) },
+                    name: { type: 'identifier', value: base26.to(i + 1), line: b.line, col: b.col },
                     locators: []
                 },
                 expression: b
@@ -412,6 +413,7 @@ const jsExpression = expression => {
         case 'digitNumber':
             return jsExpression({
                 type: 'methodExecution',
+                prefix: null,
                 method: addNode({ value: 'new' }, 'identifier', expression),
                 of: true,
                 receiver: addNode(
@@ -954,13 +956,13 @@ const jsSections = (sections) => sections.map(({ name: sectionName, context, met
     // Issue: should all method names in this namespace be added to scope?
     // They are not actually in scope, but would prefer not to allow variables with the same name?
 
-    scopes = [context.definition.map(({ entry: { name, as } }) => asCamelCase(as ?? name))]
+    scopes = [context.definition.map(({ definition: { name, as } }) => asCamelCase(as ?? name))]
 
     /*
     renames = new Map(
         context
             ? new Map(
-                context.definition.map(({ entry: { name: { value } } }, i) => [value, base26.to(i + 1)])
+                context.definition.map(({ definition: { name: { value } } }, i) => [value, base26.to(i + 1)])
             )
             : []
     )
@@ -982,9 +984,10 @@ const jsSections = (sections) => sections.map(({ name: sectionName, context, met
             const deform = inputs.length
                 ? [
                     {
-                        name: { line: inputs.line, col: inputs.col, value: 'inputs' },
-                        inputs: inputs.map(({ entry }) => entry),
-                        type: 'destructuringData'
+                        type: 'destructuring',
+                        collectionType: 'data',
+                        inputs: inputs.map(({ definition }) => definition),
+                        name: { line: inputs.line, col: inputs.col, value: 'inputs' }
                     }
                 ]
                 : []
@@ -999,7 +1002,7 @@ const jsSections = (sections) => sections.map(({ name: sectionName, context, met
             // The downside is that it could lead to more variable name repetition
 
             while (deform.length) {
-                const { name: fullName, inputs, type } = deform.shift()
+                const { inputs, collectionType, name: fullName } = deform.shift()
                 name = asCamelCase(fullName)
 
                 scopeVariables.push(inputs.map(({ name, as }) => asCamelCase(as ? as : name)))
@@ -1013,7 +1016,7 @@ const jsSections = (sections) => sections.map(({ name: sectionName, context, met
 
                 // Issue: if making this code reusable, switch out const for assignKeyword where needed
                 deformedInputs.push([
-                    type === 'destructuringList'
+                    collectionType === 'list'
                         ? [
                             indent,
                             'const ',
@@ -1221,7 +1224,7 @@ const jsSections = (sections) => sections.map(({ name: sectionName, context, met
                 ])
 
                 inputs.forEach(({ name, destructuring }) => {
-                    destructuring && deform.push({ name, ...destructuring })
+                    destructuring && deform.push({ ...destructuring, name })
                 })
             }
 
@@ -1328,8 +1331,8 @@ const jsProgram = (sections, fileName) => {
 
             inputs = inputs || []
 
-            const names = inputs.filter(({ entry: { type } }) => type === 'input')
-            const group = inputs.filter(({ entry: { type } }) => ['inputSingleton', 'inputGroup'].includes(type))
+            const names = inputs.filter(({ definition: { type } }) => type === 'input')
+            const group = inputs.filter(({ definition: { type } }) => ['inputSingleton', 'inputGroup'].includes(type))
 
             // Issue: validate there is at most one group and it's at the end
             if (group.length > 1) {
@@ -1541,7 +1544,7 @@ async function main() {
     try {
 
         const optionator = require('optionator')({
-            prepend: 'Usage: dklng [options]',
+            prepend: 'Usage: dklng [command] [options]',
             append: 'Version 1.0.0',
             options: [
                 {

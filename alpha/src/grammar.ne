@@ -184,7 +184,7 @@ assignWith[operator, expression] -> location $operator $expression
 	{%	([location, operator, expression]) => ({ location, operator, expression })	%}
 
 assignOf[operator, expression	] -> assignWith[$operator							{% take %} , $expression {% take %}	] {% ([assignment]) => ({ type: 'assignOf', ...assignment }) %}
-assign[  operator				] -> assignWith[(_ $operator _ {% takeSecond %} )	{% take %} , expression  {% take %}	] {% ([assignment]) => ({ type: 'assign', ...assignment }) %}
+assign[  operator				] -> assignWith[(_ $operator _ {% takeSecond %} )	{% take %} , expression  {% take %}	] {% ([assignment]) => ({ type: 'assign',   ...assignment }) %}
 
 assignExpand[operator] ->
 	  ( location ":" {% take %} ):? destructuringList $operator expression
@@ -208,31 +208,32 @@ blockOf[definition]		-> indented[standalone[$definition {% take %}, ____:+ {% ig
 items[definition]   -> delimited[$definition	{% take %} , ("," _:+)		{% ignore %} ]			{% take %}
 listing[definition] -> delimited[$definition	{% take %} , ("," newline)	{% ignore %} ] ",":?	{% take %}
 
-flowing[definition] -> items[$definition	{% take %} ] ("," newline
-	____:* _:+ items[$definition	{% take %} ]
-	{% takeFifth %}	):*
+flowing[definition] ->
+	items[$definition	{% take %} ] ("," newline
+		____:* _:+ items[$definition	{% take %} ]
+			{% takeFifth %}	):*
 	{%	([first, rest]) => [...first, ...rest.flat()]	%}
 
 # Issue: there is some duplication between listed/elongated which would be nice to extract and simplify
 
-listed[adjusted, entry] -> listing[(
+listed[adjusted, definition] -> listing[(
 		($adjusted comment		{% takeSecond %} ):*
-		 $adjusted $entry
-		{%	([comments, , entry]) => ({ type: 'entry', comments, entry })	%} )
+		 $adjusted $definition
+		{%	([comments, , definition]) => ({ type: 'entry', comments, definition })	%} )
 	{% take %} ]
 	{% take %}
 
-elongated[adjusted, entry] ->
+elongated[adjusted, definition] ->
 	(
-		  $entry {% ([entry]) => ({ type: 'entry', comments: [], entry }) %}
-		| ( delimited[comment {% take %}, $adjusted {% ignore %} ] {% take %} ):+ $adjusted $entry
-			{%	([comments, , entry]) => ({ type: 'entry', comments, entry })	%}
+		  $definition {% ([definition]) => ({ type: 'entry', comments: [], definition }) %}
+		| ( delimited[comment {% take %}, $adjusted {% ignore %} ] {% take %} ):+ $adjusted $definition
+			{%	([comments, , definition]) => ({ type: 'entry', comments, definition })	%}
 	)
 	("," newline
-		listed[$adjusted	{% take %} , $entry	{% take %} ]
+		listed[$adjusted	{% take %} , $definition	{% take %} ]
 		{% takeThird %}
 	):?
-	{%	([first, rest]) => [first, ...(rest || [])]	%}
+	{%	([first, rest]) => [first, ...(rest ?? [])]	%}
 
 listingBlock[definition] ->
 	indented[(
@@ -245,16 +246,16 @@ listingBlock[definition] ->
 invokeWith[prefix] ->
 	  $prefix identifier (_ of {% takeSecond %} ):? _ expression
 		{% ([prefix, method, of, , receiver]) =>
-			({ ...(prefix && { prefix }), method, ...(of && { of }), receiver }) %}
+			({ prefix, method, of, receiver }) %}
 	| expression ".." identifier
 		{% ([receiver, , method]) =>
-			({ method, receiver }) %}
+			({ prefix: null, method, of: null, receiver }) %}
 
 methodCall[prefix] ->
 
 	  invokeWith[$prefix {% take %} ]
 	  	{% ([invocation]) =>
-	  		({ type: 'methodExecution', ...invocation }) %}
+	  		({ type: 'methodExecution', ...invocation, arguments: [] }) %}
 
 	| invokeWith[$prefix {% take %} ] _ with
 				(  _ flowing[dataDefinition {% take %} ] {% takeSecond %}
@@ -350,8 +351,8 @@ method ->
 			( (_ of {% takeSecond %} ):? _ "self"		{% ([of, , receiver]) => ({ of, receiver }) %} ):?
 			(_ with _ elongated[(_ _ _ _ _ _ _ _ _:+) {% ignore %} , input {% take %} ] {% takeFourth %} ):? ":"
 			blockOf[statement {% take %}]
-				{%	([name, receiver, inputs, , statements]) =>
-						({ name, ...receiver, inputs: inputs ?? [], statements }) %}
+				{%	([name, subject, inputs, , statements]) =>
+						({ name, of: subject && subject.of, receiver: subject && subject.receiver, inputs: inputs ?? [], statements }) %}
 		) {% take %} ,
 		null {% ignore %} ]
 	newline
@@ -375,24 +376,24 @@ input ->
 	}) %}
 
 
-destructuringList -> "["   flowing[input {% take %} ]   "]" {% ([, inputs])   => ({ type: 'destructuringList', inputs }) %}
-destructuringData -> "{" _ flowing[input {% take %} ] _ "}" {% ([, , inputs]) => ({ type: 'destructuringData', inputs }) %}
+destructuringList -> "["   flowing[input {% take %} ]   "]" {% ([, inputs])   => ({ type: 'destructuring', collectionType: 'list', inputs }) %}
+destructuringData -> "{" _ flowing[input {% take %} ] _ "}" {% ([, , inputs]) => ({ type: 'destructuring', collectionType: 'data', inputs }) %}
 
 
 for -> For _ each _ identifier _ (in {% take %} | through {% take %} | of {% take %} ) _ expression ","
 		(_ to _ extent _ of _ expression "," {% takeEighth %} ):?
 		(_ do ":" {% takeSecond %} ):?
 	blockOf[statement {% take %} ]
-	{% ([, , , , name, , itemizing, , expression, , extent, Do, statements]) => ({ type: 'for', name, itemizing, expression, ...(extent && { extent }), ...(Do && { do: Do }), statements }) %}
+	{% ([, , , , name, , itemizing, , expression, , extent, Do, statements]) => ({ type: 'for', name, itemizing, expression, extent, do: Do, statements }) %}
 
 when -> When _ (expression {% take %} | walrusStatement {% take %})
 	indented[(
 		standalone[
-			((is _ expression {% ([, , is]) => ({ is }) %}
+			((is _ expression {% ([, , is]) => ({ is, has: null, as: null }) %}
 			 | has _ (identifier {% take %} | quote {% take %} | "{" expression "}" {% takeSecond %}) (_ identifier {% takeSecond %} ):?
-				{% ([, , has, as]) => ({ has, ...(as && { as }) }) %})
-					(":" _:+ statement	{% ([, , statement]) => [statement] %}
-					 | blockOf[statement {% take %} ] {% take %} )
+				{% ([, , has, as]) => ({ is: null, has, as }) %})
+			(":" _:+ statement	{% ([, , statement]) => [statement] %}
+				| blockOf[statement {% take %} ] {% take %} )
 			{% ([test, statements]) => ({ type: 'case', ...test, statements }) %} ) {% take %} ,
 			____:+ {% ignore %}	]:+
 
@@ -402,7 +403,7 @@ when -> When _ (expression {% take %} | walrusStatement {% take %})
 			{% ([, statements]) => statements %} ) {% take %} ,
 			____:+ {% ignore %}	]:?
 
-		{% ([cases, otherwise]) => ({ cases, ...(otherwise && { otherwise }) }) %}
+		{% ([cases, otherwise]) => ({ cases, otherwise }) %}
 	) {% take %} ]
 	{% ([, , expression, branches]) => ({ type: 'when', expression, ...branches }) %}
 
@@ -508,7 +509,7 @@ dataDefinition ->
 	| assignOf[(":" _:+ {% ignore %} ) {% ignore %} , dataBlock		{% take %} ]	{% take %}
 	| location ":" _:+ expression
 	  	{% ([location, , , expression]) =>
-	  		({ type: 'dataDefinition', location, ...(expression && { expression }) }) %}
+	  		({ type: 'dataDefinition', location, expression }) %}
 
 
 assignMethodResult -> (location {% take %} ):? methodNaming
@@ -540,7 +541,7 @@ value ->
 	(
 		"(" identifier ")" {% takeSecond %}
 	):?
-	{% ([value, qualifier]) => ({ type: 'literal', value, ...(qualifier && { qualifier }) }) %}
+	{% ([value, qualifier]) => ({ type: 'literal', value, qualifier }) %}
 
 
 Use			-> "use"		{% ignore %}
