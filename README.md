@@ -11,8 +11,7 @@
 ## Install
 
 * Install a recent stable Node.js and NPM
-* Review the [install script](https://raw.githubusercontent.com/ducklang-community/ducklang/main/install.sh)
-* Run the install script:
+* Run the [install script](https://raw.githubusercontent.com/ducklang-community/ducklang/main/install.sh):
 
 ```sh
 sh -c "$(curl -fsSL https://raw.githubusercontent.com/ducklang-community/ducklang/main/install.sh)"
