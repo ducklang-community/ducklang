@@ -23,13 +23,18 @@ source ~/.bashrc
 ```
 
 ## Use (WIP)
+
+* [🖖 Fork the "Hello, World!" repo](https://github.com/ducklang-community/hello)
+
 ```sh
-dklng run github:ducklang-community/hello
+dklng run github:<your-username>/hello
 ```
+
+* Continue hacking on your repo :)
 
 ## Help us grow 🐥
 
-* [🖖 Fork (and edit) the "Hello, World!" repo](https://github.com/ducklang-community/hello)
+* [⭐ Star the repo](https://github.com/ducklang-community/ducklang#top)
 * [💌 Give feedback](https://y62h76939d2.typeform.com/to/s2kKBjpC)
 * [💸 Sponsor](https://opencollective.com/ducklang)
 
