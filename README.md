@@ -27,7 +27,7 @@ source ~/.bashrc
 * [🖖 Fork the "Hello, World!" repo](https://github.com/ducklang-community/hello)
 
 ```sh
-dklng run github:<your-username>/hello
+dklg run github:<your-username>/hello
 ```
 
 * Continue hacking on your new repo :)

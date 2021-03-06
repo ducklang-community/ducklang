@@ -1499,7 +1499,7 @@ const fetch = async(programPath) => {
     const [provider, userRepo] = programPath.split(':')
     const [user, repo] = userRepo.split('/')
     // FIXME: validate user or repo aren't ".."
-    const fileName = `${repo}.program.dklng`
+    const fileName = `${repo}.program.dklg`
     const filePathPart = `${provider}/${user}/${repo}`
     const fileDir = `${__dirname}/../../sources/${filePathPart}`
     const filePath = `${fileDir}/${fileName}`
@@ -1544,7 +1544,7 @@ async function main() {
     try {
 
         const optionator = require('optionator')({
-            prepend: 'Usage: dklng [command] [options]',
+            prepend: 'Usage: dklg [command] [options]',
             append: 'Version 1.0.0',
             options: [
                 {
