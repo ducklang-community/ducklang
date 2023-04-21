@@ -12,7 +12,7 @@
         "prettier": "prettier -w package.json src/**.js"
     },
     "dependencies": {
-        "axios": "^0.21.1",
+        "axios": "^0.21.2",
         "base26": "^0.1.0",
         "fs-ext": "^2.0.0",
         "json-diff": "^0.5.4",
